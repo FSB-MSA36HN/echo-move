@@ -22,7 +22,7 @@ Cần internet lần đầu (tải thư viện, model YOLO, MediaPipe); sau đó
 
 ## 2. Cài đặt
 ```bash
-git clone <repo> && cd worker-safety-warning-system
+git clone https://github.com/FSB-MSA36HN/echo-move.git && cd echo-move
 make install        # hoặc: cd backend && pip install -e ".[dev]"
 make install-ai     # thêm YOLO + MediaPipe (tuỳ chọn)
 ```
@@ -134,3 +134,11 @@ Khi báo lỗi, kèm: dòng đỏ trong Console, phiên bản Chrome (`chrome://
 - **Có cần MATLAB?** Không bắt buộc; MATLAB dùng cho phân tích offline và bridge JSON.
 - **Chạy máy khác?** Copy thư mục, cài Python + Chrome.
 - **Tại sao 3 ngôn ngữ?** Mỗi tầng làm đúng việc: MATLAB (phân tích offline, biểu đồ), Python (AI realtime), HTML/JS (UI, 3D, demo offline).
+
+## 8. Deploy: web trên GitHub Pages + backend trên Colab
+1. **Bật Pages một lần:** repo → Settings → Pages → Source = *GitHub Actions*. Mỗi lần push sửa `web/` workflow `pages.yml` tự deploy tới `https://fsb-msa36hn.github.io/echo-move/`.
+2. **Chạy backend:** mở `notebooks/colab_backend.ipynb` trên Colab (Open in Colab → GitHub → `FSB-MSA36HN/echo-move`), chọn Runtime GPU, chạy lần lượt các cell.
+3. Cell cuối in ra link dạng `https://fsb-msa36hn.github.io/echo-move/?server=https://xxxx.trycloudflare.com`. Mở link đó → web tự dùng `wss://xxxx.trycloudflare.com/ws/pose`, bấm **Server** → **Camera**.
+4. Địa chỉ server được nhớ trong trình duyệt; dùng `?server=local` để quay về `localhost:8000`.
+
+Lưu ý: URL tunnel đổi mỗi lần chạy lại notebook; phiên Colab miễn phí tự tắt sau một thời gian không hoạt động. Repo cần public (hoặc plan hỗ trợ Pages private).
