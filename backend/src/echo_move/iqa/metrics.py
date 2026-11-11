@@ -55,7 +55,8 @@ def contrast_score(gray_f: np.ndarray) -> float:
 
 
 def noise_score(gray_f: np.ndarray) -> float:
-    residual = gray_f - cv2.GaussianBlur(gray_f, (5, 5), 0)
+    blurred = np.asarray(cv2.GaussianBlur(gray_f, (5, 5), 0), dtype=np.float64)
+    residual = np.asarray(gray_f - blurred, dtype=np.float64)
     return max(100.0 - float(np.std(residual)) * 1000.0, 0.0)
 
 
