@@ -1020,11 +1020,12 @@ function updCmpSlider(p) {
 }
 
 let dragging = false;
-document.addEventListener('mousedown', e => {
+document.addEventListener('pointerdown', e => {
   if (e.target.id === 'cs') { dragging = true; e.preventDefault(); }
 });
-document.addEventListener('mouseup', () => { dragging = false; });
-document.addEventListener('mousemove', e => {
+document.addEventListener('pointerup', () => { dragging = false; });
+document.addEventListener('pointercancel', () => { dragging = false; });
+document.addEventListener('pointermove', e => {
   if (!dragging || !S.cmp.on) return;
   const rect = $('v').getBoundingClientRect();
   let p = ((e.clientX - rect.left) / rect.width) * 100;
