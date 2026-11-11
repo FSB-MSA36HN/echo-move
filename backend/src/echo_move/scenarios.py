@@ -12,6 +12,8 @@ from functools import lru_cache
 from importlib import resources
 from typing import Any
 
+from . import __version__
+
 
 @lru_cache(maxsize=1)
 def load_scenarios() -> dict[str, dict[str, Any]]:
@@ -49,5 +51,5 @@ class DemoGenerator:
             "env_hazards": sc["env"],
             "matlab_iqa": matlab_iqa,
             "mode": "DEMO",
-            "version": "20.0",
+            "version": __version__,
         }

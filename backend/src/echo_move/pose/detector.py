@@ -1,16 +1,20 @@
-"""YOLOv8-Pose + MediaPipe Hands wrapper. Heavy imports are optional."""
+"""YOLOv8-Pose + MediaPipe Hands wrapper. Heavy imports are optional.
+
+The detector is stateless per stream (tracking/smoothing live in ``pipeline``) and is
+shared by the browser WebSocket and every server-side camera, so inference is serialised
+with a lock: Ultralytics predictors are not thread-safe.
+"""
 
 from __future__ import annotations
 
 import logging
+import threading
 from typing import Any
 
 import cv2
 import numpy as np
 
 from ..config import Settings
-from .classifier import classify_posture
-from .filters import KeypointSmoother
 
 log = logging.getLogger(__name__)
 
@@ -21,7 +25,7 @@ class PoseDetector:
         self.model: Any = None
         self.hands: Any = None
         self._half = False
-        self._smoothers = [KeypointSmoother() for _ in range(cfg.max_persons)]
+        self._lock = threading.Lock()
         self._load()
 
     @property
@@ -58,28 +62,24 @@ class PoseDetector:
         except Exception:
             log.warning("MediaPipe Hands unavailable — hand tracking disabled")
 
-    def reset(self) -> None:
-        for s in self._smoothers:
-            s.reset()
-
-    def detect(self, frame_bgr: np.ndarray, t: float) -> tuple[list[dict[str, Any]], list[Any]]:
-        """Return (persons, hands) for one BGR frame."""
-        persons: list[dict[str, Any]] = []
-        res = self.model(frame_bgr, verbose=False, conf=self.cfg.yolo_conf, half=self._half)
+    def detect_raw(self, frame_bgr: np.ndarray) -> tuple[list[list[list[float]]], list[Any]]:
+        """Return (raw keypoints per person, hands) for one BGR frame. Coordinates are 0-1."""
+        if self.model is None:
+            return [], []
+        people: list[list[list[float]]] = []
+        with self._lock:
+            res = self.model(frame_bgr, verbose=False, conf=self.cfg.yolo_conf, half=self._half)
+            hands_res = (self.hands.process(cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB))
+                         if self.hands is not None else None)
         if res and res[0].keypoints is not None:
-            # Normalised (0-1) xy so the web UI and the classifier share one coordinate space.
             xyn = res[0].keypoints.xyn.cpu().numpy()
             conf = res[0].keypoints.conf
             conf_np = (conf.cpu().numpy() if conf is not None
                        else np.ones(xyn.shape[:2], dtype=np.float32))
             kps_all = np.concatenate([xyn, conf_np[..., None]], axis=-1)
-            for i in range(min(len(kps_all), self.cfg.max_persons)):
-                kps = self._smoothers[i].apply(kps_all[i].tolist(), t)
-                persons.append({"id": i, "keypoints": kps,
-                                "safety": classify_posture(kps, self.cfg)})
+            people = [kps_all[i].tolist() for i in range(min(len(kps_all), self.cfg.max_persons))]
         hands: list[Any] = []
-        if self.hands is not None:
-            result = self.hands.process(cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB))
-            for hd in result.multi_hand_landmarks or []:
+        if hands_res is not None:
+            for hd in hands_res.multi_hand_landmarks or []:
                 hands.append([{"x": lm.x, "y": lm.y, "z": lm.z} for lm in hd.landmark])
-        return persons, hands
+        return people, hands

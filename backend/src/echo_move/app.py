@@ -1,4 +1,9 @@
-"""FastAPI application: /health, /matlab_iqa, /ws/pose."""
+"""FastAPI application.
+
+Realtime:  /ws/pose (browser frames), /ws/camera/{id} (server cameras), /ws/events (alerts)
+REST:      /health, /matlab_iqa, /api/cameras..., /api/events..., /api/stats
+Static:    the web UI (web/) at /, when the folder is available.
+"""
 
 from __future__ import annotations
 
@@ -7,97 +12,261 @@ import base64
 import json
 import logging
 import time
-from collections import deque
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import Any, Literal
 
-import cv2
-import numpy as np
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import ValidationError
+from fastapi.responses import FileResponse, PlainTextResponse, Response, StreamingResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field, ValidationError
 
 from . import __version__
+from .alerts import Alert, AlertHub
+from .alerts.engine import MESSAGES
+from .camera import CameraManager
 from .config import Settings, get_settings
-from .iqa import compute_iqa
 from .logging_setup import setup_logging
 from .matlab_bridge import MatlabBridge
+from .notify import Notifier
+from .pipeline import StreamPipeline, decode_frame
 from .pose.detector import PoseDetector
 from .scenarios import DemoGenerator
 from .schemas import FrameMessage
+from .storage import EventStore
 
 log = logging.getLogger("echo_move")
 
 
-def _env_from_quality(iqa: dict[str, float], cfg: Settings) -> dict[str, Any]:
-    if iqa["overall"] < cfg.low_quality_threshold:
-        return {"hazards": [{"name": "LOW_Q", "label": "ẢNH KÉM", "advice": "Kiểm tra camera"}],
-                "overall_level": "RISK", "overall_color": [1, 0.65, 0]}
-    return {"hazards": [], "overall_level": "SAFE", "overall_color": [0, 1, 0]}
+class EventIn(BaseModel):
+    """Alert confirmed client-side (browser AI mode) and reported for logging."""
 
-
-def decode_frame(data_url: str, max_width: int) -> np.ndarray | None:
-    try:
-        payload = data_url.split(",", 1)[-1]
-        frame = cv2.imdecode(np.frombuffer(base64.b64decode(payload), np.uint8), cv2.IMREAD_COLOR)
-    except Exception:
-        return None
-    if frame is None:
-        return None
-    h, w = frame.shape[:2]
-    if w > max_width:
-        frame = cv2.resize(frame, (max_width, int(h * max_width / w)))
-    return frame
+    type: Literal["FALL", "POSTURE", "CAMERA"]
+    detail: str = Field(default="", max_length=200)
+    track_id: int | None = None
+    source: str = Field(default="browser", max_length=40)
+    image: str | None = None  # optional JPEG data URL
 
 
 def create_app(cfg: Settings | None = None) -> FastAPI:
     cfg = cfg or get_settings()
     setup_logging(cfg.log_level)
+    bridge = MatlabBridge(cfg.matlab_dir)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        app.state.detector = PoseDetector(cfg)
+        detector = PoseDetector(cfg)
+        try:
+            store: EventStore | None = EventStore(cfg.data_dir)
+        except Exception:
+            log.exception("event store unavailable (%s) — events will not be saved", cfg.data_dir)
+            store = None
+        notifier = Notifier(cfg)
+        notifier.start()
+        hub = AlertHub(store, notifier)
+        cameras = CameraManager(cfg, detector, hub)
+        cameras.start()
+        app.state.detector, app.state.store, app.state.hub = detector, store, hub
+        app.state.notifier, app.state.cameras = notifier, cameras
+        log.info("ECHO MOVE %s ready — AI=%s cameras=%d notify=%s web=%s", __version__,
+                 detector.available, len(cameras.workers), notifier.channels() or "off",
+                 cfg.web_dir if (cfg.web_dir / "index.html").is_file() else "off")
         yield
+        cameras.stop()
+        notifier.stop()
+        if store:
+            store.close()
 
     app = FastAPI(title="ECHO MOVE", version=__version__, lifespan=lifespan)
     app.add_middleware(CORSMiddleware, allow_origins=list(cfg.cors_origins),
                        allow_methods=["*"], allow_headers=["*"])
-    bridge = MatlabBridge(cfg.matlab_dir)
 
+    def store_or_503(request: Request) -> EventStore:
+        store: EventStore | None = request.app.state.store
+        if store is None:
+            raise HTTPException(503, "event store unavailable")
+        return store
+
+    # ------------------------------------------------------------------ status
     @app.get("/health")
-    async def health() -> dict[str, Any]:
-        det: PoseDetector = app.state.detector
+    async def health(request: Request) -> dict[str, Any]:
+        st = request.app.state
+        det: PoseDetector = st.detector
         return {"status": "ok", "demo_mode": not det.available, "yolo": det.available,
                 "hands": det.hands is not None, "version": __version__,
-                "piqe_mode": cfg.piqe_mode, "matlab_dir": str(cfg.matlab_dir.resolve())}
+                "piqe_mode": cfg.piqe_mode, "matlab_dir": str(cfg.matlab_dir.resolve()),
+                "cameras": len(st.cameras.workers), "events_db": st.store is not None,
+                "notify": st.notifier.channels()}
 
     @app.get("/matlab_iqa")
     async def matlab_iqa() -> dict[str, Any]:
         data = bridge.read()
         return {"available": False} if data is None else {"available": True, **data}
 
+    # ------------------------------------------------------------------ cameras
+    def camera_or_404(request: Request, cam_id: str) -> Any:
+        w = request.app.state.cameras.get(cam_id)
+        if w is None:
+            raise HTTPException(404, f"camera '{cam_id}' not found")
+        return w
+
+    @app.get("/api/cameras")
+    async def list_cameras(request: Request) -> list[dict[str, Any]]:
+        return list(request.app.state.cameras.statuses())
+
+    @app.get("/api/cameras/{cam_id}/snapshot.jpg")
+    async def camera_snapshot(request: Request, cam_id: str) -> Response:
+        w = camera_or_404(request, cam_id)
+        if not w.latest_jpeg:
+            raise HTTPException(503, "no frame yet")
+        return Response(w.latest_jpeg, media_type="image/jpeg",
+                        headers={"Cache-Control": "no-store"})
+
+    @app.get("/api/cameras/{cam_id}/stream")
+    async def camera_stream(request: Request, cam_id: str) -> StreamingResponse:
+        w = camera_or_404(request, cam_id)
+
+        async def frames() -> AsyncIterator[bytes]:
+            last = -1
+            while not await request.is_disconnected():
+                if w.result_seq != last and w.latest_jpeg:
+                    last, jpeg = w.result_seq, w.latest_jpeg
+                    yield (b"--frame\r\nContent-Type: image/jpeg\r\nContent-Length: "
+                           + str(len(jpeg)).encode() + b"\r\n\r\n" + jpeg + b"\r\n")
+                await asyncio.sleep(0.04)
+
+        return StreamingResponse(frames(), media_type="multipart/x-mixed-replace; boundary=frame",
+                                 headers={"Cache-Control": "no-store"})
+
+    @app.websocket("/ws/camera/{cam_id}")
+    async def ws_camera(ws: WebSocket, cam_id: str) -> None:
+        w = ws.app.state.cameras.get(cam_id)
+        await ws.accept()
+        if w is None:
+            await ws.send_text(json.dumps({"error": f"camera '{cam_id}' not found"}))
+            await ws.close()
+            return
+        last = -1
+        try:
+            while True:
+                if w.result_seq != last and w.latest is not None:
+                    last = w.result_seq
+                    await ws.send_text(json.dumps({**w.latest, "status": w.status()}))
+                await asyncio.sleep(0.05)
+        except (WebSocketDisconnect, RuntimeError):
+            pass
+
+    # ------------------------------------------------------------------ events
+    @app.get("/api/events")
+    async def list_events(
+        request: Request,
+        type: str | None = None, source: str | None = None, level: str | None = None,
+        since: float | None = None, until: float | None = None,
+        hours: float | None = Query(default=None, gt=0),
+        acknowledged: bool | None = None,
+        limit: int = Query(default=50, ge=1, le=500), offset: int = Query(default=0, ge=0),
+    ) -> dict[str, Any]:
+        store = store_or_503(request)
+        if hours is not None:
+            since = time.time() - hours * 3600
+        items, total = store.list(type=type, source=source, level=level, since=since,
+                                  until=until, acknowledged=acknowledged, limit=limit,
+                                  offset=offset)
+        return {"items": items, "total": total, "limit": limit, "offset": offset}
+
+    @app.get("/api/events.csv")
+    async def events_csv(request: Request, type: str | None = None, source: str | None = None,
+                         hours: float | None = Query(default=None, gt=0)) -> PlainTextResponse:
+        store = store_or_503(request)
+        since = time.time() - hours * 3600 if hours else None
+        body = "\ufeff" + store.to_csv(type=type, source=source, since=since)
+        name = time.strftime("echo_events_%Y%m%d_%H%M%S.csv")
+        return PlainTextResponse(body, media_type="text/csv; charset=utf-8",
+                                 headers={"Content-Disposition": f'attachment; filename="{name}"'})
+
+    @app.post("/api/events", status_code=201)
+    async def create_event(request: Request, body: EventIn) -> dict[str, Any]:
+        store_or_503(request)
+        level, message = MESSAGES[body.type]
+        jpeg = None
+        if body.image:
+            try:
+                jpeg = base64.b64decode(body.image.split(",", 1)[-1], validate=False)
+            except ValueError:
+                raise HTTPException(422, "invalid image") from None
+            if len(jpeg) > cfg.max_message_bytes:
+                raise HTTPException(413, "image too large")
+        alert = Alert(body.type, level, body.source, message, body.detail, body.track_id)
+        hub: AlertHub = request.app.state.hub
+        return await asyncio.get_running_loop().run_in_executor(None, hub.publish, alert, jpeg)
+
+    @app.get("/api/events/{event_id}")
+    async def get_event(request: Request, event_id: int) -> dict[str, Any]:
+        event = store_or_503(request).get(event_id)
+        if event is None:
+            raise HTTPException(404, "event not found")
+        return event
+
+    @app.get("/api/events/{event_id}/image")
+    async def event_image(request: Request, event_id: int) -> FileResponse:
+        path = store_or_503(request).image_path(event_id)
+        if path is None:
+            raise HTTPException(404, "no snapshot for this event")
+        return FileResponse(path, media_type="image/jpeg")
+
+    @app.post("/api/events/{event_id}/ack")
+    async def ack_event(request: Request, event_id: int) -> dict[str, Any]:
+        if not store_or_503(request).acknowledge(event_id):
+            raise HTTPException(404, "event not found")
+        return {"id": event_id, "acknowledged": True}
+
+    @app.get("/api/stats")
+    async def stats(request: Request,
+                    hours: float = Query(default=24, gt=0, le=24 * 365)) -> dict[str, Any]:
+        out = store_or_503(request).stats(since=time.time() - hours * 3600)
+        out["hours"] = hours
+        return out
+
+    @app.websocket("/ws/events")
+    async def ws_events(ws: WebSocket) -> None:
+        await ws.accept()
+        hub: AlertHub = ws.app.state.hub
+        q = hub.subscribe()
+        try:
+            while True:
+                try:
+                    event = await asyncio.wait_for(q.get(), timeout=20)
+                    await ws.send_text(json.dumps(event, ensure_ascii=False))
+                except asyncio.TimeoutError:
+                    await ws.send_text(json.dumps({"ping": time.time()}))
+        except (WebSocketDisconnect, RuntimeError):
+            pass
+        finally:
+            hub.unsubscribe(q)
+
+    # ------------------------------------------------------------------ browser frames
     @app.websocket("/ws/pose")
     async def ws_pose(ws: WebSocket) -> None:
         await ws.accept()
-        det: PoseDetector = app.state.detector
-        det.reset()
+        st = ws.app.state
+        det: PoseDetector = st.detector
+        hub = st.hub if cfg.record_browser_events else None
+        pipe = StreamPipeline("browser" if det.available else "demo", det, cfg, hub)
         demo = DemoGenerator(cfg.server_fps)
         loop = asyncio.get_running_loop()
-        last_ts, frame_count = 0.0, 0
-        bench: deque[float] = deque(maxlen=100)
+        last_ts = 0.0
         try:
             while True:
                 text = await ws.receive_text()
-                started = time.perf_counter()
                 now = time.time()
                 if now - last_ts < 1.0 / cfg.server_fps:
                     await ws.send_text(json.dumps({"skip": True}))
                     continue
                 last_ts = now
                 if not det.available:
-                    await ws.send_text(json.dumps(demo.next_frame(bridge.read())))
-                    frame_count += 1
+                    payload = pipe.observe(demo.next_frame(bridge.read()), now)
+                    await ws.send_text(json.dumps(payload))
                     continue
                 if len(text) > cfg.max_message_bytes:
                     await ws.send_text(json.dumps({"error": "frame too large"}))
@@ -109,33 +278,20 @@ def create_app(cfg: Settings | None = None) -> FastAPI:
                     continue
                 frame = decode_frame(msg.image, cfg.max_frame_width)
                 if frame is None:
+                    await ws.send_text(json.dumps({"error": "undecodable frame"}))
                     continue
-                t = msg.timestamp if msg.timestamp is not None else now
                 # Blocking CV/NN work runs off the event loop.
-                persons, hands = await loop.run_in_executor(None, det.detect, frame, t)
-                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                iqa = compute_iqa(
-                    gray, gray.astype(np.float64) / 255.0, mode=cfg.piqe_mode,  # type: ignore[arg-type]
-                    weights=cfg.iqa_weights,
-                    compute_full=frame_count % cfg.piqe_sample_every == 0,
-                ).to_dict()
-                frame_ms = (time.perf_counter() - started) * 1000
-                bench.append(frame_ms)
-                avg = sum(bench) / len(bench)
-                await ws.send_text(json.dumps({
-                    "detected": bool(persons), "persons": persons, "hands": hands,
-                    "quality": iqa, "env_hazards": _env_from_quality(iqa, cfg),
-                    "matlab_iqa": bridge.read(),
-                    "benchmark": {"frame_ms": round(frame_ms, 2), "avg_frame_ms": round(avg, 2),
-                                  "fps_actual": round(1000.0 / max(avg, 1), 1),
-                                  "frames_total": frame_count},
-                    "mode": "AI", "version": "20.0",
-                }))
-                frame_count += 1
+                payload = await loop.run_in_executor(None, pipe.process, frame, now)
+                payload["matlab_iqa"] = bridge.read()
+                await ws.send_text(json.dumps(payload))
         except WebSocketDisconnect:
             log.info("client disconnected")
         except Exception:
             log.exception("websocket error")
+
+    # ------------------------------------------------------------------ web UI
+    if (cfg.web_dir / "index.html").is_file():
+        app.mount("/", StaticFiles(directory=cfg.web_dir, html=True), name="web")
 
     return app
 

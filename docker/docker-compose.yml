@@ -6,7 +6,13 @@ services:
       args:
         ECHO_WITH_AI: "0"
     ports: ["8000:8000"]
+    restart: unless-stopped
     environment:
       ECHO_DEMO_MODE: "1"
+      # Optional — empty values keep the feature off.
+      ECHO_CAMERAS: ${ECHO_CAMERAS:-}
+      ECHO_TELEGRAM_TOKEN: ${ECHO_TELEGRAM_TOKEN:-}
+      ECHO_TELEGRAM_CHAT_ID: ${ECHO_TELEGRAM_CHAT_ID:-}
+      ECHO_WEBHOOK_URL: ${ECHO_WEBHOOK_URL:-}
     volumes:
-      - ../output:/data/output
+      - ../output:/data/output   # MATLAB JSON, echo.db, snapshots/

@@ -3,6 +3,7 @@
 //   index.html?server=https://xxxx.trycloudflare.com
 //   index.html?server=wss://xxxx.trycloudflare.com/ws/pose
 // The choice is remembered in localStorage; use ?server=local to reset.
+// Without it, js/backend.js auto-detects a backend on the same origin or localhost:8000.
 (function () {
   const DEFAULT_HTTP = 'http://localhost:8000';
   let raw = new URLSearchParams(location.search).get('server');
@@ -20,5 +21,6 @@
   window.ECHO_CONFIG = {
     apiBase: http,
     wsUrl: http.replace(/^http/, 'ws') + '/ws/pose',
+    explicit: !!raw,
   };
 })();

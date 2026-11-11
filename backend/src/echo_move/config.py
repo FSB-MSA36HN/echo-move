@@ -16,6 +16,20 @@ def _env(name: str, default: str) -> str:
     return os.environ.get(f"ECHO_{name}", default)
 
 
+def _default_output() -> Path:
+    # Editable/source checkout → <repo>/output; installed package (Docker/Colab) → ./output.
+    if (REPO_ROOT / "backend").is_dir():
+        return REPO_ROOT / "output"
+    return Path.cwd() / "output"
+
+
+def _default_web() -> Path:
+    for candidate in (REPO_ROOT / "web", Path.cwd() / "web", Path.cwd().parent / "web"):
+        if (candidate / "index.html").is_file():
+            return candidate
+    return REPO_ROOT / "web"
+
+
 @dataclass(frozen=True)
 class Settings:
     # Server
@@ -30,6 +44,7 @@ class Settings:
         default_factory=lambda: int(_env("MAX_MESSAGE_BYTES", str(4 * 1024 * 1024)))
     )
     max_frame_width: int = 640
+    web_dir: Path = field(default_factory=lambda: Path(_env("WEB_DIR", str(_default_web()))))
 
     # Models
     demo_mode: bool = field(default_factory=lambda: _env("DEMO_MODE", "0") == "1")
@@ -43,7 +58,20 @@ class Settings:
     spine_risk_deg: float = 60.0
     knee_bent_deg: float = 140.0
     lift_spine_max_deg: float = 45.0
-    fall_torso_ratio: float = 0.08  # |shoulder_y - hip_y| < ratio * frame_height
+    fall_spine_deg: float = 65.0  # torso this far from vertical ...
+    fall_bbox_ratio: float = 1.0  # ... and body box wider than tall → lying
+
+    # Temporal alert confirmation (seconds)
+    fall_confirm_s: float = field(default_factory=lambda: float(_env("FALL_CONFIRM_S", "1.5")))
+    posture_confirm_s: float = field(
+        default_factory=lambda: float(_env("POSTURE_CONFIRM_S", "3"))
+    )
+    quality_confirm_s: float = field(
+        default_factory=lambda: float(_env("QUALITY_CONFIRM_S", "5"))
+    )
+    alert_cooldown_s: float = field(
+        default_factory=lambda: float(_env("ALERT_COOLDOWN_S", "30"))
+    )
 
     # Image quality assessment
     piqe_mode: PiqeMode = field(default_factory=lambda: cast(PiqeMode, _env("PIQE_MODE", "both")))
@@ -52,9 +80,27 @@ class Settings:
     iqa_weights: tuple[float, float, float, float, float] = (0.25, 0.25, 0.20, 0.15, 0.15)
     low_quality_threshold: float = 40.0
 
+    # Server-side cameras: "name=rtsp://...,dock=0,demo=/path/video.mp4" or a JSON file
+    cameras: str = field(default_factory=lambda: _env("CAMERAS", ""))
+    cameras_file: str = field(default_factory=lambda: _env("CAMERAS_FILE", ""))
+    camera_fps: float = field(default_factory=lambda: float(_env("CAMERA_FPS", "10")))
+
+    # Event storage
+    data_dir: Path = field(
+        default_factory=lambda: Path(_env("DATA_DIR", str(_default_output())))
+    )
+    record_browser_events: bool = field(
+        default_factory=lambda: _env("RECORD_BROWSER_EVENTS", "1") == "1"
+    )
+
+    # Notifications (disabled unless configured)
+    telegram_token: str = field(default_factory=lambda: _env("TELEGRAM_TOKEN", ""))
+    telegram_chat_id: str = field(default_factory=lambda: _env("TELEGRAM_CHAT_ID", ""))
+    webhook_url: str = field(default_factory=lambda: _env("WEBHOOK_URL", ""))
+
     # MATLAB bridge
     matlab_dir: Path = field(
-        default_factory=lambda: Path(_env("MATLAB_DIR", str(REPO_ROOT / "output")))
+        default_factory=lambda: Path(_env("MATLAB_DIR", str(_default_output())))
     )
 
 

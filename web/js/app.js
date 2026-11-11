@@ -16,8 +16,6 @@ const S = {
   safety:'SAFE', ws:null, dang_gui:false, lan_gui:0,
   nhat_ky:[], stream:null, url:null,
   three:false, lib:false, ctx2d:null,
-  robot:null, lasers:null, beacon:null, radar:null, particles:null,
-  scene:null, cam:null, rnd:null, t3:0,
   dbg:{video:'-', err:null},
   ready:false,
   pose:null, pose_ready:false, pose_loading:false,
@@ -25,17 +23,29 @@ const S = {
   det_fps:0, det_dem:0, det_moc:0,
   mIQA:null, mFile:null, mMtime:0, mTimer:null, mFetch:0,
   bench:{on:false}, cmp:{on:false, pct:50},
-  sess:{on:false, hist:[]}
+  sess:{on:false, hist:[]},
+  ext:null  // server camera id currently driving the 3D view (Camera tab)
 };
 
+// Anatomical poses (COCO-17, normalised to a 4:3 frame; subject's left side appears on image right).
+const POSE = {
+  stand:[[.5,.12],[.511,.105],[.489,.105],[.524,.115],[.476,.115],[.56,.22],[.44,.22],[.572,.356],[.428,.356],[.578,.49],[.422,.49],[.53,.45],[.47,.45],[.533,.66],[.467,.66],[.535,.87],[.465,.87]],
+  lift:[[.5,.3],[.511,.285],[.489,.285],[.524,.295],[.476,.295],[.56,.4],[.44,.4],[.58,.53],[.42,.53],[.55,.66],[.45,.66],[.53,.63],[.47,.63],[.6,.72],[.4,.72],[.57,.87],[.43,.87]],
+  bend:[[.73,.45],[.725,.435],[.72,.44],[.7,.42],[.695,.425],[.65,.405],[.658,.427],[.65,.55],[.665,.56],[.655,.67],[.67,.68],[.495,.51],[.505,.53],[.505,.725],[.515,.725],[.5,.935],[.51,.935]],
+  fall:[[.77,.85],[.765,.865],[.765,.835],[.745,.88],[.745,.82],[.67,.895],[.67,.805],[.57,.91],[.57,.79],[.47,.92],[.47,.78],[.5,.875],[.5,.825],[.34,.88],[.34,.83],[.18,.885],[.18,.835]]
+};
+const CORE = [0,5,6,11,12,13,14,15,16];
+const withConf = (pose, c) => pose.map(([x,y],i) => [x, y, Math.round((CORE.includes(i) ? c : c-.05)*100)/100]);
+const SAFE_ENV = {hazards:[],overall_level:'SAFE',overall_color:[0,1,0]};
+
 const KB = {
-  an_toan:{ten:'An toàn',kps:[[.5,.15,.95],[.48,.13,.9],[.52,.13,.9],[.45,.15,.9],[.55,.15,.9],[.38,.25,.95],[.62,.25,.95],[.32,.38,.9],[.68,.38,.9],[.3,.52,.9],[.7,.52,.9],[.42,.55,.95],[.58,.55,.95],[.42,.75,.95],[.58,.75,.95],[.42,.95,.95],[.58,.95,.95]],safety:{level:'SAFE',color:[0,1,0],label:'AN TOÀN',detail:'Bình thường',technique:'NONE'},env:{hazards:[],overall_level:'SAFE',overall_color:[0,1,0]},iqa:{piqe:85,piqe_full:85,blur:82,contrast:80,noise:88,exposure:90,overall:85}},
-  nang_dung:{ten:'Nâng đúng',kps:[[.5,.22,.95],[.48,.2,.9],[.52,.2,.9],[.45,.22,.9],[.55,.22,.9],[.42,.35,.95],[.58,.35,.95],[.4,.48,.9],[.6,.48,.9],[.4,.62,.9],[.6,.62,.9],[.42,.58,.95],[.58,.58,.95],[.35,.75,.95],[.65,.75,.95],[.42,.92,.95],[.58,.92,.95]],safety:{level:'SAFE',color:[0,1,0],label:'NÂNG ĐÚNG',detail:'Gối 105°',technique:'PROPER_LIFT'},env:{hazards:[],overall_level:'SAFE',overall_color:[0,1,0]},iqa:{piqe:82,piqe_full:82,blur:80,contrast:78,noise:86,exposure:88,overall:82}},
-  cui_sai:{ten:'Cúi sai',kps:[[.7,.4,.95],[.68,.38,.9],[.72,.38,.9],[.65,.4,.9],[.75,.4,.9],[.6,.45,.95],[.8,.45,.95],[.62,.6,.9],[.85,.6,.9],[.62,.75,.9],[.85,.75,.9],[.42,.55,.95],[.58,.55,.95],[.42,.75,.95],[.58,.75,.95],[.42,.95,.95],[.58,.95,.95]],safety:{level:'RISK',color:[1,0,0],label:'SAI TƯ THẾ',detail:'Cúi 63°',technique:'IMPROPER'},env:{hazards:[],overall_level:'SAFE',overall_color:[0,1,0]},iqa:{piqe:80,piqe_full:80,blur:78,contrast:76,noise:84,exposure:86,overall:80}},
-  nga:{ten:'Ngã',kps:[[.85,.65,.95],[.83,.63,.9],[.83,.67,.9],[.81,.63,.9],[.81,.67,.9],[.72,.6,.95],[.72,.7,.95],[.62,.58,.9],[.62,.72,.9],[.52,.56,.9],[.52,.74,.9],[.45,.6,.95],[.45,.7,.95],[.28,.62,.95],[.28,.68,.95],[.12,.63,.95],[.12,.67,.95]],safety:{level:'RISK',color:[1,0,0],label:'PHÁT HIỆN NGÃ',detail:'Nguy hiểm',technique:'FALL'},env:{hazards:[],overall_level:'SAFE',overall_color:[0,1,0]},iqa:{piqe:75,piqe_full:75,blur:72,contrast:70,noise:80,exposure:82,overall:75}},
-  chay:{ten:'Cháy',kps:[[.5,.15,.95],[.48,.13,.9],[.52,.13,.9],[.45,.15,.9],[.55,.15,.9],[.38,.25,.95],[.62,.25,.95],[.32,.38,.9],[.68,.38,.9],[.3,.52,.9],[.7,.52,.9],[.42,.55,.95],[.58,.55,.95],[.42,.75,.95],[.58,.75,.95],[.42,.95,.95],[.58,.95,.95]],safety:{level:'SAFE',color:[0,1,0],label:'AN TOÀN',detail:'Bình thường',technique:'NONE'},env:{hazards:[{name:'FIRE',label:'LỬA (12.5%)',advice:'GỌI 114'}],overall_level:'CRITICAL',overall_color:[1,0,0]},iqa:{piqe:55,piqe_full:55,blur:60,contrast:65,noise:55,exposure:60,overall:59}},
-  bui:{ten:'Bụi',kps:[[.5,.15,.6],[.48,.13,.55],[.52,.13,.55],[.45,.15,.55],[.55,.15,.55],[.38,.25,.6],[.62,.25,.6],[.32,.38,.55],[.68,.38,.55],[.3,.52,.55],[.7,.52,.55],[.42,.55,.6],[.58,.55,.6],[.42,.75,.6],[.58,.75,.6],[.42,.95,.6],[.58,.95,.6]],safety:{level:'SAFE',color:[0,1,0],label:'AN TOÀN',detail:'Bình thường',technique:'NONE'},env:{hazards:[{name:'DUST',label:'BỤI',advice:'Khẩu trang'},{name:'SMOKE',label:'KHÓI',advice:'Sơ tán'}],overall_level:'CRITICAL',overall_color:[1,0,0]},iqa:{piqe:35,piqe_full:35,blur:30,contrast:25,noise:20,exposure:60,overall:36}},
-  toi:{ten:'Tối',kps:[[.5,.15,.5],[.48,.13,.45],[.52,.13,.45],[.45,.15,.45],[.55,.15,.45],[.38,.25,.5],[.62,.25,.5],[.32,.38,.45],[.68,.38,.45],[.3,.52,.45],[.7,.52,.45],[.42,.55,.5],[.58,.55,.5],[.42,.75,.5],[.58,.75,.5],[.42,.95,.5],[.58,.95,.5]],safety:{level:'SAFE',color:[0,1,0],label:'KHÓ THẤY',detail:'Ảnh tối',technique:'NONE'},env:{hazards:[{name:'DARK',label:'THIẾU SÁNG',advice:'Bật đèn'}],overall_level:'CRITICAL',overall_color:[1,0,0]},iqa:{piqe:30,piqe_full:30,blur:25,contrast:20,noise:60,exposure:15,overall:28}},
+  an_toan:{ten:'An toàn',kps:withConf(POSE.stand,.95),safety:{level:'SAFE',color:[0,1,0],label:'AN TOÀN',detail:'Bình thường',technique:'NONE'},env:SAFE_ENV,iqa:{piqe:85,piqe_full:85,blur:82,contrast:80,noise:88,exposure:90,overall:85}},
+  nang_dung:{ten:'Nâng đúng',kps:withConf(POSE.lift,.95),safety:{level:'SAFE',color:[0,1,0],label:'NÂNG ĐÚNG',detail:'Gối 119°',technique:'PROPER_LIFT'},env:SAFE_ENV,iqa:{piqe:82,piqe_full:82,blur:80,contrast:78,noise:86,exposure:88,overall:82}},
+  cui_sai:{ten:'Cúi sai',kps:withConf(POSE.bend,.95),safety:{level:'RISK',color:[1,0,0],label:'SAI TƯ THẾ',detail:'Cúi 63°',technique:'IMPROPER'},env:SAFE_ENV,iqa:{piqe:80,piqe_full:80,blur:78,contrast:76,noise:84,exposure:86,overall:80}},
+  nga:{ten:'Ngã',kps:withConf(POSE.fall,.95),safety:{level:'RISK',color:[1,0,0],label:'PHÁT HIỆN NGÃ',detail:'Nguy hiểm',technique:'FALL'},env:SAFE_ENV,iqa:{piqe:75,piqe_full:75,blur:72,contrast:70,noise:80,exposure:82,overall:75}},
+  chay:{ten:'Cháy',kps:withConf(POSE.stand,.95),safety:{level:'SAFE',color:[0,1,0],label:'AN TOÀN',detail:'Bình thường',technique:'NONE'},env:{hazards:[{name:'FIRE',label:'LỬA (12.5%)',advice:'GỌI 114'}],overall_level:'CRITICAL',overall_color:[1,0,0]},iqa:{piqe:55,piqe_full:55,blur:60,contrast:65,noise:55,exposure:60,overall:59}},
+  bui:{ten:'Bụi',kps:withConf(POSE.stand,.6),safety:{level:'SAFE',color:[0,1,0],label:'AN TOÀN',detail:'Bình thường',technique:'NONE'},env:{hazards:[{name:'DUST',label:'BỤI',advice:'Khẩu trang'},{name:'SMOKE',label:'KHÓI',advice:'Sơ tán'}],overall_level:'CRITICAL',overall_color:[1,0,0]},iqa:{piqe:35,piqe_full:35,blur:30,contrast:25,noise:20,exposure:60,overall:36}},
+  toi:{ten:'Tối',kps:withConf(POSE.stand,.5),safety:{level:'SAFE',color:[0,1,0],label:'KHÓ THẤY',detail:'Ảnh tối',technique:'NONE'},env:{hazards:[{name:'DARK',label:'THIẾU SÁNG',advice:'Bật đèn'}],overall_level:'CRITICAL',overall_color:[1,0,0]},iqa:{piqe:30,piqe_full:30,blur:25,contrast:20,noise:60,exposure:15,overall:28}},
   che_cam:{ten:'Che cam',kps:Array(17).fill([.5,.5,0]),safety:{level:'SAFE',color:[0,1,0],label:'KHÔNG PHÁT HIỆN',detail:'Camera lỗi',technique:'NONE'},env:{hazards:[{name:'DARK',label:'THIẾU SÁNG',advice:'Kiểm tra'},{name:'SMOKE',label:'KHÓI/CHE',advice:'Vệ sinh'}],overall_level:'CRITICAL',overall_color:[1,0,0]},iqa:{piqe:15,piqe_full:15,blur:10,contrast:8,noise:40,exposure:5,overall:14}}
 };
 
@@ -63,7 +73,7 @@ const STEPS = [
   ['Canvas', () => { $('ov').width = 640; $('ov').height = 480; return true; }],
   ['Three.js', () => { S.lib = typeof THREE !== 'undefined'; return S.lib; }],
   ['Scene 3D', () => init3D()],
-  ['Robot', () => !!S.robot],
+  ['Người 3D', () => !S.three || Human3D.info().ok],
   ['Events', () => { bind(); return true; }],
   ['Scenario', () => { pickKB('an_toan'); return true; }],
   ['Loop', () => { requestAnimationFrame(loop); return true; }]
@@ -155,8 +165,10 @@ function goc(p1, p2, p3) {
   return Math.acos(c) * 180 / Math.PI;
 }
 
-function classify(kps, h) {
-  if (!kps || kps.length < 17) return {level:'SAFE',color:[0,1,0],label:'CHƯA ĐỦ',detail:'-',technique:'NONE'};
+// Keypoints are normalised (x/width, y/height); `aspect` = width/height restores true angles.
+function classify(kps0, aspect) {
+  if (!kps0 || kps0.length < 17) return {level:'SAFE',color:[0,1,0],label:'CHƯA ĐỦ',detail:'-',technique:'NONE'};
+  const kps = kps0.map(k => [k[0]*(aspect||1), k[1], k[2]]);
   if (![5,6,11,12].every(i => kps[i][2] > VIS))
     return {level:'SAFE',color:[0,1,0],label:'CHƯA RÕ',detail:'Cần vai+hông',technique:'NONE'};
   const vy = (kps[5][1]+kps[6][1])/2, hy = (kps[11][1]+kps[12][1])/2;
@@ -165,7 +177,11 @@ function classify(kps, h) {
   let goi = 180;
   if ([11,12,13,14,15,16].every(i => kps[i][2] > VIS))
     goi = (goc(kps[11],kps[13],kps[15]) + goc(kps[12],kps[14],kps[16])) / 2;
-  if (Math.abs(vy-hy) < h*0.08) return {level:'RISK',color:[1,0,0],label:'PHÁT HIỆN NGÃ',detail:'Nguy hiểm',technique:'FALL'};
+  const vis = kps.filter(k => k[2] > VIS);
+  const bw = Math.max(...vis.map(k => k[0])) - Math.min(...vis.map(k => k[0]));
+  const bh = Math.max(...vis.map(k => k[1])) - Math.min(...vis.map(k => k[1]));
+  if (sp > 65 && bw / (bh + 1e-6) > 1.0)
+    return {level:'RISK',color:[1,0,0],label:'PHÁT HIỆN NGÃ',detail:`Thân ${sp.toFixed(0)}° · nằm ngang`,technique:'FALL'};
   if (goi < 140 && sp < 45) return {level:'SAFE',color:[0,1,0],label:'NÂNG ĐÚNG',detail:`Gối ${goi.toFixed(0)}° · Lưng ${sp.toFixed(0)}°`,technique:'PROPER_LIFT'};
   if (sp > 60) return {level:'RISK',color:[1,0,0],label:'SAI TƯ THẾ',detail:`Cúi ${sp.toFixed(0)}°`,technique:'IMPROPER'};
   if (sp > 30) return {level:'WARNING',color:[1,.65,0],label:'CHÚ Ý',detail:`Cúi ${sp.toFixed(0)}°`,technique:'PARTIAL'};
@@ -187,7 +203,9 @@ function detect() {
     if (r.landmarks && r.landmarks.length > 0) {
       const persons = r.landmarks.map((lms, i) => {
         const kps = mp2coco(lms);
-        return {id:i, keypoints:kps, safety:classify(kps, v.videoHeight||480)};
+        const wl = r.worldLandmarks && r.worldLandmarks[i];
+        const world = wl ? MP2COCO.map(j => [wl[j].x, wl[j].y, wl[j].z]) : null;
+        return {id:i, keypoints:kps, world, safety:classify(kps, (v.videoWidth||4)/(v.videoHeight||3))};
       });
       persons.sort((a,b) => b.keypoints.reduce((s,k)=>s+k[2],0) - a.keypoints.reduce((s,k)=>s+k[2],0));
       const q = calcIQA();
@@ -203,26 +221,8 @@ function detect() {
 
 // ========== 3D ==========
 function init3D() {
-  if (!S.lib || typeof THREE.OrbitControls === 'undefined') return false;
-  S.scene = new THREE.Scene();
-  S.scene.fog = new THREE.FogExp2(0x050a15, 0.0015);
-  const c = $('c3d'), W = c.clientWidth||500, H = c.clientHeight||500;
-  S.cam = new THREE.PerspectiveCamera(50, W/H, 0.1, 3000);
-  S.cam.position.set(0, 50, 550);
-  S.rnd = new THREE.WebGLRenderer({antialias:true, alpha:true});
-  S.rnd.setSize(W, H);
-  S.rnd.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
-  c.appendChild(S.rnd.domElement);
-  new THREE.OrbitControls(S.cam, S.rnd.domElement);
-  S.scene.add(new THREE.AmbientLight(0x334155, 0.6));
-  const d1 = new THREE.DirectionalLight(0xffffff, 0.8); d1.position.set(200,300,200); S.scene.add(d1);
-  const d2 = new THREE.DirectionalLight(0x00ffcc, 0.4); d2.position.set(-200,100,-200); S.scene.add(d2);
-  S.scene.add(new THREE.GridHelper(800, 32, 0x1e293b, 0x0f172a));
-  S.radar = mkRadar(); S.scene.add(S.radar);
-  S.robot = mkRobot(); S.scene.add(S.robot.group);
-  S.lasers = mkLaser();
-  S.beacon = mkBeacon(); S.scene.add(S.beacon);
-  S.particles = mkDust(); S.scene.add(S.particles);
+  if (!S.lib || !window.Human3D) return false;
+  if (!Human3D.init($('c3d'))) return false;
   S.three = true;
   return true;
 }
@@ -236,188 +236,10 @@ function fallback2D() {
   S.three = false;
 }
 
-function mkRobot() {
-  const g = new THREE.Group();
-  const mB = new THREE.MeshStandardMaterial({color:0x00ffcc,metalness:.85,roughness:.25,emissive:0x00ffcc,emissiveIntensity:.15});
-  const mJ = new THREE.MeshStandardMaterial({color:0x1a1a2e,metalness:.95,roughness:.1,emissive:0x00ffcc,emissiveIntensity:.4});
-  const mH = new THREE.MeshStandardMaterial({color:0x2a2a3e,metalness:.9,roughness:.15,emissive:0x003366,emissiveIntensity:.3});
-  const mG = new THREE.MeshBasicMaterial({color:0x00ffcc,transparent:true,opacity:.9});
-  const T = ['nose','left_eye','right_eye','left_ear','right_ear','left_shoulder','right_shoulder','left_elbow','right_elbow','left_wrist','right_wrist','left_hip','right_hip','left_knee','right_knee','left_ankle','right_ankle'];
-  const R = [5,3,3,3,3,7,7,5,5,4,4,8,8,6,6,5,5];
-  const joints = {};
-  T.forEach((n,i) => { const s = new THREE.Mesh(new THREE.SphereGeometry(R[i],16,16), mJ); s.visible = false; g.add(s); joints[n] = s; });
-  const head = new THREE.Mesh(new THREE.SphereGeometry(14,24,24), mH); head.visible = false; g.add(head);
-  const visor = new THREE.Mesh(new THREE.BoxGeometry(20,5,2), mG); visor.position.set(0,1,12); head.add(visor);
-  const e1 = new THREE.Mesh(new THREE.SphereGeometry(2.5,12,12), mG); e1.position.set(-5,1,12.5); head.add(e1);
-  const e2 = e1.clone(); e2.position.x = 5; head.add(e2);
-  const torso = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mB); torso.visible = false; g.add(torso);
-  const ch = new THREE.Mesh(new THREE.CircleGeometry(.12,20), mG); ch.position.set(0,.1,.5); torso.add(ch);
-  const bones = {};
-  [['left_shoulder','left_elbow',4],['left_elbow','left_wrist',3.5],['right_shoulder','right_elbow',4],['right_elbow','right_wrist',3.5],['left_hip','left_knee',5],['left_knee','left_ankle',4.5],['right_hip','right_knee',5],['right_knee','right_ankle',4.5]].forEach(([a,b,r]) => {
-    const cyl = new THREE.Mesh(new THREE.CylinderGeometry(r,r,1,14), mB); cyl.visible = false; g.add(cyl); bones[a+'|'+b] = cyl;
-  });
-  const neck = new THREE.Mesh(new THREE.CylinderGeometry(4,4,1,10), mJ); neck.visible = false; g.add(neck);
-  const lh = new THREE.Mesh(new THREE.SphereGeometry(5,14,14), mB); const rh = lh.clone(); lh.visible = rh.visible = false; g.add(lh); g.add(rh);
-  const lf = new THREE.Mesh(new THREE.BoxGeometry(10,5,18), mB); const rf = lf.clone(); lf.visible = rf.visible = false; g.add(lf); g.add(rf);
-  return {group:g,joints,bones,head,torso,neck,lh,rh,lf,rf};
-}
-
-function updRobot(kps) {
-  if (!S.robot) return;
-  if (!kps || kps.length < 17) { S.robot.group.visible = false; return; }
-  S.robot.group.visible = true;
-  const T = ['nose','left_eye','right_eye','left_ear','right_ear','left_shoulder','right_shoulder','left_elbow','right_elbow','left_wrist','right_wrist','left_hip','right_hip','left_knee','right_knee','left_ankle','right_ankle'];
-  T.forEach((n,i) => {
-    const kp = kps[i], j = S.robot.joints[n];
-    if (kp[2] > VIS) {
-      const z = n.indexOf('left_')===0 ? 12 : (n.indexOf('right_')===0 ? -12 : 0);
-      j.position.set(kp[0]*400-200, -kp[1]*400+200, z); j.visible = true;
-    } else j.visible = false;
-  });
-  if (S.robot.joints.nose.visible) {
-    S.robot.head.position.copy(S.robot.joints.nose.position);
-    S.robot.head.position.y += 10; S.robot.head.visible = true;
-  } else S.robot.head.visible = false;
-  const ls = S.robot.joints.left_shoulder, rs = S.robot.joints.right_shoulder;
-  const lh = S.robot.joints.left_hip, rh = S.robot.joints.right_hip;
-  if (ls.visible && rs.visible && lh.visible && rh.visible) {
-    S.robot.torso.position.set((ls.position.x+rs.position.x+lh.position.x+rh.position.x)/4, (ls.position.y+rs.position.y+lh.position.y+rh.position.y)/2, 0);
-    const sv = new THREE.Vector3((ls.position.x+rs.position.x)/2-(lh.position.x+rh.position.x)/2, (ls.position.y+rs.position.y)/2-(lh.position.y+rh.position.y)/2, 0);
-    const sl = Math.max(sv.length(), 20);
-    S.robot.torso.scale.set(sl*.45, sl, sl*.22);
-    S.robot.torso.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), sv.normalize());
-    S.robot.torso.visible = true;
-  } else S.robot.torso.visible = false;
-  Object.keys(S.robot.bones).forEach(k => {
-    const [a,b] = k.split('|');
-    const ja = S.robot.joints[a], jb = S.robot.joints[b], bn = S.robot.bones[k];
-    if (ja.visible && jb.visible) { updBone(bn, ja.position, jb.position); bn.visible = true; }
-    else bn.visible = false;
-  });
-  if (S.robot.head.visible && ls.visible && rs.visible) {
-    const nb = new THREE.Vector3((ls.position.x+rs.position.x)/2, (ls.position.y+rs.position.y)/2, 0);
-    updBone(S.robot.neck, nb, S.robot.head.position); S.robot.neck.visible = true;
-  } else S.robot.neck.visible = false;
-  const lw = S.robot.joints.left_wrist, rw = S.robot.joints.right_wrist;
-  if (lw.visible) { S.robot.lh.position.copy(lw.position); S.robot.lh.visible = true; } else S.robot.lh.visible = false;
-  if (rw.visible) { S.robot.rh.position.copy(rw.position); S.robot.rh.visible = true; } else S.robot.rh.visible = false;
-  const la = S.robot.joints.left_ankle, ra = S.robot.joints.right_ankle;
-  if (la.visible) { S.robot.lf.position.copy(la.position); S.robot.lf.position.y -= 3; S.robot.lf.visible = true; } else S.robot.lf.visible = false;
-  if (ra.visible) { S.robot.rf.position.copy(ra.position); S.robot.rf.position.y -= 3; S.robot.rf.visible = true; } else S.robot.rf.visible = false;
-}
-
-function updBone(b, p1, p2) {
-  const d = new THREE.Vector3().subVectors(p2, p1);
-  const l = d.length();
-  if (l < .5) { b.visible = false; return; }
-  b.scale.set(1, l, 1);
-  b.position.copy(p1).add(p2).multiplyScalar(.5);
-  b.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), d.normalize());
-}
-
-function mkLaser() {
-  const ds = [];
-  [{pos:new THREE.Vector3(-320,220,100),target:'left_shoulder'},
-   {pos:new THREE.Vector3(320,220,100),target:'right_shoulder'},
-   {pos:new THREE.Vector3(-320,-180,100),target:'left_hip'},
-   {pos:new THREE.Vector3(320,-180,100),target:'right_hip'}].forEach((e, i) => {
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(15,18,10,20), new THREE.MeshStandardMaterial({color:0x222222,metalness:.9,roughness:.2}));
-    base.position.copy(e.pos); base.position.y -= 8; S.scene.add(base);
-    const lens = new THREE.Mesh(new THREE.SphereGeometry(7,20,20), new THREE.MeshBasicMaterial({color:0x00ffcc}));
-    lens.position.copy(e.pos); S.scene.add(lens);
-    const beam = new THREE.Mesh(new THREE.CylinderGeometry(2,2,1,10), new THREE.MeshBasicMaterial({color:0x00ffcc,transparent:true,opacity:.85,blending:THREE.AdditiveBlending,depthWrite:false}));
-    beam.visible = false; S.scene.add(beam);
-    const impact = new THREE.Mesh(new THREE.SphereGeometry(8,20,20), new THREE.MeshBasicMaterial({color:0x00ffcc,transparent:true,opacity:.9,blending:THREE.AdditiveBlending}));
-    impact.visible = false; S.scene.add(impact);
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(20,1.2,8,32), new THREE.MeshBasicMaterial({color:0x00ffcc,transparent:true,opacity:.5,blending:THREE.AdditiveBlending}));
-    ring.position.copy(e.pos); S.scene.add(ring);
-    ds.push({cfg:e, lens, beam, impact, ring, phase:i*Math.PI/2});
-  });
-  return ds;
-}
-
-function updLaser(mau, t) {
-  const hex = (Math.round(mau[0])<<16)|(Math.round(mau[1])<<8)|Math.round(mau[2]);
-  S.lasers.forEach(l => {
-    const tgt = S.robot.joints[l.cfg.target];
-    if (!tgt || !tgt.visible) { l.beam.visible = false; l.impact.visible = false; return; }
-    const p = .6 + .4*Math.sin(t*6 + l.phase);
-    const d = new THREE.Vector3().subVectors(tgt.position, l.cfg.pos);
-    const len = d.length();
-    l.beam.scale.set(p, len, p);
-    l.beam.position.copy(l.cfg.pos).add(tgt.position).multiplyScalar(.5);
-    l.beam.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), d.normalize());
-    l.beam.visible = true; l.beam.material.color.setHex(hex);
-    l.impact.position.copy(tgt.position);
-    l.impact.scale.setScalar(.8 + .5*Math.sin(t*10 + l.phase));
-    l.impact.visible = true; l.impact.material.color.setHex(hex);
-    l.lens.material.color.setHex(hex);
-    l.ring.rotation.x = t*2 + l.phase;
-    l.ring.rotation.z = t*1.5 + l.phase;
-    l.ring.material.color.setHex(hex);
-    l.ring.material.opacity = .3 + .3*Math.sin(t*3 + l.phase);
-  });
-}
-
-function mkRadar() {
-  const g = new THREE.Group();
-  const r1 = new THREE.Mesh(new THREE.RingGeometry(80,82,64), new THREE.MeshBasicMaterial({color:0x00ffcc,transparent:true,opacity:.6,side:THREE.DoubleSide,blending:THREE.AdditiveBlending}));
-  r1.rotation.x = -Math.PI/2; r1.position.y = -160; g.add(r1);
-  const r2 = new THREE.Mesh(new THREE.RingGeometry(140,141,64), new THREE.MeshBasicMaterial({color:0x00ffcc,transparent:true,opacity:.3,side:THREE.DoubleSide,blending:THREE.AdditiveBlending}));
-  r2.rotation.x = -Math.PI/2; r2.position.y = -160; g.add(r2);
-  const sw = new THREE.Mesh(new THREE.ConeGeometry(80,5,32,1,true), new THREE.MeshBasicMaterial({color:0x00ffcc,transparent:true,opacity:.2,side:THREE.DoubleSide,blending:THREE.AdditiveBlending}));
-  sw.rotation.x = -Math.PI/2; sw.position.y = -160; g.add(sw);
-  g.userData = {r1,r2,sw};
-  return g;
-}
-
-function mkBeacon() {
-  const g = new THREE.Group();
-  const cot = new THREE.Mesh(new THREE.CylinderGeometry(3,3,40,8), new THREE.MeshStandardMaterial({color:0x333333,metalness:.9,roughness:.2}));
-  cot.position.y = 240; g.add(cot);
-  const den = new THREE.Mesh(new THREE.SphereGeometry(10,20,20), new THREE.MeshBasicMaterial({color:0x00ff00,transparent:true,opacity:.9}));
-  den.position.y = 265; g.add(den);
-  const halo = new THREE.Mesh(new THREE.SphereGeometry(18,20,20), new THREE.MeshBasicMaterial({color:0x00ff00,transparent:true,opacity:.3,blending:THREE.AdditiveBlending}));
-  halo.position.y = 265; g.add(halo);
-  g.userData = {den,halo};
-  return g;
-}
-
-function mkDust() {
-  const geo = new THREE.BufferGeometry();
-  const N = 300, pos = new Float32Array(N*3);
-  for (let i = 0; i < N; i++) {
-    pos[i*3] = (Math.random()-.5)*800;
-    pos[i*3+1] = (Math.random()-.5)*600;
-    pos[i*3+2] = (Math.random()-.5)*500;
-  }
-  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  return new THREE.Points(geo, new THREE.PointsMaterial({color:0x00ffcc,size:1.5,transparent:true,opacity:.6,blending:THREE.AdditiveBlending}));
-}
-
 function render3D() {
-  if (!S.three || !S.rnd) return;
-  S.t3 += .016;
-  if (S.radar) {
-    S.radar.userData.sw.rotation.z = S.t3*2;
-    S.radar.userData.r1.rotation.z = S.t3*.5;
-    S.radar.userData.r2.rotation.z = -S.t3*.3;
-  }
-  const ml = S.safety==='SAFE' ? [0,1,0] : S.safety==='WARNING' ? [1,.65,0] : [1,0,0];
-  if (S.robot) updLaser(ml, S.t3);
-  if (S.beacon) {
-    const nh = S.safety !== 'SAFE';
-    const np = .5 + .5*Math.sin(S.t3*(nh?10:2));
-    const md = S.safety==='SAFE' ? 0x00ff00 : S.safety==='WARNING' ? 0xffaa00 : 0xff0000;
-    S.beacon.userData.den.material.color.setHex(md);
-    S.beacon.userData.halo.material.color.setHex(md);
-    S.beacon.userData.den.material.opacity = .5 + .5*np;
-    S.beacon.userData.halo.material.opacity = .15 + .35*np;
-    S.beacon.userData.halo.scale.setScalar(1 + .5*np);
-  }
-  if (S.particles) S.particles.rotation.y = S.t3*.05;
-  if (S.robot && S.robot.group.visible) S.robot.group.position.y = Math.sin(S.t3*1.5)*3;
-  S.rnd.render(S.scene, S.cam);
+  if (!S.three) return;
+  Human3D.setLevel(S.safety);
+  Human3D.render();
 }
 
 function render2D(kps) {
@@ -661,15 +483,78 @@ function process(data) {
   } else if (ds.length === 0) $('kt').style.display = 'none';
 
   if (S.three) {
-    if (ds.length > 0) updRobot(ds[0].keypoints);
-    else S.robot.group.visible = false;
+    Human3D.update(ds[0] || null, srcAspect());
+    Human3D.setEnv(data.env_hazards ? data.env_hazards.hazards.map(h => h.name) : []);
   } else if (S.ctx2d) render2D(ds.length > 0 ? ds[0].keypoints : null);
 
   draw2D(ds);
   updateBench(data.benchmark, data.quality);
+  alertsFor(data);
 
   S.nhat_ky.push({t:Date.now(), mode:S.che_do, ...data});
   if (S.nhat_ky.length > 3000) S.nhat_ky.shift();
+}
+
+// Server payloads carry alerts already confirmed by the backend; everything computed in the
+// browser (scenarios, presets, MediaPipe) goes through the same temporal rules locally.
+function alertsFor(data) {
+  if (!window.EchoAlerts) return;
+  if (S.che_do === 'server') { (data.alerts || []).forEach(a => EchoAlerts.raise(a, true)); return; }
+  const real = !!data._real;
+  EchoAlerts.observe(real ? 'browser' : 'scenario', data.persons || [], data.quality, {
+    source: real ? 'browser' : 'kịch bản',
+    report: real,
+    snapshot: real ? snapshot : null,
+  });
+}
+
+function snapshot() {
+  const v = $('v'), ov = $('ov');
+  if (!v.videoWidth) return null;
+  const w = Math.min(640, v.videoWidth), h = Math.round(w * v.videoHeight / v.videoWidth);
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const ctx = c.getContext('2d');
+  ctx.drawImage(v, 0, 0, w, h);
+  ctx.drawImage(ov, 0, 0, w, h);
+  return c.toDataURL('image/jpeg', .7);
+}
+
+// Camera tab: a server camera drives the 3D worker instead of the local source.
+window.EchoApp = {
+  drive(d, camId) {
+    S.ext = camId;
+    const p = (d.persons || [])[0] || null;
+    S.safety = p && p.safety ? p.safety.level : 'SAFE';
+    if (S.three) {
+      Human3D.update(p, d.frame && d.frame.h ? d.frame.w / d.frame.h : 4/3);
+      Human3D.setEnv(d.env_hazards ? d.env_hazards.hazards.map(h => h.name) : []);
+    } else if (S.ctx2d) render2D(p ? p.keypoints : null);
+    $('c3dLabel').textContent = `Mô phỏng 3D — camera "${camId}"` + (p ? ` · ${p.safety.label}` : ' · không có người');
+  },
+  release() {
+    if (!S.ext) return;
+    S.ext = null;
+    $('c3dLabel').textContent = 'Mô phỏng công nhân 3D';
+  }
+};
+
+window.EchoTabs = {
+  current: 'mon',
+  show(name) {
+    document.querySelectorAll('.tabs .tab').forEach(b => b.classList.toggle('on', b.dataset.tab === name));
+    document.querySelectorAll('#L .pane').forEach(p => { p.hidden = p.id !== 'tab-' + name; });
+    document.body.classList.toggle('sub-tab', name !== 'mon');
+    if (this.current === name) return;
+    this.current = name;
+    document.dispatchEvent(new CustomEvent('echo:tab', {detail: name}));
+  }
+};
+
+function srcAspect() {
+  if (S.che_do === 'offline') return 4/3;
+  const v = $('v');
+  return v.videoWidth && v.videoHeight ? v.videoWidth / v.videoHeight : 4/3;
 }
 
 function updateBench(b, q) {
@@ -710,6 +595,7 @@ function loop(now) {
   requestAnimationFrame(loop);
   try {
     if (S.three) render3D();
+    if (S.ext) { updDebug(); return; }
     if (S.che_do === 'video' && S.ai_on && S.pose_ready) detect();
     const fps = S.che_do === 'offline' ? FPS_OFF : S.che_do === 'video' ? FPS_VID : FPS_SRV;
     if (now - S.lan_ve < 1000/fps) return;
@@ -812,7 +698,7 @@ function updDebug() {
   const t = S.three ? '3D' : '2D';
   const ai = S.ai_on && S.pose_ready ? `AI:${S.det_fps}fps` : 'AI:OFF';
   const src = S.mIQA ? 'MATLAB' : (S.ai_on ? 'Live' : 'Preset');
-  d.textContent = `[${S.che_do.toUpperCase()}] ${t} | FPS:${S.fps} | ${ai} | IQA:${src} | Video:${S.dbg.video} | ${S.kich_ban} | Laser:${S.safety} | Log:${S.nhat_ky.length}` + (S.dbg.err ? ` | LỖI:${S.dbg.err}` : '');
+  d.textContent = `[${S.che_do.toUpperCase()}] ${t} | FPS:${S.fps} | ${ai} | IQA:${src} | Video:${S.dbg.video} | ${S.kich_ban} | ${S.ext ? 'Cam:' + S.ext + ' | ' : ''}An toàn:${S.safety} | Log:${S.nhat_ky.length}` + (S.dbg.err ? ` | LỖI:${S.dbg.err}` : '');
   const b = $('badge');
   if (S.pose_loading) { b.textContent = '⏳ AI...'; b.style.background = '#0ea5e9'; b.style.display = 'block'; }
   else if (S.pose_ready && S.ai_on) { b.textContent = `🔬 AI:${S.det_fps}FPS`; b.style.background = '#059669'; b.style.display = 'block'; }
@@ -937,7 +823,7 @@ th{background:#f8fafc;color:#1e40af;}
 .badge.WARNING{background:#f59e0b;color:#fff;}
 .badge.DANGER{background:#dc2626;color:#fff;}
 </style></head><body>
-<h1>📊 ECHO MOVE v20.0 — IQA Report</h1>
+<h1>📊 ECHO MOVE v21.0 — IQA Report</h1>
 <p><b>Video:</b> ${S.dbg.video}<br>
 <b>Thời gian:</b> ${now.toLocaleString('vi-VN')}<br>
 <b>Mode:</b> ${S.che_do.toUpperCase()} | <b>AI:</b> ${S.ai_on ? 'ON' : 'OFF'}<br>
@@ -987,7 +873,7 @@ ${s.alertCount > 0 ?
   <li><b>3-tier fallback:</b> never-fail demo</li>
 </ul></div>
 <p style="margin-top:40px;text-align:center;color:#94a3b8;font-size:12px;">
-Generated by ECHO MOVE v20.0 — ${now.toISOString()}</p>
+Generated by ECHO MOVE v21.0 — ${now.toISOString()}</p>
 </body></html>`;
     const blob = new Blob([html], {type:'text/html;charset=utf-8'});
     const url = URL.createObjectURL(blob);
@@ -1180,13 +1066,9 @@ function bind() {
     else if (e.key === 't' || e.key === 'T') $('bTst').click();
   });
 
-  window.addEventListener('resize', () => {
-    if (!S.three) return;
-    const c = $('c3d');
-    S.cam.aspect = c.clientWidth / c.clientHeight;
-    S.cam.updateProjectionMatrix();
-    S.rnd.setSize(c.clientWidth, c.clientHeight);
-  });
+  document.querySelectorAll('.tabs .tab').forEach(b => { b.onclick = () => EchoTabs.show(b.dataset.tab); });
+
+  window.addEventListener('resize', () => { if (S.three) Human3D.resize(); });
 }
 
 // ========== SELF-TEST ==========
@@ -1203,10 +1085,8 @@ async function selfTest() {
   const tests = [
     ['Three.js', () => S.lib],
     ['Scene 3D', () => S.three],
-    ['Robot', () => S.robot !== null],
-    ['Laser', () => S.lasers !== null && S.lasers.length === 4],
-    ['Beacon', () => S.beacon !== null],
-    ['Radar', () => S.radar !== null],
+    ['Người 3D', () => S.three && Human3D.info().ok],
+    ['Model GLTF', () => S.three && Human3D.info().mode === 'gltf'],
     ['8 KB', () => ds.length === 8],
     ['Canvas', () => $('ov').getContext('2d') !== null],
     ['AI button', () => typeof $('bAI').onclick === 'function'],
@@ -1216,6 +1096,9 @@ async function selfTest() {
     ['Report button', () => typeof $('bRep').onclick === 'function'],
     ['Compare button', () => typeof $('bCmp').onclick === 'function'],
     ['Bench button', () => typeof $('bBen').onclick === 'function'],
+    ['Cảnh báo (còi/toast)', () => !!window.EchoAlerts],
+    ['Tab Camera/Sự kiện', () => !!$('tab-cam') && !!$('tab-evt')],
+    ['Backend', () => window.EchoBackend && EchoBackend.online ? true : null],
     ['MediaPipe', () => S.pose_ready],
     ['Loop', () => S.fps >= 0],
     ['Debug', () => $('dbc') !== null]
@@ -1248,5 +1131,5 @@ async function selfTest() {
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', loadStep);
 else loadStep();
 
-console.log('%c ECHO MOVE v20.0 — FINAL', 'color:#00ffcc;font-weight:bold;font-size:14px');
+console.log('%c ECHO MOVE v21.0 — FINAL', 'color:#00ffcc;font-weight:bold;font-size:14px');
 console.log('  Shortcuts: 1-8 | Space | A(AI) | B(Bench) | C(Compare) | P(Report) | R(Reset) | T(Test)');

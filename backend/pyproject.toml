@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "echo-move"
-version = "20.0.0"
+version = "21.0.0"
 description = "Worker safety warning system: pose-based posture check + image quality assessment"
 requires-python = ">=3.10,<3.13"
 dependencies = [
