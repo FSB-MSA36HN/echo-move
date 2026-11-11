@@ -40,6 +40,7 @@
     ok: false, mode: 'none', loading: false, error: null,
     scene: null, cam: null, rnd: null, ctl: null, el: null, clock: null,
     holder: null, rig: null, bones: null, rest: null, dims: null,
+    P: null, u: 0, filt: {},
     level: 'SAFE', env: [], visible: false, lastPose: 0,
     uniforms: {uGlow: {value: null}},
     fx: {}
@@ -273,18 +274,6 @@
   }
 
   function face(head, scale, eyeY, eyeZ) {
-    const white = new THREE.MeshStandardMaterial({color: 0xf8fafc, roughness: 0.3});
-    const iris = new THREE.MeshStandardMaterial({color: 0x1e293b, roughness: 0.2});
-    const brow = new THREE.MeshStandardMaterial({color: 0x3b2a20, roughness: 0.9});
-    [-1, 1].forEach(k => {
-      const e = new THREE.Mesh(new THREE.SphereGeometry(1.25, 14, 10), white);
-      e.position.set(3.0 * k, eyeY, eyeZ); e.scale.set(1, 0.8, 0.6);
-      const p = new THREE.Mesh(new THREE.SphereGeometry(0.62, 10, 8), iris);
-      p.position.set(3.0 * k, eyeY, eyeZ + 0.65);
-      const b = new THREE.Mesh(new THREE.BoxGeometry(3, 0.55, 0.8), brow);
-      b.position.set(3.0 * k, eyeY + 2.1, eyeZ - 0.2); b.rotation.z = -0.12 * k;
-      [e, p, b].forEach(m => { m.position.multiplyScalar(scale); m.scale.multiplyScalar(scale); head.add(m); });
-    });
     const mouth = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.35, 0.6), new THREE.MeshStandardMaterial({color: 0x7f3f35, roughness: 0.8}));
     mouth.position.set(0, eyeY - 4.6, eyeZ - 0.4).multiplyScalar(scale);
     mouth.scale.setScalar(scale);
@@ -548,9 +537,12 @@ vec3 echoRegion(vec3 p, out float stripe) {
         seg(11, 13, 'thigh'), seg(12, 14, 'thigh'), seg(13, 15, 'shin'), seg(14, 16, 'shin'),
         seg(5, 7, 'upperArm'), seg(6, 8, 'upperArm'), seg(7, 9, 'foreArm'), seg(8, 10, 'foreArm'),
         0.6 * shW / D.shW, 0.6 * hipW / D.hipW, 1e-4);
-      side = shW / u < 0.4 * D.shW && hipW / u < 0.45 * D.hipW;
-      for (let i = 0; i < 17; i++) P[i] = img[i].clone().sub(hm).divideScalar(u);
-      P.hipX = hm.x / u;
+      // The scale estimate jumps between segments frame to frame; a slow average keeps the body steady.
+      st.u = st.u ? st.u + (u - st.u) * 0.12 : u;
+      const us = st.u;
+      side = shW / us < 0.4 * D.shW && hipW / us < 0.45 * D.hipW;
+      for (let i = 0; i < 17; i++) P[i] = img[i].clone().sub(hm).divideScalar(us);
+      P.hipX = hm.x / us;
       // Recover depth lost in projection: a limb shorter than its true length points at the camera.
       // Small shortening is treated as noise (keypoint jitter, body proportions).
       const depth = (l, L) => L * Math.sqrt(Math.max(0, 1 - Math.pow(l / (0.88 * L), 2)));
@@ -598,8 +590,9 @@ vec3 echoRegion(vec3 p, out float stripe) {
     bone.updateMatrixWorld(true);
   }
 
-  function pose(P) {
-    const b = st.bones, R = st.rest, a = 0.45;
+  // `a` is the fraction of the remaining rotation applied this call (1 = snap).
+  function pose(P, a) {
+    const b = st.bones, R = st.rest;
     st.holder.updateMatrixWorld(true);
     const Qb = basis(P.up, P.lat);
     const hipsQ = Qb.clone().multiply(R.basisInv).multiply(R.Hips.body);
@@ -608,7 +601,7 @@ vec3 echoRegion(vec3 p, out float stripe) {
     Object.keys(TARGET).forEach(n => {
       const [f, t] = TARGET[n];
       const okF = typeof f === 'string' || P.ok(f), okT = typeof t === 'string' || P.ok(t);
-      if (!okF || !okT) { relax(b[n], 0.15); return; }
+      if (!okF || !okT) { relax(b[n], a * 0.35); return; }
       const dir = P[t].clone().sub(P[f]);
       if (dir.lengthSq() < 1e-8) return;
       tmpQ.setFromUnitVectors(R[n].dir, dir.normalize());
@@ -630,26 +623,59 @@ vec3 echoRegion(vec3 p, out float stripe) {
       ['LeftLeg', 0.06], ['RightLeg', 0.06], ['LeftForeArm', 0.05], ['RightForeArm', 0.05], ['Spine2', 0.13]];
     let minY = Infinity;
     probes.forEach(([n, r]) => { if (b[n]) minY = Math.min(minY, b[n].getWorldPosition(V()).y - r); });
-    if (isFinite(minY)) st.holder.position.y += (0 - minY) * (st.visible ? 0.5 : 1);
+    if (isFinite(minY)) st.holder.position.y += (0 - minY) * Math.min(1, a * 1.5);
     const tx = Math.max(-1, Math.min(1, P.hipX || 0));
-    st.holder.position.x += (tx - st.holder.position.x) * 0.3;
+    st.holder.position.x += (tx - st.holder.position.x) * a;
+  }
+
+  // One-Euro filter (Casiez 2012) per keypoint coordinate: strong smoothing when still,
+  // little lag when moving fast. Coordinates are normalised image units.
+  const EURO = {minCutoff: 0.8, beta: 4, dCutoff: 1};
+  const euroAlpha = (cutoff, dt) => 1 / (1 + 1 / (2 * Math.PI * cutoff * dt));
+  function smooth(key, pts, t, dims) {
+    const f = st.filt[key] || (st.filt[key] = {t: 0, s: []});
+    if (!f.t || t - f.t > 1) f.s = [];
+    const dt = f.t ? Math.max(t - f.t, 1e-3) : 1 / 30;
+    f.t = t;
+    return pts.map((p, i) => {
+      if (p.length > dims && p[dims] <= VIS) return p;
+      const s = f.s[i];
+      if (!s) { f.s[i] = {x: p.slice(0, dims), dx: new Array(dims).fill(0)}; return p; }
+      const out = p.slice();
+      for (let d = 0; d < dims; d++) {
+        const dx = (p[d] - s.x[d]) / dt;
+        s.dx[d] += (dx - s.dx[d]) * euroAlpha(EURO.dCutoff, dt);
+        const cutoff = EURO.minCutoff + EURO.beta * Math.abs(s.dx[d]);
+        s.x[d] += (p[d] - s.x[d]) * euroAlpha(cutoff, dt);
+        out[d] = s.x[d];
+      }
+      return out;
+    });
   }
 
   function update(person, aspect) {
     if (!st.ok || !st.bones) return;
-    const kps = person && person.keypoints;
-    const P = kps && kps.length >= 17 ? lift(kps, aspect || 4 / 3, person.world) : null;
+    let kps = person && person.keypoints;
+    let P = null;
+    if (kps && kps.length >= 17) {
+      const t = performance.now() / 1000;
+      kps = smooth('kps', kps, t, 2);
+      const world = person.world ? smooth('world', person.world, t, 3) : null;
+      P = lift(kps, aspect || 4 / 3, world);
+    }
     if (!P) {
       st.visible = false;
       st.holder.visible = false;
+      st.P = null;
+      st.filt = {};
+      st.u = 0;
       return;
     }
     const wasHidden = !st.visible;
     st.visible = true;
     st.holder.visible = true;
-    if (wasHidden) for (let i = 0; i < 6; i++) pose(P);
-    else pose(P);
-    st.lastPose = performance.now();
+    st.P = P;
+    if (wasHidden) for (let i = 0; i < 4; i++) pose(P, 1);
   }
 
   // ---------------------------------------------------------------- status visuals
@@ -673,6 +699,9 @@ vec3 echoRegion(vec3 p, out float stripe) {
   function render() {
     if (!st.ok) return;
     const dt = Math.min(st.clock.getDelta(), 0.1), t = st.clock.elapsedTime, fx = st.fx;
+    // Ease toward the latest pose every rendered frame (time constant ~0.12 s) instead of
+    // jumping whenever a detection arrives.
+    if (st.visible && st.P && st.bones) pose(st.P, 1 - Math.exp(-dt * 8));
     const alarm = st.level !== 'SAFE';
     const pulse = 0.5 + 0.5 * Math.sin(t * (alarm ? 9 : 2));
     fx.lamp.material.emissiveIntensity = alarm ? 0.6 + 2 * pulse : 1.2;

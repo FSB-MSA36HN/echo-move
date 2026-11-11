@@ -11,6 +11,8 @@
 - **Web**: 3 tab Giám sát / Camera (lưới MJPEG, chọn camera để điều khiển người 3D) / Sự kiện; còi WebAudio, thông báo desktop, toast; tự dò backend cùng origin hoặc `localhost:8000`.
 - **Backend phục vụ giao diện** tại `/` (`ECHO_WEB_DIR`, tự tìm thư mục `web/`); Docker image kèm `web/`.
 - Test mới: tracker, alert engine, SQLite, notifier (giả lập mạng), camera worker (capture giả + file video thật), API sự kiện/camera/WS.
+- Người 3D bỏ mắt; giảm rung: lọc One-Euro trên keypoint, làm mượt tỉ lệ ảnh/mét, nội suy tư thế theo từng frame vẽ (hằng số thời gian ~0.12 s).
+- MATLAB JSON tự nạp qua backend (không cần chọn file); biểu đồ Session thành một mục cố định phía trên Citations.
 - Cách deploy không đổi: `make run/demo`, `docker compose up`, notebook Colab, GitHub Pages.
 
 ## 20.0.0 — tái cấu trúc

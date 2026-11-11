@@ -75,11 +75,12 @@
 
   <div class="hop" style="border-color:#f59e0b;">
     <div style="font-size:10px;color:#f59e0b;margin-bottom:4px;">🔗 MATLAB JSON</div>
+    <button class="b on" id="bMAuto">🔄 Tự động: BẬT</button>
     <button class="b" id="bJson" style="background:#f59e0b;">📂 Nạp</button>
     <button class="b" id="bDemo" style="background:#8b5cf6;">🎭 Demo</button>
     <button class="b" id="bClr" style="background:#64748b;">✕</button>
     <input id="jfile" type="file" accept=".json" style="display:none">
-    <div id="jst" style="font-size:9px;color:#94a3b8;margin-top:4px;">Chưa nạp</div>
+    <div id="jst" style="font-size:9px;color:#94a3b8;margin-top:4px;">Tự động: đang tìm backend…</div>
   </div>
 
   <div class="hop">
@@ -107,6 +108,10 @@
     </div>
     <div class="card"><h4>Môi trường</h4><div id="mt">--</div></div>
     <div class="card"><h4>Phát hiện</h4><div id="tt">--</div></div>
+    <div class="card" id="sc" style="grid-column:span 2;">
+      <h4>📈 Session — IQA tổng theo thời gian</h4>
+      <canvas id="scc" width="600" height="80"></canvas>
+    </div>
     <div class="card" style="grid-column:span 2;border-color:var(--ai);font-size:9px;">
       <h4 style="color:var(--ai);">📚 Citations</h4>
       <div style="line-height:1.4;color:#94a3b8;">
@@ -159,12 +164,6 @@
   <div id="c3dLabel" style="position:absolute;top:8px;left:8px;font-weight:bold;
               color:var(--c);font-size:11px;">Mô phỏng công nhân 3D</div>
 </div>
-
-<div id="sc">
-  <div style="color:#00ffcc;font-size:10px;margin-bottom:4px;">📈 Session</div>
-  <canvas id="scc" width="300" height="80"></canvas>
-</div>
-
 <div id="dbc">Đang khởi động...</div>
 
 <script src="js/config.js"></script>

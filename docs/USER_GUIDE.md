@@ -75,8 +75,8 @@ Khi một cảnh báo được xác nhận (ngã ≥ 1.5 s, cúi sai ≥ 3 s, ca
 Các nút khác: **Log** (xuất nhật ký JSON), **📂 Nạp** (nạp JSON từ MATLAB), **🎭 Demo** (JSON demo), **✕** (xoá JSON).
 
 ### 3.3 Kết nối MATLAB → web
-1. Qua Python (khuyến nghị): backend tự đọc `output/*_iqa.json` mới nhất và đẩy qua WebSocket.
-2. Thủ công: **📂 Nạp** → chọn JSON; trên Chrome/Edge trang theo dõi file và cập nhật mỗi giây.
+1. **Tự động (mặc định, nút 🔄 Tự động: BẬT)**: khi backend đang chạy, web hỏi `/matlab_iqa` mỗi 2 giây; backend đọc file `output/*_iqa.json` mới nhất nên MATLAB chạy xong là web tự hiện, không cần chọn file. Chưa có backend thì dòng trạng thái báo "chờ backend".
+2. Thủ công (khi không chạy backend): **📂 Nạp** → chọn JSON; trên Chrome/Edge trang theo dõi file và cập nhật mỗi giây. Nạp tay, **🎭 Demo** hoặc **✕** sẽ tắt chế độ tự động; bấm 🔄 để bật lại.
 
 ## 4. Backend Python
 ```bash

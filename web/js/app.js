@@ -21,7 +21,7 @@ const S = {
   pose:null, pose_ready:false, pose_loading:false,
   ai_on:false, last_det:0, last_vt:-1,
   det_fps:0, det_dem:0, det_moc:0,
-  mIQA:null, mFile:null, mMtime:0, mTimer:null, mFetch:0,
+  mIQA:null, mFile:null, mMtime:0, mTimer:null, mAuto:true,
   bench:{on:false}, cmp:{on:false, pct:50},
   sess:{on:false, hist:[]},
   ext:null  // server camera id currently driving the 3D view (Camera tab)
@@ -85,7 +85,7 @@ function loadStep() {
     setTimeout(() => {
       $('ld').classList.add('hide');
       setTimeout(() => $('ld').style.display = 'none', 400);
-      S.sess.on = true; $('sc').classList.add('show');
+      S.sess.on = true;
       setInterval(drawSess, 500);
     }, 300);
     return;
@@ -384,7 +384,47 @@ function procMatlabIQA(m) {
   S.mIQA = m;
 }
 
+// Auto mode: the backend reads the newest output/*_iqa.json written by MATLAB, so the web
+// picks up new results without choosing a file. Manual load / demo switch auto off.
+function setMatlabStatus(text, color) {
+  $('jst').textContent = text;
+  $('jst').style.color = color;
+}
+
+function setMatlabAuto(on) {
+  S.mAuto = on;
+  $('bMAuto').classList.toggle('on', on);
+  $('bMAuto').textContent = on ? '🔄 Tự động: BẬT' : '🔄 Tự động: TẮT';
+  if (on) {
+    S.mFile = null;
+    if (S.mTimer) { clearInterval(S.mTimer); S.mTimer = null; }
+    autoMatlab();
+  }
+}
+
+async function autoMatlab() {
+  if (!S.mAuto) return;
+  if (!window.EchoBackend || !EchoBackend.online) {
+    setMatlabStatus('Tự động: chờ backend (make run) — hoặc bấm 📂 Nạp', '#94a3b8');
+    return;
+  }
+  try {
+    const d = await EchoBackend.json('/matlab_iqa');
+    if (!S.mAuto) return;
+    if (d && d.available) {
+      procMatlabIQA(d);
+      const age = d._age_seconds != null ? ` · ${d._age_seconds}s trước` : '';
+      setMatlabStatus(`🔄 Tự động: ${d._source_file || d.video || 'MATLAB'}${age}`, '#00ff88');
+    } else {
+      setMatlabStatus('Tự động: chưa có output/*_iqa.json — chạy MATLAB', '#f59e0b');
+    }
+  } catch (e) {
+    setMatlabStatus('Tự động: lỗi đọc /matlab_iqa', '#ef4444');
+  }
+}
+
 async function loadJSON(file) {
+  setMatlabAuto(false);
   try {
     const t = await file.text();
     const raw = JSON.parse(t);
@@ -405,6 +445,7 @@ async function pickJSON() {
     const [h] = await window.showOpenFilePicker({
       types:[{description:'JSON', accept:{'application/json':['.json']}}], multiple:false
     });
+    setMatlabAuto(false);
     S.mFile = h;
     await watchJSON();
     if (S.mTimer) clearInterval(S.mTimer);
@@ -437,7 +478,7 @@ async function watchJSON() {
 // ========== PROCESS DATA ==========
 function process(data) {
   if (!data) return;
-  if (data.matlab_iqa && data.matlab_iqa.available !== false) procMatlabIQA(data.matlab_iqa);
+  if (S.mAuto && data.matlab_iqa && data.matlab_iqa.available !== false) procMatlabIQA(data.matlab_iqa);
 
   if (data.quality) {
     const q = data.quality;
@@ -662,15 +703,6 @@ function procVideo() {
     detected: true, persons: [{id:0, keypoints:kb.kps, safety:kb.safety}],
     hands: [], quality:q, env_hazards:envAnalysis(q)
   });
-  if (!S.ws && !S.mFile) {
-    if (Date.now() - S.mFetch > 2000) {
-      S.mFetch = Date.now();
-      fetch(window.ECHO_CONFIG.apiBase + '/matlab_iqa')
-        .then(r => r.ok ? r.json() : null)
-        .then(d => { if (d && d.available) procMatlabIQA(d); })
-        .catch(() => {});
-    }
-  }
 }
 
 function procServer(now) {
@@ -735,7 +767,8 @@ function updAI() {
 // ========== SESSION CHART ==========
 function drawSess() {
   const c = $('scc');
-  if (!c) return;
+  if (!c || !c.clientWidth) return;
+  if (c.width !== c.clientWidth) c.width = c.clientWidth;
   const x = c.getContext('2d'), W = c.width, H = c.height;
   x.clearRect(0, 0, W, H);
   x.strokeStyle = '#1e293b'; x.lineWidth = .5;
@@ -1032,8 +1065,13 @@ function bind() {
     };
   });
 
+  $('bMAuto').onclick = () => setMatlabAuto(!S.mAuto);
+  setMatlabAuto(true);
+  setInterval(autoMatlab, 2000);
+  if (window.EchoBackend) EchoBackend.on('status', () => autoMatlab());
   $('bJson').onclick = pickJSON;
   $('bDemo').onclick = () => {
+    setMatlabAuto(false);
     procMatlabIQA({
       video:'demo_video.mp4', frames:450, fps:30,
       piqe:78.3, piqe_full:79.1, blur:81.5, contrast:74.2,
@@ -1044,6 +1082,7 @@ function bind() {
     $('jst').textContent = '🎭 Demo'; $('jst').style.color = '#8b5cf6';
   };
   $('bClr').onclick = () => {
+    setMatlabAuto(false);
     S.mIQA = null; S.mFile = null;
     if (S.mTimer) { clearInterval(S.mTimer); S.mTimer = null; }
     procMatlabIQA(null);

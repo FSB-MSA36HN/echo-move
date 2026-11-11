@@ -53,9 +53,7 @@
           font-size:10px;font-weight:bold;}
   #cl{left:10px;background:rgba(239,68,68,.85);color:#fff;}
   #cr{right:10px;background:rgba(5,150,105,.85);color:#fff;}
-  #sc{position:fixed;bottom:110px;left:10px;background:rgba(0,0,0,.9);
-      padding:8px;border-radius:6px;border:1px solid #334155;z-index:500;display:none;}
-  #sc.show{display:block;}
+  #scc{width:100%;height:80px;display:block;}
   #dbc{position:fixed;bottom:0;left:0;right:0;padding:5px 10px;
        background:rgba(0,0,0,.92);color:#00ff88;font-size:10px;
        border-top:1px solid #334155;z-index:9999;white-space:pre;
@@ -100,7 +98,6 @@
     #R{height:min(70vw,420px);min-height:260px;border-left:none;border-top:1px solid #1e293b;}
     .kv{max-width:100%;}
     #wsurl{width:100% !important;font-size:12px !important;padding:6px !important;}
-    #sc{display:none !important;}               /* session mini-chart hides under debug bar */
     #dbc{max-height:70px;font-size:9px;}
   }
 
@@ -141,9 +138,7 @@
   .tab.on{color:var(--c);border-bottom-color:var(--c);}
   .cnt{display:none;background:var(--d);color:#fff;border-radius:9px;padding:0 6px;
        font-size:10px;margin-left:4px;}
-  .pane[hidden]{display:none !important;}
-  body.sub-tab #sc{display:none !important;}
-  .hint{background:var(--p);border:1px dashed #334155;border-radius:8px;padding:12px;
+  .pane[hidden]{display:none !important;}  .hint{background:var(--p);border:1px dashed #334155;border-radius:8px;padding:12px;
         font-size:11px;line-height:1.7;color:#cbd5e1;margin-top:6px;}
   .hint code{background:#0f172a;color:var(--c);padding:1px 5px;border-radius:3px;word-break:break-all;}
 
