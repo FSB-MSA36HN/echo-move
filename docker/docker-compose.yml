@@ -1,0 +1,12 @@
+services:
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        ECHO_WITH_AI: "0"
+    ports: ["8000:8000"]
+    environment:
+      ECHO_DEMO_MODE: "1"
+    volumes:
+      - ../output:/data/output

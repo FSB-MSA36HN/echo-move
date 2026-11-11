@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+# Models & data
+*.pt
+data/*.mp4
+data/*.avi
+data/*.mov
+# MATLAB output
+output/*
+!output/.gitkeep
+*.asv
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+.env

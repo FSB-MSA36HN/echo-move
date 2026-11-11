@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>ECHO MOVE v20.0 — Real Safety Monitor</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="css/styles.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+<div id="ld">
+  <h1>ECHO MOVE v20.0</h1>
+  <div id="lds"></div>
+  <div class="bar"><div id="ldb"></div></div>
+  <div id="ap"><div id="apb"></div></div>
+</div>
+
+<div id="L">
+  <h2 style="color:var(--c);margin-bottom:6px;font-size:15px;">
+    ECHO MOVE v20.0 — Real Safety
+  </h2>
+
+  <div class="kv">
+    <video id="v" playsinline muted loop></video>
+    <canvas id="ov"></canvas>
+    <div id="kt"></div>
+    <div id="cb">CANH BAO!</div>
+    <div id="mode">OFFLINE</div>
+    <div id="badge">AI: OFF</div>
+    <div id="bp">
+      <div style="color:var(--ai);font-weight:bold;margin-bottom:2px;">⚡ BENCHMARK</div>
+      <div class="br"><span>FPS:</span><span class="bv" id="bf">--</span></div>
+      <div class="br"><span>Frame:</span><span class="bv" id="bm">--</span></div>
+      <div class="br"><span>PIQE fast:</span><span class="bv" id="bpf">--</span></div>
+      <div class="br"><span>PIQE full:</span><span class="bv" id="bpu">--</span></div>
+      <div class="br"><span>Speedup:</span><span class="bv" id="bsp">--</span></div>
+      <div class="br"><span>Corr:</span><span class="bv" id="bcor">--</span></div>
+    </div>
+    <div id="cc">
+      <div id="cl">GỐC</div>
+      <div id="cr">SAU IQA</div>
+      <div id="cs"></div>
+    </div>
+  </div>
+
+  <div class="hop">
+    <button class="b" id="bAI" style="background:#0ea5e9;">🔬 AI Detect</button>
+    <button class="b" id="bCam" style="background:#8b5cf6;">Camera</button>
+    <button class="b" id="bVid" style="background:#059669;">Video</button>
+    <button class="b" id="bSrv">Server</button>
+    <button class="b" id="bLog" style="background:#f59e0b;">Log</button>
+    <button class="b" id="bTst" style="background:#6366f1;">Test</button>
+    <button class="b gold" id="bRep">📊 Report</button>
+    <button class="b" id="bCmp" style="background:#8b5cf6;">🔀 Compare</button>
+    <button class="b" id="bBen" style="background:#0ea5e9;">⚡ Bench</button>
+    <input id="wsurl" type="text" value="ws://localhost:8000/ws/pose" data-config="wsUrl"
+           style="width:150px;padding:3px;background:#0f172a;color:#fff;
+                  border:1px solid #334155;font-size:9px;margin-top:4px;">
+    <input id="file" type="file" accept="video/*" style="display:none">
+    <div id="stt" style="font-size:10px;color:#cbd5e1;margin-top:4px;">
+      Sẵn sàng — bấm AI Detect để phát hiện
+    </div>
+  </div>
+
+  <div class="hop" style="border-color:#f59e0b;">
+    <div style="font-size:10px;color:#f59e0b;margin-bottom:4px;">🔗 MATLAB JSON</div>
+    <button class="b" id="bJson" style="background:#f59e0b;">📂 Nạp</button>
+    <button class="b" id="bDemo" style="background:#8b5cf6;">🎭 Demo</button>
+    <button class="b" id="bClr" style="background:#64748b;">✕</button>
+    <input id="jfile" type="file" accept=".json" style="display:none">
+    <div id="jst" style="font-size:9px;color:#94a3b8;margin-top:4px;">Chưa nạp</div>
+  </div>
+
+  <div class="hop">
+    <div style="font-size:10px;color:var(--c);margin-bottom:3px;">KỊCH BẢN:</div>
+    <div class="kb">
+      <button class="b kbb" data-kb="an_toan">1.An toàn</button>
+      <button class="b kbb" data-kb="nang_dung">2.Nâng</button>
+      <button class="b kbb" data-kb="cui_sai">3.Cúi sai</button>
+      <button class="b kbb" data-kb="nga">4.Ngã</button>
+      <button class="b kbb" data-kb="chay">5.Cháy</button>
+      <button class="b kbb" data-kb="bui">6.Bụi</button>
+      <button class="b kbb" data-kb="toi">7.Tối</button>
+      <button class="b kbb" data-kb="che_cam">8.Che</button>
+    </div>
+    <button class="b" id="bAuto" style="background:#6366f1;margin-top:4px;">
+      Tự động chạy
+    </button>
+  </div>
+
+  <div class="grid">
+    <div class="card"><h4>IQA Live</h4><div id="iqa">--</div></div>
+    <div class="card" style="border-color:#f59e0b;">
+      <h4 style="color:#f59e0b;">MATLAB 🎬</h4>
+      <div id="iqaM">Chưa có</div>
+    </div>
+    <div class="card"><h4>Môi trường</h4><div id="mt">--</div></div>
+    <div class="card"><h4>Phát hiện</h4><div id="tt">--</div></div>
+    <div class="card" style="grid-column:span 2;border-color:var(--ai);font-size:9px;">
+      <h4 style="color:var(--ai);">📚 Citations</h4>
+      <div style="line-height:1.4;color:#94a3b8;">
+        • <b>Blur:</b> Laplacian <i>(Pech-Pacheco 2000)</i><br>
+        • <b>Noise:</b> Gaussian <i>(Immerkær 1996)</i><br>
+        • <b>Contrast:</b> RMS <i>(Peli 1990)</i><br>
+        • <b>PIQE:</b> MSCN <i>(Venkatanath 2015)</i><br>
+        • <b>Exposure:</b> ISO 18434-1
+      </div>
+    </div>
+  </div>
+  <div id="st"></div>
+</div>
+
+<div id="R">
+  <div id="c3d" style="width:100%;height:100%;"></div>
+  <div style="position:absolute;top:8px;left:8px;font-weight:bold;
+              color:var(--c);font-size:11px;">Robot 3D + Laser</div>
+</div>
+
+<div id="sc">
+  <div style="color:#00ffcc;font-size:10px;margin-bottom:4px;">📈 Session</div>
+  <canvas id="scc" width="300" height="80"></canvas>
+</div>
+
+<div id="dbc">Đang khởi động...</div>
+
+<script src="js/config.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
