@@ -180,12 +180,82 @@ function classify(kps0, aspect) {
   const vis = kps.filter(k => k[2] > VIS);
   const bw = Math.max(...vis.map(k => k[0])) - Math.min(...vis.map(k => k[0]));
   const bh = Math.max(...vis.map(k => k[1])) - Math.min(...vis.map(k => k[1]));
-  if (sp > 65 && bw / (bh + 1e-6) > 1.0)
-    return {level:'RISK',color:[1,0,0],label:'PHÁT HIỆN NGÃ',detail:`Thân ${sp.toFixed(0)}° · nằm ngang`,technique:'FALL'};
-  if (goi < 140 && sp < 45) return {level:'SAFE',color:[0,1,0],label:'NÂNG ĐÚNG',detail:`Gối ${goi.toFixed(0)}° · Lưng ${sp.toFixed(0)}°`,technique:'PROPER_LIFT'};
-  if (sp > 60) return {level:'RISK',color:[1,0,0],label:'SAI TƯ THẾ',detail:`Cúi ${sp.toFixed(0)}°`,technique:'IMPROPER'};
-  if (sp > 30) return {level:'WARNING',color:[1,.65,0],label:'CHÚ Ý',detail:`Cúi ${sp.toFixed(0)}°`,technique:'PARTIAL'};
-  return {level:'SAFE',color:[0,1,0],label:'AN TOÀN',detail:'Bình thường',technique:'NONE'};
+  // Multi-signal fall rule (same as backend pose/classifier.py + pose/fall.py).
+  const lying = sp > 65 && bw / (bh + 1e-6) > 1.0;
+  const head = [0,1,2,3,4].filter(i => kps[i][2] > VIS);
+  const headY = head.length ? head.reduce((s, i) => s + kps[i][1], 0) / head.length : null;
+  const headLow = headY === null ? null : hy - headY < .15 * Math.max(bh, 1e-6);
+  const extra = {spine_deg: sp, knee_deg: goi, reba: reba(kps, sp, goi), height: bh, hip_y: hy,
+                 signals: {lying, head_low: headLow, collapsed: false}};
+  const r = (o) => Object.assign(o, extra);
+  if (isFall(lying, headLow, false))
+    return r({level:'RISK',color:[1,0,0],label:'PHÁT HIỆN NGÃ',detail: lying ? `Thân ${sp.toFixed(0)}° · nằm ngang` : 'Đầu thấp ngang hông',technique:'FALL'});
+  if (goi < 140 && sp < 45) return r({level:'SAFE',color:[0,1,0],label:'NÂNG ĐÚNG',detail:`Gối ${goi.toFixed(0)}° · Lưng ${sp.toFixed(0)}°`,technique:'PROPER_LIFT'});
+  if (sp > 60) return r({level:'RISK',color:[1,0,0],label:'SAI TƯ THẾ',detail:`Cúi ${sp.toFixed(0)}°`,technique:'IMPROPER'});
+  if (sp > 30) return r({level:'WARNING',color:[1,.65,0],label:'CHÚ Ý',detail:`Cúi ${sp.toFixed(0)}°`,technique:'PARTIAL'});
+  return r({level:'SAFE',color:[0,1,0],label:'AN TOÀN',detail:'Bình thường',technique:'NONE'});
+}
+
+function isFall(lying, headLow, collapsed) {
+  if (lying && headLow === null) return true;
+  return (+lying) + (+!!headLow) + (+collapsed) >= 2;
+}
+
+// REBA (Hignett & McAtamney 2000) from one 2D frame; load/coupling/twist/wrist scored neutral.
+const REBA_A = [[[1,2,3,4],[1,2,3,4],[3,3,5,6]],[[2,3,4,5],[3,4,5,6],[4,5,6,7]],[[2,4,5,6],[4,5,6,7],[5,6,7,8]],
+  [[3,5,6,7],[5,6,7,8],[6,7,8,9]],[[4,6,7,8],[6,7,8,9],[7,8,9,9]]];
+const REBA_B = [[[1,2,2],[1,2,3]],[[1,2,3],[2,3,4]],[[3,4,5],[4,5,5]],[[4,5,5],[5,6,7]],[[6,7,8],[7,8,8]],[[7,8,8],[8,9,9]]];
+const REBA_C = [[1,1,1,2,3,3,4,5,6,7,7,7],[1,2,2,3,4,4,5,6,6,7,7,8],[2,3,3,3,4,5,6,7,7,8,8,8],[3,4,4,4,5,6,7,8,8,9,9,9],
+  [4,4,4,5,6,7,8,8,9,9,9,9],[6,6,6,7,8,8,9,9,10,10,10,10],[7,7,7,8,9,9,9,10,10,11,11,11],[8,8,8,9,10,10,10,10,10,11,11,11],
+  [9,9,9,10,10,10,11,11,11,12,12,12],[10,10,10,11,11,11,11,12,12,12,12,12],[11,11,11,11,12,12,12,12,12,12,12,12],
+  [12,12,12,12,12,12,12,12,12,12,12,12]];
+function vecAngle(a, b) {
+  const c = (a[0]*b[0] + a[1]*b[1]) / ((Math.hypot(a[0], a[1]) + 1e-6) * (Math.hypot(b[0], b[1]) + 1e-6));
+  return Math.acos(Math.max(-1, Math.min(1, c))) * 180 / Math.PI;
+}
+function reba(k, sp, goi) {
+  const trunk = sp <= 5 ? 1 : sp <= 20 ? 2 : sp <= 60 ? 3 : 4;
+  const sh = [(k[5][0]+k[6][0])/2, (k[5][1]+k[6][1])/2], hp = [(k[11][0]+k[12][0])/2, (k[11][1]+k[12][1])/2];
+  const up = [sh[0]-hp[0], sh[1]-hp[1]], down = [-up[0], -up[1]];
+  const head = [0,1,2,3,4].filter(i => k[i][2] > VIS);
+  let neck = 1;
+  if (head.length) {
+    const hx = head.reduce((s, i) => s + k[i][0], 0) / head.length, hy2 = head.reduce((s, i) => s + k[i][1], 0) / head.length;
+    if (vecAngle(up, [hx - sh[0], hy2 - sh[1]]) > 20) neck = 2;
+  }
+  const flex = 180 - goi, legs = 1 + (flex > 60 ? 2 : flex >= 30 ? 1 : 0);
+  let upper = 1, lower = 1;
+  [[5,7,9],[6,8,10]].forEach(([s, e, w]) => {
+    if (k[s][2] <= VIS || k[e][2] <= VIS) return;
+    const a = vecAngle(down, [k[e][0]-k[s][0], k[e][1]-k[s][1]]);
+    upper = Math.max(upper, a <= 20 ? 1 : a <= 45 ? 2 : a <= 90 ? 3 : 4);
+    if (k[w][2] > VIS) { const f = 180 - goc(k[s], k[e], k[w]); lower = Math.max(lower, f >= 60 && f <= 100 ? 1 : 2); }
+  });
+  const A = REBA_A[trunk-1][neck-1][legs-1], B = REBA_B[upper-1][lower-1][0];
+  return REBA_C[Math.min(A,12)-1][Math.min(B,12)-1];
+}
+
+// Per-person standing baseline: a body collapsed to < 50 % of its standing height with the
+// hips dropped is the "collapsed" fall signal (catches falls towards/away from the camera).
+const FALL_BASE = {};
+function fallRefine(id, s, t) {
+  if (!s || !s.signals) return s;
+  Object.keys(FALL_BASE).forEach(k => { if (t - FALL_BASE[k].t > 10) delete FALL_BASE[k]; });
+  const b = FALL_BASE[id] || (FALL_BASE[id] = {h: 0, hip: 0, n: 0, t});
+  b.t = t;
+  const ready = b.n >= 5;
+  if (s.technique === 'NONE' && s.spine_deg < 20 && s.height > 0 && (!ready || s.height > .8 * b.h)) {
+    const a = ready ? .2 : 1 / (b.n + 1);
+    b.h += a * (s.height - b.h); b.hip += a * (s.hip_y - b.hip); b.n++;
+    return s;
+  }
+  if (!ready || s.technique === 'FALL') return s;
+  if (!(s.height < .5 * b.h && s.hip_y - b.hip > .2 * b.h)) return s;
+  const out = {...s, signals: {...s.signals, collapsed: true}};
+  if ((s.signals.lying || s.knee_deg >= 140) && isFall(s.signals.lying, s.signals.head_low, true))
+    Object.assign(out, {level:'RISK', color:[1,0,0], label:'PHÁT HIỆN NGÃ', technique:'FALL',
+                        detail:`Đổ người (cao ${Math.round(100 * s.height / b.h)}% lúc đứng)`});
+  return out;
 }
 
 function detect() {
@@ -205,7 +275,8 @@ function detect() {
         const kps = mp2coco(lms);
         const wl = r.worldLandmarks && r.worldLandmarks[i];
         const world = wl ? MP2COCO.map(j => [wl[j].x, wl[j].y, wl[j].z]) : null;
-        return {id:i, keypoints:kps, world, safety:classify(kps, (v.videoWidth||4)/(v.videoHeight||3))};
+        return {id:i, keypoints:kps, world,
+                safety:fallRefine(i, classify(kps, (v.videoWidth||4)/(v.videoHeight||3)), now / 1000)};
       });
       persons.sort((a,b) => b.keypoints.reduce((s,k)=>s+k[2],0) - a.keypoints.reduce((s,k)=>s+k[2],0));
       const q = calcIQA();
@@ -856,7 +927,7 @@ th{background:#f8fafc;color:#1e40af;}
 .badge.WARNING{background:#f59e0b;color:#fff;}
 .badge.DANGER{background:#dc2626;color:#fff;}
 </style></head><body>
-<h1>📊 ECHO MOVE v21.0 — IQA Report</h1>
+<h1>📊 ECHO MOVE v22.0 — IQA Report</h1>
 <p><b>Video:</b> ${S.dbg.video}<br>
 <b>Thời gian:</b> ${now.toLocaleString('vi-VN')}<br>
 <b>Mode:</b> ${S.che_do.toUpperCase()} | <b>AI:</b> ${S.ai_on ? 'ON' : 'OFF'}<br>
@@ -906,7 +977,7 @@ ${s.alertCount > 0 ?
   <li><b>3-tier fallback:</b> never-fail demo</li>
 </ul></div>
 <p style="margin-top:40px;text-align:center;color:#94a3b8;font-size:12px;">
-Generated by ECHO MOVE v21.0 — ${now.toISOString()}</p>
+Generated by ECHO MOVE v22.0 — ${now.toISOString()}</p>
 </body></html>`;
     const blob = new Blob([html], {type:'text/html;charset=utf-8'});
     const url = URL.createObjectURL(blob);
@@ -1170,5 +1241,5 @@ async function selfTest() {
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', loadStep);
 else loadStep();
 
-console.log('%c ECHO MOVE v21.0 — FINAL', 'color:#00ffcc;font-weight:bold;font-size:14px');
+console.log('%c ECHO MOVE v22.0 — FINAL', 'color:#00ffcc;font-weight:bold;font-size:14px');
 console.log('  Shortcuts: 1-8 | Space | A(AI) | B(Bench) | C(Compare) | P(Report) | R(Reset) | T(Test)');

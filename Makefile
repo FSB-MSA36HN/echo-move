@@ -1,5 +1,5 @@
 PY ?= python3
-.PHONY: install install-ai run demo test lint bench export-scenarios
+.PHONY: install install-ai run demo test lint bench eval export-scenarios
 
 install:        ## backend + dev tools (no AI models)
 	cd backend && $(PY) -m pip install -e ".[dev]"
@@ -15,5 +15,7 @@ lint:
 	cd backend && $(PY) -m ruff check src tests && $(PY) -m mypy src
 bench:
 	$(PY) scripts/benchmark.py
+eval:           ## fall-rule evaluation: make eval DATASET=urfd ROOT=data/urfd
+	$(PY) scripts/evaluate.py $(or $(DATASET),urfd) $(or $(ROOT),data/urfd)
 export-scenarios:
 	$(PY) scripts/export_scenarios.py

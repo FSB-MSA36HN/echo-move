@@ -149,12 +149,15 @@
          line-height:1.5;color:#fff;box-shadow:0 4px 18px rgba(0,0,0,.5);animation:tin .25s ease-out;}
   .toast.crit{background:rgba(127,29,29,.96);border:1px solid #ef4444;}
   .toast.warn{background:rgba(120,53,15,.96);border:1px solid #f59e0b;}
+  .toast.info{background:rgba(6,78,59,.96);border:1px solid #10b981;}
   .toast .d{color:#fde68a;}
   @keyframes tin{from{transform:translateX(30px);opacity:0}to{transform:none;opacity:1}}
-  #imgv{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:10001;display:flex;
+  #imgv{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:10001;display:flex;flex-direction:column;
         align-items:center;justify-content:center;cursor:zoom-out;}
   #imgv[hidden]{display:none;}
-  #imgv img{max-width:94vw;max-height:90vh;border:2px solid #334155;border-radius:6px;}
+  #imgv img{max-width:94vw;max-height:86vh;border:2px solid #334155;border-radius:6px;}
+  #imgv .cap{margin-top:6px;font-size:11px;color:#cbd5e1;}
+  #imgv .cap a{color:var(--c);}
 
   /* ===== Camera tab ===== */
   .camtip{font-size:10px;color:#94a3b8;margin:2px 0 6px;}
@@ -162,10 +165,20 @@
   .cam{background:var(--p);border:2px solid #1e293b;border-radius:8px;overflow:hidden;cursor:pointer;}
   .cam:hover{border-color:#334155;}
   .cam.sel{border-color:var(--c);box-shadow:0 0 12px rgba(0,255,204,.35);}
-  .camimg{aspect-ratio:4/3;background:#000;display:flex;align-items:center;justify-content:center;}
-  .camimg img{width:100%;height:100%;object-fit:contain;display:block;}
-  .camh{display:flex;justify-content:space-between;padding:5px 8px 0;font-size:12px;}
-  .camh span{font-size:10px;}
+  .camimg{position:relative;background:#000;min-height:120px;}
+  .camimg img{width:100%;height:auto;display:block;}
+  .zdraw{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
+  .zdraw .zp{fill:rgba(239,68,68,.25);stroke:#ef4444;stroke-width:.004;}
+  .zdraw .zn{fill:rgba(250,204,21,.2);stroke:#facc15;stroke-width:.005;stroke-dasharray:.01;}
+  .zdraw .zc{fill:#facc15;}
+  .cam.editing .camimg{cursor:crosshair;outline:2px dashed #facc15;}
+  .camcfg{margin-top:8px;font-size:11px;}
+  .camcfg .zrow{display:flex;gap:6px;align-items:center;margin:3px 0;}
+  .camcfg .zrow input{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:4px;padding:2px 4px;}
+  .camcfg .zrow input[type=number]{width:50px;}
+  .camcfg .rules{display:flex;flex-wrap:wrap;gap:4px 12px;margin:8px 0;}
+  .camh{display:flex;justify-content:space-between;align-items:center;gap:6px;padding:5px 8px 0;font-size:12px;}
+  .camh span{margin-left:auto;font-size:10px;}
   .camm{padding:2px 8px 6px;font-size:9px;color:#94a3b8;line-height:1.5;word-break:break-all;}
 
   /* ===== Events tab ===== */

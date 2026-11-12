@@ -19,8 +19,11 @@ from .config import Settings
 from .iqa import compute_iqa
 from .pose.classifier import classify_posture
 from .pose.detector import PoseDetector
+from .pose.fall import FallAnalyzer
+from .pose.ppe import assign_ppe
 from .pose.tracker import PoseTracker
-from .render import annotate, encode_jpeg
+from .render import annotate, blur_faces, encode_jpeg
+from .zones import CameraOptions, foot_point
 
 SAFE_ENV: dict[str, Any] = {"hazards": [], "overall_level": "SAFE", "overall_color": [0, 1, 0]}
 
@@ -59,12 +62,41 @@ class StreamPipeline:
         self.hub = hub
         self.tracker = PoseTracker()
         self.engine = AlertEngine(cfg, source)
+        self.fall = FallAnalyzer(cfg)
+        self.options = CameraOptions()
         self.frames = 0
         self._bench: deque[float] = deque(maxlen=100)
+
+    def configure(self, options: CameraOptions) -> None:
+        self.options = options
+        self.engine.disabled = set(options.disabled_rules)
+
+    def _zones(self, persons: list[dict[str, Any]]) -> None:
+        if not self.options.zones:
+            return
+        vis = self.cfg.visibility_threshold
+        for p in persons:
+            foot = foot_point(p["keypoints"], p.get("bbox"), vis)
+            p["zones"] = [] if foot is None else [
+                {"name": z.name, "dwell_s": z.dwell_s}
+                for z in self.options.zones if z.contains(foot)]
+
+    def _ppe(self, frame: np.ndarray, persons: list[dict[str, Any]]) -> None:
+        detect = getattr(self.detector, "detect_ppe", None)
+        if not persons or detect is None or "PPE" in self.engine.disabled:
+            return
+        dets = detect(frame)
+        if dets is None:
+            return
+        statuses = assign_ppe([p["keypoints"] for p in persons], dets,
+                              self.cfg.visibility_threshold)
+        for p, status in zip(persons, statuses, strict=True):
+            p["ppe"] = status
 
     def reset(self) -> None:
         self.tracker.reset()
         self.engine.reset()
+        self.fall.reset()
 
     def process(self, frame: np.ndarray, t: float | None = None) -> dict[str, Any]:
         started = time.perf_counter()
@@ -73,9 +105,12 @@ class StreamPipeline:
         raw, hands = self.detector.detect_raw(frame)
         persons = [
             {"id": tp.track_id, "keypoints": tp.keypoints, "bbox": list(tp.bbox),
-             "safety": classify_posture(tp.keypoints, self.cfg, w / h)}
+             "safety": self.fall.refine(tp.track_id,
+                                        classify_posture(tp.keypoints, self.cfg, w / h), t)}
             for tp in self.tracker.update(raw, t)
         ]
+        self._zones(persons)
+        self._ppe(frame, persons)
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         iqa = compute_iqa(
             gray, gray.astype(np.float64) / 255.0, mode=self.cfg.piqe_mode,
@@ -111,7 +146,10 @@ class StreamPipeline:
             return dict(alert.to_dict())
         jpeg = None
         if frame is not None:
+            if self.cfg.blur_faces:
+                frame = blur_faces(frame, persons, self.cfg.visibility_threshold)
             img = annotate(frame, persons, title=f"{self.source} - {alert.type}",
-                           highlight=alert.track_id, vis=self.cfg.visibility_threshold)
+                           highlight=alert.track_id, vis=self.cfg.visibility_threshold,
+                           zones=self.options.zones)
             jpeg = encode_jpeg(img)
         return self.hub.publish(alert, jpeg)

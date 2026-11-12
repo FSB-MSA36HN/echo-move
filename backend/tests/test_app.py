@@ -87,6 +87,26 @@ def test_events_crud_csv_stats(client):
     assert len(csv.text.strip().splitlines()) == 3
 
 
+def test_event_clip_and_false_alarm_endpoints(client):
+    import cv2
+    import numpy as np
+
+    ev = post_event(client, type="MANDOWN", detail="Nằm bất động 12 s")
+    assert ev["level"] == "CRITICAL" and ev["has_clip"] is False
+    assert client.get(f"/api/events/{ev['id']}/clip").status_code == 404
+    jpeg = cv2.imencode(".jpg", np.zeros((48, 64, 3), np.uint8))[1].tobytes()
+    client.app.state.store.save_clip(ev["id"], [jpeg] * 3, 30.0)
+    mp4 = client.get(f"/api/events/{ev['id']}/clip.mp4")
+    assert mp4.status_code == 200 and mp4.headers["content-type"] == "video/mp4"
+    stream = client.get(f"/api/events/{ev['id']}/clip")
+    assert stream.headers["content-type"].startswith("multipart/x-mixed-replace")
+    assert stream.content.count(b"--frame") == 3
+    assert client.post(f"/api/events/{ev['id']}/false-alarm").json()["false_alarm"] is True
+    got = client.get(f"/api/events/{ev['id']}").json()
+    assert got["false_alarm"] and got["acknowledged"] and got["has_clip"]
+    assert client.post("/api/events/999/false-alarm").status_code == 404
+
+
 def test_event_validation(client):
     assert client.post("/api/events", json={"type": "NOPE"}).status_code == 422
     assert client.post("/api/events", json={"type": "FALL", "detail": "x" * 500}).status_code == 422
@@ -104,6 +124,28 @@ def test_cameras_empty_and_404(client):
     assert client.get("/api/cameras/x/snapshot.jpg").status_code == 404
     with client.websocket_connect("/ws/camera/x") as ws:
         assert "error" in json.loads(ws.receive_text())
+
+
+def test_camera_config_roundtrip(tmp_path, monkeypatch):
+    monkeypatch.setenv("ECHO_DEMO_MODE", "1")
+    monkeypatch.setenv("ECHO_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("ECHO_CAMERAS", f"kho={tmp_path / 'missing.mp4'}")
+    zone = {"name": "Máy dập", "points": [[0, 0.5], [0.5, 0.5], [0.5, 1]], "dwell_s": 2}
+    with TestClient(create_app(Settings())) as c:
+        assert c.get("/api/cameras/kho/config").json()["zones"] == []
+        r = c.put("/api/cameras/kho/config", json={"zones": [zone], "disabled_rules": ["posture"]})
+        assert r.status_code == 200 and r.json()["disabled_rules"] == ["POSTURE"]
+        cam = c.get("/api/cameras").json()[0]
+        assert cam["zones"][0]["name"] == "Máy dập" and cam["disabled_rules"] == ["POSTURE"]
+        bad = {"zones": [{"points": [[0, 0], [2, 2], [0, 1]]}]}
+        assert c.put("/api/cameras/kho/config", json=bad).status_code == 422
+        assert c.put("/api/cameras/kho/config",
+                     json={"disabled_rules": ["NOPE"]}).status_code == 422
+        assert c.put("/api/cameras/x/config", json={}).status_code == 404
+    saved = json.loads((tmp_path / "camera_config.json").read_text())
+    assert saved["kho"]["zones"][0]["dwell_s"] == 2.0
+    with TestClient(create_app(Settings())) as c:  # survives a restart
+        assert c.get("/api/cameras/kho/config").json()["disabled_rules"] == ["POSTURE"]
 
 
 def test_web_ui_served_at_root(client):

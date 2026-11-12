@@ -9,15 +9,18 @@ import logging
 import re
 import threading
 import time
+from collections import deque
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Any
 
 import cv2
 import numpy as np
 
+from ..alerts.engine import MESSAGES, Alert
 from ..config import Settings
 from ..pipeline import StreamPipeline, resize_max_width
-from ..render import annotate, encode_jpeg
+from ..render import annotate, blur_faces, encode_jpeg
 
 log = logging.getLogger(__name__)
 
@@ -34,6 +37,13 @@ def is_file_source(source: Source) -> bool:
 def mask_source(source: Source) -> str:
     """Hide credentials (rtsp://user:pass@host → rtsp://***@host)."""
     return re.sub(r"//[^/@]+@", "//***@", str(source))
+
+
+@dataclass
+class _PendingClip:
+    event: dict[str, Any]
+    frames: list[tuple[float, bytes]]
+    until: float
 
 
 def _open_capture(source: Source) -> Any:
@@ -69,6 +79,13 @@ class CameraWorker:
         self.latest: dict[str, Any] | None = None
         self.latest_jpeg: bytes | None = None
         self.result_seq = 0
+        hub = pipeline.hub
+        self._clips_on = bool(cfg.event_clips and hub is not None and hub.store is not None)
+        self._clip_buf: deque[tuple[float, bytes]] = deque()
+        self._pending_clips: list[_PendingClip] = []
+        self._clip_threads: list[threading.Thread] = []
+        self._down_since: float | None = None
+        self._offline_alerted = False
 
     # ------------------------------------------------------------------ lifecycle
     def start(self) -> None:
@@ -86,6 +103,12 @@ class CameraWorker:
         for th in self._threads:
             th.join(timeout=5)
         self._threads.clear()
+        for th in self._clip_threads:
+            th.join(timeout=10)
+        for pc in self._pending_clips:  # keep whatever was recorded after the event
+            self._finish_clip(pc, sync=True)
+        self._pending_clips.clear()
+        self._clip_threads.clear()
         self.state = "stopped"
 
     # ------------------------------------------------------------------ threads
@@ -134,6 +157,7 @@ class CameraWorker:
         period = 1.0 / max(self.cfg.camera_fps, 0.5)
         last_seq, count, tick = -1, 0, time.time()
         while not self._stop.wait(period):
+            self._check_offline(time.time())
             with self._lock:
                 frame, seq, ft = self._frame, self._seq, self._frame_t
             if frame is None or seq == last_seq:
@@ -146,8 +170,17 @@ class CameraWorker:
                 result = self.pipeline.process(frame, ft)
                 result["camera"] = self.id
                 img = annotate(frame, result["persons"], title=self.id,
-                               vis=self.cfg.visibility_threshold)
+                               vis=self.cfg.visibility_threshold,
+                               zones=self.pipeline.options.zones)
                 self.latest, self.latest_jpeg = result, encode_jpeg(img, 75)
+                if self._clips_on:
+                    if self.cfg.blur_faces and result["persons"]:
+                        img = annotate(blur_faces(frame, result["persons"],
+                                                  self.cfg.visibility_threshold),
+                                       result["persons"], title=self.id,
+                                       vis=self.cfg.visibility_threshold,
+                                       zones=self.pipeline.options.zones)
+                    self._clip_step(ft, encode_jpeg(img, 70), result["alerts"])
                 self.result_seq += 1
                 if self.state == "stalled":
                     self.state = "online"
@@ -159,6 +192,62 @@ class CameraWorker:
             if now - tick >= 1.0:
                 self.fps, count, tick = count / (now - tick), 0, now
 
+    def _check_offline(self, now: float) -> None:
+        """One OFFLINE event per outage longer than ``offline_alert_s``."""
+        if self.state == "online":
+            if self._offline_alerted:
+                log.info("camera %s back online", self.id)
+            self._down_since, self._offline_alerted = None, False
+            return
+        if self._down_since is None:
+            self._down_since = now
+        hub = self.pipeline.hub
+        if (self._offline_alerted or hub is None or self.cfg.offline_alert_s <= 0
+                or now - self._down_since < self.cfg.offline_alert_s
+                or "OFFLINE" in self.pipeline.engine.disabled):
+            return
+        self._offline_alerted = True
+        level, message = MESSAGES["OFFLINE"]
+        down = now - self._down_since
+        detail = f"{self.state} {down:.0f} s" + (f" — {self.error}" if self.error else "")
+        try:
+            hub.publish(Alert("OFFLINE", level, self.id, message, detail, None, now,
+                              {"reconnects": self.reconnects}))
+        except Exception:
+            log.exception("camera %s: failed to publish OFFLINE", self.id)
+
+    # ------------------------------------------------------------------ event clips
+    def _clip_step(self, t: float, jpeg: bytes, alerts: list[dict[str, Any]]) -> None:
+        """Keep ``clip_pre_s`` of frames; each stored alert collects ``clip_post_s`` more."""
+        self._clip_buf.append((t, jpeg))
+        while self._clip_buf and t - self._clip_buf[0][0] > self.cfg.clip_pre_s:
+            self._clip_buf.popleft()
+        for pc in self._pending_clips:
+            pc.frames.append((t, jpeg))
+        for ev in alerts:
+            if ev.get("id") is not None:
+                self._pending_clips.append(
+                    _PendingClip(ev, list(self._clip_buf), t + self.cfg.clip_post_s))
+        done = [pc for pc in self._pending_clips if t >= pc.until]
+        self._pending_clips = [pc for pc in self._pending_clips if t < pc.until]
+        for pc in done:
+            self._finish_clip(pc)
+
+    def _finish_clip(self, pc: _PendingClip, sync: bool = False) -> None:
+        hub = self.pipeline.hub
+        if hub is None or len(pc.frames) < 2:
+            return
+        span = pc.frames[-1][0] - pc.frames[0][0]
+        fps = max(1.0, min(30.0, (len(pc.frames) - 1) / span)) if span > 0 else self.cfg.camera_fps
+        frames = [j for _, j in pc.frames]
+        if sync:
+            hub.attach_clip(pc.event, frames, fps)
+            return
+        th = threading.Thread(target=hub.attach_clip, args=(pc.event, frames, fps),
+                              name=f"clip-{pc.event.get('id')}", daemon=True)
+        th.start()
+        self._clip_threads = [t for t in self._clip_threads if t.is_alive()] + [th]
+
     # ------------------------------------------------------------------ status
     def status(self) -> dict[str, Any]:
         latest = self.latest or {}
@@ -168,4 +257,5 @@ class CameraWorker:
             "persons": len(latest.get("persons", [])),
             "quality": (latest.get("quality") or {}).get("overall"),
             "last_frame_age_s": round(time.time() - self._frame_t, 1) if self._frame_t else None,
+            **self.pipeline.options.to_dict(),
         }

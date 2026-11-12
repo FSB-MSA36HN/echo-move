@@ -10,6 +10,8 @@ from echo_move.config import Settings
 from echo_move.pipeline import StreamPipeline
 from echo_move.scenarios import load_scenarios
 from echo_move.storage import EventStore
+from echo_move.storage.db import read_clip_frames
+from echo_move.zones import foot_point, load_file_options, parse_options, point_in_polygon
 
 FRAME = np.full((480, 640, 3), 128, np.uint8)
 FRAME[::8] = 30  # some texture so IQA is not degenerate
@@ -90,6 +92,84 @@ def test_worker_processes_frames_and_raises_alerts(tmp_path):
     assert w.latest_jpeg[:2] == b"\xff\xd8"
     event = store.list()[0][0]
     assert event["source"] == "kho" and event["has_image"]
+
+
+def test_worker_records_event_clip(tmp_path):
+    cfg = Settings(camera_fps=20, fall_confirm_s=0.3, alert_cooldown_s=60, demo_mode=True,
+                   clip_pre_s=0.5, clip_post_s=0.5)
+    store = EventStore(tmp_path)
+    pipe = StreamPipeline("kho", FakeDetector(load_scenarios()["nga"]["kps"]), cfg,
+                          AlertHub(store))
+    w = CameraWorker("kho", "rtsp://cam", pipe, cfg, capture_factory=lambda s: FakeCapture())
+    w.start()
+    try:
+        assert wait_for(lambda: store.list(type="FALL")[1] == 1 and store.list()[0][-1]["has_clip"])
+    finally:
+        w.stop()
+    event = store.list(type="FALL")[0][0]
+    mjpg, mp4 = store.clip_paths(event["id"])
+    fps, frames = read_clip_frames(mjpg)
+    assert len(frames) >= 4 and frames[0][:2] == b"\xff\xd8" and 1 <= fps <= 30
+    assert mp4 is not None and mp4.stat().st_size > 0
+
+
+def test_offline_alert_once_per_outage(tmp_path):
+    cfg = Settings(offline_alert_s=30, demo_mode=True)
+    store = EventStore(tmp_path)
+    pipe = StreamPipeline("kho", FakeDetector([]), cfg, AlertHub(store))
+    w = CameraWorker("kho", "rtsp://cam", pipe, cfg, capture_factory=lambda s: FakeCapture())
+    w.state, w.error = "reconnecting", "cannot open"
+    w._check_offline(100.0)
+    w._check_offline(120.0)
+    assert store.list(type="OFFLINE")[1] == 0
+    w._check_offline(131.0)
+    w._check_offline(200.0)
+    events = store.list(type="OFFLINE")[0]
+    assert len(events) == 1 and events[0]["source"] == "kho"
+    assert "cannot open" in events[0]["detail"]
+    w.state = "online"
+    w._check_offline(201.0)
+    w.state = "stalled"
+    w._check_offline(300.0)
+    w._check_offline(331.0)
+    assert store.list(type="OFFLINE")[1] == 2
+    pipe.engine.disabled = {"OFFLINE"}
+    w.state = "online"
+    w._check_offline(400.0)
+    w.state = "reconnecting"
+    w._check_offline(400.0)
+    w._check_offline(500.0)
+    assert store.list(type="OFFLINE")[1] == 2
+
+
+def test_zone_geometry_and_parsing(tmp_path):
+    square = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]
+    assert point_in_polygon((0.5, 0.5), square) and not point_in_polygon((1.5, 0.5), square)
+    kps = [[0.5, 0.5, 0.9]] * 17
+    assert foot_point(kps, None, 0.25) == (0.5, 0.5)
+    assert foot_point([[0, 0, 0]] * 17, [0.2, 0.1, 0.4, 0.9], 0.25) == (0.30000000000000004, 0.9)
+    with pytest.raises(ValueError):
+        parse_options({"zones": [{"points": [[0, 0], [1, 1]]}]})
+    f = tmp_path / "cams.json"
+    f.write_text('[{"id": "kho", "source": "0", "zones": [{"name": "A", '
+                 '"points": [[0,0],[1,0],[1,1]]}], "disabled_rules": ["CAMERA"]}]')
+    opts = load_file_options(str(f))
+    assert parse_options(opts["kho"]).disabled_rules == ["CAMERA"]
+
+
+def test_zone_intrusion_raises_alert(tmp_path):
+    cfg = Settings(demo_mode=True)
+    store = EventStore(tmp_path)
+    stand = load_scenarios()["an_toan"]["kps"]  # ankles at y≈0.87
+    pipe = StreamPipeline("kho", FakeDetector(stand), cfg, AlertHub(store))
+    pipe.configure(parse_options({"zones": [{"name": "Máy dập", "dwell_s": 0.5,
+                                             "points": [[0, 0.7], [1, 0.7], [1, 1], [0, 1]]}],
+                                  "disabled_rules": ["CAMERA"]}))
+    out = [pipe.process(FRAME, i * 0.1) for i in range(10)]
+    assert out[0]["persons"][0]["zones"][0]["name"] == "Máy dập"
+    events = [a for o in out for a in o["alerts"]]
+    assert [e["type"] for e in events] == ["ZONE"] and events[0]["detail"] == "Vùng: Máy dập"
+    assert store.get(events[0]["id"])["has_image"]
 
 
 def test_worker_reconnects_after_open_failure():

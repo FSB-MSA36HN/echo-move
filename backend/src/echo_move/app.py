@@ -24,10 +24,11 @@ from pydantic import BaseModel, Field, ValidationError
 
 from . import __version__
 from .alerts import Alert, AlertHub
-from .alerts.engine import MESSAGES
+from .alerts.engine import ALERT_TYPES, MESSAGES
 from .camera import CameraManager
 from .config import Settings, get_settings
 from .logging_setup import setup_logging
+from .maintenance import Maintenance
 from .matlab_bridge import MatlabBridge
 from .notify import Notifier
 from .pipeline import StreamPipeline, decode_frame
@@ -35,6 +36,8 @@ from .pose.detector import PoseDetector
 from .scenarios import DemoGenerator
 from .schemas import FrameMessage
 from .storage import EventStore
+from .storage.db import read_clip_frames
+from .zones import OptionsStore, parse_options
 
 log = logging.getLogger("echo_move")
 
@@ -42,11 +45,22 @@ log = logging.getLogger("echo_move")
 class EventIn(BaseModel):
     """Alert confirmed client-side (browser AI mode) and reported for logging."""
 
-    type: Literal["FALL", "POSTURE", "CAMERA"]
+    type: Literal["FALL", "MANDOWN", "RECOVERED", "POSTURE", "ERGO", "CAMERA"]
     detail: str = Field(default="", max_length=200)
     track_id: int | None = None
     source: str = Field(default="browser", max_length=40)
     image: str | None = None  # optional JPEG data URL
+
+
+class ZoneIn(BaseModel):
+    name: str = Field(default="", max_length=40)
+    points: list[list[float]] = Field(min_length=3, max_length=50)
+    dwell_s: float = Field(default=1.0, ge=0, le=600)
+
+
+class CameraConfigIn(BaseModel):
+    zones: list[ZoneIn] = Field(default_factory=list, max_length=20)
+    disabled_rules: list[str] = Field(default_factory=list)
 
 
 def create_app(cfg: Settings | None = None) -> FastAPI:
@@ -65,14 +79,19 @@ def create_app(cfg: Settings | None = None) -> FastAPI:
         notifier = Notifier(cfg)
         notifier.start()
         hub = AlertHub(store, notifier)
-        cameras = CameraManager(cfg, detector, hub)
+        cameras = CameraManager(cfg, detector, hub,
+                                options_store=OptionsStore(cfg.data_dir / "camera_config.json"))
         cameras.start()
+        maintenance = Maintenance(cfg, store, notifier, hub)
+        housekeeping = asyncio.create_task(maintenance.loop())
         app.state.detector, app.state.store, app.state.hub = detector, store, hub
         app.state.notifier, app.state.cameras = notifier, cameras
+        app.state.maintenance = maintenance
         log.info("ECHO MOVE %s ready — AI=%s cameras=%d notify=%s web=%s", __version__,
                  detector.available, len(cameras.workers), notifier.channels() or "off",
                  cfg.web_dir if (cfg.web_dir / "index.html").is_file() else "off")
         yield
+        housekeeping.cancel()
         cameras.stop()
         notifier.stop()
         if store:
@@ -114,6 +133,25 @@ def create_app(cfg: Settings | None = None) -> FastAPI:
     @app.get("/api/cameras")
     async def list_cameras(request: Request) -> list[dict[str, Any]]:
         return list(request.app.state.cameras.statuses())
+
+    @app.get("/api/cameras/{cam_id}/config")
+    async def get_camera_config(request: Request, cam_id: str) -> dict[str, Any]:
+        w = camera_or_404(request, cam_id)
+        return {"id": cam_id, **w.pipeline.options.to_dict(), "rules": list(ALERT_TYPES)}
+
+    @app.put("/api/cameras/{cam_id}/config")
+    async def put_camera_config(request: Request, cam_id: str,
+                                body: CameraConfigIn) -> dict[str, Any]:
+        camera_or_404(request, cam_id)
+        try:
+            options = parse_options(body.model_dump(), cfg.zone_dwell_s)
+        except (ValueError, TypeError, IndexError) as exc:
+            raise HTTPException(422, str(exc)) from None
+        unknown = set(options.disabled_rules) - set(ALERT_TYPES)
+        if unknown:
+            raise HTTPException(422, f"unknown rules: {sorted(unknown)}")
+        request.app.state.cameras.configure(cam_id, options)
+        return {"id": cam_id, **options.to_dict()}
 
     @app.get("/api/cameras/{cam_id}/snapshot.jpg")
     async def camera_snapshot(request: Request, cam_id: str) -> Response:
@@ -215,11 +253,43 @@ def create_app(cfg: Settings | None = None) -> FastAPI:
             raise HTTPException(404, "no snapshot for this event")
         return FileResponse(path, media_type="image/jpeg")
 
+    @app.get("/api/events/{event_id}/clip.mp4")
+    async def event_clip_mp4(request: Request, event_id: int) -> FileResponse:
+        _, mp4 = store_or_503(request).clip_paths(event_id)
+        if mp4 is None:
+            raise HTTPException(404, "no clip for this event")
+        return FileResponse(mp4, media_type="video/mp4", filename=f"event_{event_id}.mp4")
+
+    @app.get("/api/events/{event_id}/clip")
+    async def event_clip_stream(request: Request, event_id: int) -> StreamingResponse:
+        """Replay the clip as MJPEG (plays in an <img> whatever codec the MP4 got)."""
+        mjpg, _ = store_or_503(request).clip_paths(event_id)
+        if mjpg is None:
+            raise HTTPException(404, "no clip for this event")
+        fps, frames = read_clip_frames(mjpg)
+
+        async def replay() -> AsyncIterator[bytes]:
+            for jpeg in frames:
+                if await request.is_disconnected():
+                    return
+                yield (b"--frame\r\nContent-Type: image/jpeg\r\nContent-Length: "
+                       + str(len(jpeg)).encode() + b"\r\n\r\n" + jpeg + b"\r\n")
+                await asyncio.sleep(1.0 / max(fps, 1.0))
+
+        return StreamingResponse(replay(), media_type="multipart/x-mixed-replace; boundary=frame",
+                                 headers={"Cache-Control": "no-store"})
+
     @app.post("/api/events/{event_id}/ack")
     async def ack_event(request: Request, event_id: int) -> dict[str, Any]:
         if not store_or_503(request).acknowledge(event_id):
             raise HTTPException(404, "event not found")
         return {"id": event_id, "acknowledged": True}
+
+    @app.post("/api/events/{event_id}/false-alarm")
+    async def false_alarm(request: Request, event_id: int) -> dict[str, Any]:
+        if not store_or_503(request).acknowledge(event_id, false_alarm=True):
+            raise HTTPException(404, "event not found")
+        return {"id": event_id, "acknowledged": True, "false_alarm": True}
 
     @app.get("/api/stats")
     async def stats(request: Request,

@@ -15,6 +15,7 @@ import cv2
 import numpy as np
 
 from ..config import Settings
+from .ppe import PPEDetection, parse_results
 
 log = logging.getLogger(__name__)
 
@@ -24,6 +25,7 @@ class PoseDetector:
         self.cfg = cfg
         self.model: Any = None
         self.hands: Any = None
+        self.ppe_model: Any = None
         self._half = False
         self._lock = threading.Lock()
         self._load()
@@ -51,6 +53,14 @@ class PoseDetector:
             log.exception("YOLO failed to load → DEMO mode")
             self.model = None
             return
+        if self.cfg.ppe_model:
+            try:
+                self.ppe_model = YOLO(self.cfg.ppe_model).to(device)
+                log.info("PPE model %s loaded (classes: %s)", self.cfg.ppe_model,
+                         ", ".join(map(str, self.ppe_model.names.values())))
+            except Exception:
+                log.exception("PPE model %s failed to load — PPE alerts disabled",
+                              self.cfg.ppe_model)
         try:
             import mediapipe as mp
 
@@ -83,3 +93,12 @@ class PoseDetector:
             for hd in hands_res.multi_hand_landmarks or []:
                 hands.append([{"x": lm.x, "y": lm.y, "z": lm.z} for lm in hd.landmark])
         return people, hands
+
+    def detect_ppe(self, frame_bgr: np.ndarray) -> list[PPEDetection] | None:
+        """PPE detections for one frame, or None when no PPE model is configured."""
+        if self.ppe_model is None:
+            return None
+        with self._lock:
+            res = self.ppe_model(frame_bgr, verbose=False, conf=self.cfg.yolo_conf,
+                                 half=self._half)
+        return parse_results(res[0]) if res else []

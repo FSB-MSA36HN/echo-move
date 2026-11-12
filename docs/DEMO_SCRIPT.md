@@ -13,16 +13,18 @@
 |---|---|---|---|
 | 0:00 | NV1 | MATLAB chọn `data/demo.mp4`, Run | 9 biểu đồ + `output/demo_iqa.json` |
 | 0:30 | NV1 | Chỉ biểu đồ 9 | PIQE fast vs full + hệ số tương quan **đo được** |
-| 0:45 | NV2 | Mở <http://localhost:8000> | Chấm xanh "Backend v21 · AI · 1 cam", công nhân 3D đứng trong xưởng |
+| 0:45 | NV2 | Mở <http://localhost:8000> | Chấm xanh "Backend v22 · AI · 1 cam", công nhân 3D đứng trong xưởng |
 | 1:00 | NV3 | Phím `4` (Ngã) | Người 3D nằm xuống, đèn xoay; sau 1.5 s còi hú + toast |
 | 1:20 | NV3 | Tab **Camera** | Lưới camera MJPEG có skeleton, FPS, IQA |
 | 1:35 | NV3 | Bấm vào camera | Người 3D làm theo người trong camera |
 | 2:00 | NV2 | Trước webcam: **Camera** → **Server**, cúi sai > 3 s | Badge đỏ, sau 3 s còi + toast; Telegram nhận ảnh (nếu bật) |
 | 2:30 | NV2 | Nằm xuống (hoặc phím `4`) | Cảnh báo NGÃ (CRITICAL) |
-| 2:50 | NV3 | Tab **Sự kiện** | Sự kiện vừa rồi kèm ảnh, thống kê theo giờ; bấm **Xác nhận**, **⬇ CSV** |
+| 2:40 | NV2 | Nằm yên thêm 10 s rồi đứng dậy | **Bất động sau ngã** (CRITICAL) → toast xanh **Đã đứng dậy** |
+| 2:50 | NV3 | Tab **Sự kiện** | Sự kiện vừa rồi kèm ảnh, thống kê theo giờ; bấm **▶ Clip** (5 s trước + 5 s sau), **Xác nhận**, **Báo nhầm**, **⬇ CSV** |
+| 3:10 | NV3 | Tab **Camera** → ⚙ → vẽ vùng quanh một góc sàn → Lưu | NV2 bước vào vùng → cảnh báo **Vùng cấm** |
 | 3:30 | NV3 | Phím 1–8 | 8 kịch bản không cần diễn |
 | 3:50 | NV3 | `B`, `C`, `P` | Benchmark, so sánh trước/sau, báo cáo HTML |
-| 4:20 | NV2 | Rút dây mạng camera IP (hoặc đổi URL sai) | Trạng thái "Mất tín hiệu — thử lại", cắm lại tự chạy tiếp |
+| 4:20 | NV2 | Rút dây mạng camera IP (hoặc đổi URL sai) | Trạng thái "Mất tín hiệu — thử lại"; sau 30 s có sự kiện **Mất tín hiệu camera**; cắm lại tự chạy tiếp |
 | 4:50 | NV2 | Ctrl+C backend | Chấm xám "Chưa kết nối backend", web vẫn chạy offline |
 | 5:10 | NV3 | `T` | Self-test |
 | 5:30 | NV1 | Mở JSON MATLAB | Chứng minh bridge |
@@ -36,7 +38,15 @@
 
 **Sao không báo ngã ngay khi phát hiện?** Phân loại từng frame nhiễu (che khuất, cúi nhặt đồ). Em yêu cầu điều kiện kéo dài 1.5 s (0.75 s nếu hông rơi nhanh), chịu được mất dấu < 0.5 s, và cooldown 30 s mỗi người để không spam. Xem `docs/ALGORITHMS.md`.
 
-**Nhiều người thì sao?** Tracker gán ID ổn định (IoU + khoảng cách tâm, kiểu SORT), mỗi người có bộ lọc và bộ đếm thời gian riêng; cảnh báo ghi rõ "người #ID".
+**Nhiều người thì sao?** Tracker kiểu ByteTrack gán ID ổn định: ghép detection mạnh trước, detection yếu (bị che) sau, dự đoán vận tốc. Mỗi người có bộ lọc và bộ đếm thời gian riêng, và cảnh báo ghi rõ "người #ID".
+
+**Ngã về phía camera thì sao?** Luật cũ chỉ nhìn góc thân nên bỏ sót. Bản 22 kết hợp 3 tín hiệu: nằm ngang, đầu thấp ngang hông, và chiều cao người sụp dưới 50 % so với lúc người đó đứng (hệ thống nhớ chiều cao đứng của từng track). FALL cần ít nhất 2 tín hiệu.
+
+**Độ chính xác bao nhiêu?** Trả lời bằng số **tự đo**: `make eval DATASET=urfd` trên UR Fall (30 video ngã, 40 video sinh hoạt) cho precision, recall, F1, độ trễ phát hiện và số báo nhầm/giờ, so sánh luật cũ với luật mới. Chưa chạy thì nói rõ là chưa đo.
+
+**Ngã xong người dậy được thì có còn báo không?** Có MANDOWN (vẫn nằm sau 10 s, kèm "bất động" hay "còn cử động") để ưu tiên cứu hộ, và RECOVERED (thông tin, không hú còi) khi đã đứng dậy. Sự kiện CRITICAL không ai xác nhận sau N phút sẽ được leo thang tới quản đốc.
+
+**Quyền riêng tư?** Ảnh và clip lưu lại được làm mờ vùng đầu (`ECHO_BLUR_FACES=1`), dữ liệu tự xoá sau `ECHO_RETENTION_DAYS` ngày, chỉ xem trực tiếp mới thấy mặt.
 
 **Người 3D lấy chiều sâu ở đâu khi chỉ có 1 camera?** Ước lượng từ độ co ngắn của chi so với chiều dài chuẩn (đoạn ít co nhất cho tỉ lệ ảnh/mét); MediaPipe có world landmarks thì dùng trực tiếp. Đây là ước lượng để trực quan hoá, luật cảnh báo vẫn dựa trên keypoint 2D.
 

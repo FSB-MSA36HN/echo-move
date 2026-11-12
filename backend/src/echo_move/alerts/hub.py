@@ -41,12 +41,28 @@ class AlertHub:
                     alert.track_id, alert.detail)
         if self.notifier:
             self.notifier.send(event, jpeg)
+        self._broadcast(event)
+        return event
+
+    def attach_clip(self, event: dict[str, Any], frames: list[bytes], fps: float) -> None:
+        """Save the pre/post-event clip of a stored event and send it as a follow-up."""
+        if self.store is None or event.get("id") is None:
+            return
+        try:
+            mp4 = self.store.save_clip(int(event["id"]), frames, fps)
+        except Exception:
+            log.exception("failed to save clip for event %s", event.get("id"))
+            return
+        if mp4 is not None and self.notifier:
+            self.notifier.send_video(event, mp4.read_bytes())
+        self._broadcast({"update": "clip", "id": event["id"]})
+
+    def _broadcast(self, message: dict[str, Any]) -> None:
         for q, loop in list(self._subs.items()):
             try:
-                loop.call_soon_threadsafe(_offer, q, event)
+                loop.call_soon_threadsafe(_offer, q, message)
             except RuntimeError:  # loop closed
                 self._subs.pop(q, None)
-        return event
 
 
 def _offer(q: asyncio.Queue[dict[str, Any]], event: dict[str, Any]) -> None:

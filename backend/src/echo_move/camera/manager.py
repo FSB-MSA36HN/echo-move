@@ -11,6 +11,7 @@ from ..alerts import AlertHub
 from ..config import Settings
 from ..pipeline import StreamPipeline
 from ..pose.detector import PoseDetector
+from ..zones import CameraOptions, OptionsStore, load_file_options, parse_options
 from .worker import CameraWorker, CaptureFactory, Source
 
 log = logging.getLogger(__name__)
@@ -43,18 +44,27 @@ def parse_cameras(spec: str = "", file: str = "") -> dict[str, Source]:
 class CameraManager:
     def __init__(self, cfg: Settings, detector: PoseDetector, hub: AlertHub | None,
                  capture_factory: CaptureFactory | None = None,
-                 sources: dict[str, Source] | None = None):
+                 sources: dict[str, Source] | None = None,
+                 options_store: OptionsStore | None = None):
+        file_opts: dict[str, dict[str, Any]] = {}
         if sources is None:
             try:
                 sources = parse_cameras(cfg.cameras, cfg.cameras_file)
+                file_opts = load_file_options(cfg.cameras_file)
             except (OSError, ValueError, KeyError) as exc:
                 log.error("invalid camera configuration: %s", exc)
                 sources = {}
-        self.workers = {
-            cid: CameraWorker(cid, src, StreamPipeline(cid, detector, cfg, hub), cfg,
-                              capture_factory)
-            for cid, src in sources.items()
-        }
+        self.options_store = options_store or OptionsStore(None)
+        overrides = self.options_store.load()
+        self.workers: dict[str, CameraWorker] = {}
+        for cid, src in sources.items():
+            pipe = StreamPipeline(cid, detector, cfg, hub)
+            raw = overrides.get(cid, file_opts.get(cid))
+            try:
+                pipe.configure(parse_options(raw, cfg.zone_dwell_s))
+            except (ValueError, TypeError, KeyError, IndexError) as exc:
+                log.error("camera %s: invalid zones/rules (%s) — ignored", cid, exc)
+            self.workers[cid] = CameraWorker(cid, src, pipe, cfg, capture_factory)
 
     def start(self) -> None:
         for w in self.workers.values():
@@ -66,6 +76,14 @@ class CameraManager:
 
     def get(self, cam_id: str) -> CameraWorker | None:
         return self.workers.get(cam_id)
+
+    def configure(self, cam_id: str, options: CameraOptions) -> bool:
+        w = self.workers.get(cam_id)
+        if w is None:
+            return False
+        w.pipeline.configure(options)
+        self.options_store.save(cam_id, options)
+        return True
 
     def statuses(self) -> list[dict[str, Any]]:
         return [w.status() for w in self.workers.values()]

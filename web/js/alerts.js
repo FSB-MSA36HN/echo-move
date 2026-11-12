@@ -3,29 +3,65 @@
 // are reported to the backend event log when one is connected.
 (function () {
   "use strict";
-  const RULES = {fallS: 1.5, postureS: 3, qualityS: 5, cooldownS: 30, graceS: 0.5, lowQ: 40};
+  const RULES = {fallS: 1.5, postureS: 3, qualityS: 5, cooldownS: 30, graceS: 0.5, lowQ: 40,
+                 mandownS: 10, mandownGraceS: 2, recoverS: 2, stillSpeed: .05,
+                 rebaHigh: 6, ergoExposureS: 60, ergoWindowS: 600};
   const MESSAGES = {
     FALL: ['CRITICAL', 'Phát hiện công nhân bị ngã'],
+    MANDOWN: ['CRITICAL', 'Công nhân không đứng dậy sau ngã'],
+    RECOVERED: ['INFO', 'Công nhân đã đứng dậy sau ngã'],
     POSTURE: ['WARNING', 'Cúi sai tư thế kéo dài'],
+    ERGO: ['WARNING', 'Tư thế có hại tích lũy (REBA cao)'],
+    ZONE: ['WARNING', 'Xâm nhập vùng nguy hiểm'],
+    PPE: ['WARNING', 'Thiếu đồ bảo hộ'],
     CAMERA: ['WARNING', 'Chất lượng camera kém / bị che'],
+    OFFLINE: ['WARNING', 'Camera mất tín hiệu'],
   };
-  const LABEL = {FALL: 'NGÃ', POSTURE: 'CÚI SAI', CAMERA: 'CAMERA'};
+  const LABEL = {FALL: 'NGÃ', MANDOWN: 'KHÔNG DẬY', RECOVERED: 'ĐÃ DẬY', POSTURE: 'CÚI SAI',
+                 ERGO: 'REBA', ZONE: 'VÙNG CẤM', PPE: 'BẢO HỘ', CAMERA: 'CAMERA', OFFLINE: 'MẤT CAM'};
+  const UPRIGHT = ['NONE', 'PROPER_LIFT', 'PARTIAL'];
 
   // ---------------------------------------------------------------- engine
-  function Engine() { this.ep = {}; this.last = {}; this.hips = {}; }
-  Engine.prototype.reset = function () { this.ep = {}; this.hips = {}; };
-  Engine.prototype.check = function (key, active, t, confirmS) {
+  function Engine() { this.ep = {}; this.last = {}; this.hips = {}; this.tr = {}; }
+  Engine.prototype.reset = function () { this.ep = {}; this.hips = {}; this.tr = {}; };
+  Engine.prototype.check = function (key, active, t, confirmS, graceS, cooldownS) {
     const ep = this.ep[key] || (this.ep[key] = {start: null, lastTrue: 0, fired: false});
     if (!active) {
-      if (ep.start !== null && t - ep.lastTrue > RULES.graceS) this.ep[key] = {start: null, lastTrue: 0, fired: false};
+      if (ep.start !== null && t - ep.lastTrue > (graceS || RULES.graceS)) this.ep[key] = {start: null, lastTrue: 0, fired: false};
       return false;
     }
     if (ep.start === null) ep.start = t;
     ep.lastTrue = t;
     if (ep.fired || t - ep.start < confirmS) return false;
-    if (t - (this.last[key] ?? -1e9) < RULES.cooldownS) return false;
+    if (t - (this.last[key] ?? -1e9) < (cooldownS ?? RULES.cooldownS)) return false;
     ep.fired = true; this.last[key] = t;
     return true;
+  };
+  // Body-normalised keypoint speed (EMA), used to tell "lying still" from "moving on the floor".
+  Engine.prototype.motion = function (tr, kps, t) {
+    if (!kps || kps.length < 17) return tr.motion || 0;
+    const vis = kps.filter(k => k[2] > .3);
+    if (tr.kps && t > tr.t && vis.length > 1) {
+      const xs = vis.map(k => k[0]), ys = vis.map(k => k[1]);
+      const size = Math.max(.05, Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys));
+      const d = kps.map((k, i) => k[2] > .3 && tr.kps[i][2] > .3 ? Math.hypot(k[0] - tr.kps[i][0], k[1] - tr.kps[i][1]) : null)
+        .filter(v => v !== null);
+      if (d.length) {
+        const speed = Math.min(5, d.reduce((a, b) => a + b, 0) / d.length / size / (t - tr.t));
+        tr.motion = .7 * (tr.motion || 0) + .3 * speed;
+      }
+    }
+    tr.kps = kps.map(k => k.slice()); tr.t = t;
+    return tr.motion || 0;
+  };
+  Engine.prototype.ergo = function (id, tr, s, t, prevT) {
+    tr.ergo = tr.ergo || [];
+    if (s.reba != null && s.reba >= RULES.rebaHigh && prevT != null) tr.ergo.push([t, Math.min(t - prevT, 1)]);
+    while (tr.ergo.length && t - tr.ergo[0][0] > RULES.ergoWindowS) tr.ergo.shift();
+    const exp = tr.ergo.reduce((a, x) => a + x[1], 0), key = 'ERGO|' + id;
+    if (exp < RULES.ergoExposureS || t - (this.last[key] ?? -1e9) < RULES.ergoWindowS) return null;
+    this.last[key] = t;
+    return {type: 'ERGO', track_id: id, detail: `REBA ≥ ${RULES.rebaHigh} trong ${Math.round(exp)} s / ${RULES.ergoWindowS / 60} phút`};
   };
   Engine.prototype.rapidDrop = function (id, kps, t) {
     if (!kps || kps.length < 17 || kps[11][2] < .3 || kps[12][2] < .3) return false;
@@ -41,11 +77,30 @@
     const out = [];
     (persons || []).forEach((p, i) => {
       const id = p.id ?? i, s = p.safety || {}, tech = s.technique || 'NONE';
+      const tr = this.tr[id] || (this.tr[id] = {}), prevT = tr.seen;
+      tr.seen = t;
       const rapid = this.rapidDrop(id, p.keypoints, t);
-      if (this.check('FALL|' + id, tech === 'FALL', t, RULES.fallS * (rapid ? .5 : 1)))
+      const motion = this.motion(tr, p.keypoints, t);
+      const fallS = RULES.fallS * (rapid ? .5 : 1);
+      if (this.check('FALL|' + id, tech === 'FALL', t, fallS)) {
         out.push({type: 'FALL', track_id: id, detail: rapid ? 'Ngã đột ngột' : 'Nằm trên sàn'});
+        tr.fallen = true;
+      }
+      if (this.check('MANDOWN|' + id, tech === 'FALL', t, fallS + RULES.mandownS, RULES.mandownGraceS)) {
+        const secs = Math.round(fallS + RULES.mandownS);
+        out.push({type: 'MANDOWN', track_id: id,
+                  detail: motion < RULES.stillSpeed ? `Nằm bất động ${secs} s` : `Nằm ${secs} s, còn cử động`});
+        tr.fallen = true;
+      }
+      if (this.check('RECOVERED|' + id, !!tr.fallen && UPRIGHT.includes(tech), t, RULES.recoverS, null, 0)) {
+        out.push({type: 'RECOVERED', track_id: id, detail: 'Đã đứng dậy'});
+        tr.fallen = false;
+        delete this.ep['RECOVERED|' + id];
+      }
       if (this.check('POSTURE|' + id, tech === 'IMPROPER', t, RULES.postureS))
         out.push({type: 'POSTURE', track_id: id, detail: s.detail || ''});
+      const ergo = this.ergo(id, tr, s, t, prevT);
+      if (ergo) out.push(ergo);
     });
     if (quality && typeof quality.overall === 'number' &&
         this.check('CAMERA', quality.overall < RULES.lowQ, t, RULES.qualityS))
@@ -111,9 +166,10 @@
     const box = document.getElementById('toasts');
     if (!box) return;
     const el = document.createElement('div');
-    el.className = 'toast ' + (ev.level === 'CRITICAL' ? 'crit' : 'warn');
+    el.className = 'toast ' + (ev.level === 'CRITICAL' ? 'crit' : ev.level === 'INFO' ? 'info' : 'warn');
     const who = ev.track_id != null ? ` · người #${ev.track_id}` : '';
-    el.innerHTML = `<b>${ev.level === 'CRITICAL' ? '🚨' : '⚠️'} ${esc(ev.message)}</b>
+    const icon = ev.level === 'CRITICAL' ? '🚨' : ev.level === 'INFO' ? '✅' : '⚠️';
+    el.innerHTML = `<b>${icon} ${esc(ev.message)}</b>
       <div>${esc(ev.source)}${who} · ${fmtTime(ev.ts || ev.t)}</div>
       ${ev.detail ? `<div class="d">${esc(ev.detail)}</div>` : ''}`;
     el.onclick = () => { el.remove(); if (window.EchoTabs) window.EchoTabs.show('evt'); };
@@ -157,7 +213,8 @@
       }
       if (fromServer && ev.source === 'browser' && Date.now() - (pending[ev.type] || 0) < 10000) return;
       A.count++;
-      toast(ev); siren(ev.level); notify(ev);
+      toast(ev);
+      if (ev.level !== 'INFO') { siren(ev.level); notify(ev); }
       document.dispatchEvent(new CustomEvent('echo:alert', {detail: ev}));
     },
     /** Run local confirmation on one processed frame (browser-side detection / scenarios). */

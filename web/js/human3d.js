@@ -516,27 +516,43 @@ vec3 echoRegion(vec3 p, out float stripe) {
 
   // ---------------------------------------------------------------- pose
   // Keypoints -> body-space 3D points in metres (origin at hip midpoint, y up, z to camera).
+  // Parts the detector misses are filled in as a person standing upright: a missing torso half
+  // goes straight above/below the visible one, missing limbs hang straight down.
   function lift(kps, aspect, world) {
-    const ok = i => kps[i] && kps[i][2] > VIS;
-    if (![5, 6, 11, 12].every(ok)) return null;
+    const seen = i => !!kps[i] && kps[i][2] > VIS;
+    const hasSh = seen(5) && seen(6), hasHip = seen(11) && seen(12);
+    if (!hasSh && !hasHip) return null;
+    const filled = new Set();
+    const ok = i => seen(i) || filled.has(i);
     const P = [], D = st.dims;
     let side = false;
-    if (world && world.length >= 17) {
+    if (world && world.length >= 17 && hasSh && hasHip) {
       for (let i = 0; i < 17; i++) P[i] = new THREE.Vector3(world[i][0], -world[i][1], -world[i][2]);
       const hm = P[11].clone().add(P[12]).multiplyScalar(0.5);
       P.forEach(p => p.sub(hm));
     } else {
       const img = kps.map(k => new THREE.Vector3((k[0] - 0.5) * aspect, 0.5 - k[1], 0));
+      // Image units per metre from the least foreshortened segment (widths are only a fallback:
+      // detector shoulder/hip points sit wider than the skeleton's joint centres).
+      const seg = (a, b, key) => seen(a) && seen(b) ? img[a].distanceTo(img[b]) / D[key] : 0;
+      const segU = Math.max(
+        seg(11, 13, 'thigh'), seg(12, 14, 'thigh'), seg(13, 15, 'shin'), seg(14, 16, 'shin'),
+        seg(5, 7, 'upperArm'), seg(6, 8, 'upperArm'), seg(7, 9, 'foreArm'), seg(8, 10, 'foreArm'),
+        hasSh ? 0.6 * img[5].distanceTo(img[6]) / D.shW : 0,
+        hasHip ? 0.6 * img[11].distanceTo(img[12]) / D.hipW : 0, 1e-4);
+      if (!hasSh || !hasHip) {
+        const uu = st.u || segU;
+        const [a, b, c, d] = hasSh ? [5, 6, 11, 12] : [11, 12, 5, 6];
+        const mid = img[a].clone().add(img[b]).multiplyScalar(0.5);
+        const half = img[a].clone().sub(img[b]).multiplyScalar(0.5 * (hasSh ? D.hipW / D.shW : D.shW / D.hipW));
+        mid.y += (hasSh ? -1 : 1) * D.torso * uu;
+        img[c] = mid.clone().add(half); img[d] = mid.clone().sub(half);
+        filled.add(c); filled.add(d);
+      }
       const hm = img[11].clone().add(img[12]).multiplyScalar(0.5);
       const sm = img[5].clone().add(img[6]).multiplyScalar(0.5);
       const shW = img[5].distanceTo(img[6]), hipW = img[11].distanceTo(img[12]);
-      // Image units per metre from the least foreshortened segment (widths are only a fallback:
-      // detector shoulder/hip points sit wider than the skeleton's joint centres).
-      const seg = (a, b, key) => ok(a) && ok(b) ? img[a].distanceTo(img[b]) / D[key] : 0;
-      const u = Math.max(sm.distanceTo(hm) / D.torso,
-        seg(11, 13, 'thigh'), seg(12, 14, 'thigh'), seg(13, 15, 'shin'), seg(14, 16, 'shin'),
-        seg(5, 7, 'upperArm'), seg(6, 8, 'upperArm'), seg(7, 9, 'foreArm'), seg(8, 10, 'foreArm'),
-        0.6 * shW / D.shW, 0.6 * hipW / D.hipW, 1e-4);
+      const u = Math.max(hasSh && hasHip ? sm.distanceTo(hm) / D.torso : 0, segU);
       // The scale estimate jumps between segments frame to frame; a slow average keeps the body steady.
       st.u = st.u ? st.u + (u - st.u) * 0.12 : u;
       const us = st.u;
@@ -550,7 +566,7 @@ vec3 echoRegion(vec3 p, out float stripe) {
       const dzT = depth(torso2, D.torso);
       [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].forEach(i => { P[i].z += dzT; });
       CHAIN.forEach(([a, b, key]) => {
-        if (!ok(a) || !ok(b)) return;
+        if (!seen(a) || !seen(b)) return;
         let dz = depth(Math.hypot(P[b].x - P[a].x, P[b].y - P[a].y), D[key]);
         // Feet stay under the body: a shin runs from a forward knee back down to the ankle.
         if (key === 'shin' && P[a].z > 0) dz = -Math.min(dz, P[a].z);
@@ -571,6 +587,21 @@ vec3 echoRegion(vec3 p, out float stripe) {
       const dx = (head.x - sm.x) || (sm.x - hm.x) || 1;
       lat = new THREE.Vector3().crossVectors(up, new THREE.Vector3(Math.sign(dx), 0, 0));
     }
+    // Undetected limbs: straight down (along the body when lying), arms slightly away from the hips.
+    // A missing joint also replaces the joint below it, which is unreliable without its parent.
+    const upN = up.clone().normalize();
+    const down = upN.y > 0.5 ? new THREE.Vector3(0, -1, 0) : upN.clone().negate();
+    const out = lat.clone().normalize();
+    const forced = new Set();
+    CHAIN.forEach(([a, b, key]) => {
+      if (!ok(a) || (ok(b) && !forced.has(b))) return;
+      const dir = down.clone();
+      if (key === 'upperArm' || key === 'foreArm') dir.addScaledVector(out, a === 5 || a === 7 ? 0.12 : -0.12).normalize();
+      P[b] = P[a].clone().addScaledVector(dir, D[key]);
+      filled.add(b);
+      const kid = {7: 9, 8: 10, 13: 15, 14: 16}[b];
+      if (kid !== undefined) forced.add(kid);
+    });
     const ears = ok(3) && ok(4) ? P[3].clone().add(P[4]).multiplyScalar(0.5) : null;
     P.neck = sm;
     P.head = ears || (ok(0) ? P[0] : sm.clone().add(up.clone().normalize().multiplyScalar(0.25)));

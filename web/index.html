@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>ECHO MOVE v21.0 — Real Safety Monitor</title>
+<title>ECHO MOVE v22.0 — Real Safety Monitor</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="css/styles.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -12,7 +12,7 @@
 <body>
 
 <div id="ld">
-  <h1>ECHO MOVE v21.0</h1>
+  <h1>ECHO MOVE v22.0</h1>
   <div id="lds"></div>
   <div class="bar"><div id="ldb"></div></div>
   <div id="ap"><div id="apb"></div></div>
@@ -20,7 +20,7 @@
 
 <div id="L">
   <div class="top">
-    <h2>ECHO MOVE v21.0 — Real Safety</h2>
+    <h2>ECHO MOVE v22.0 — Real Safety</h2>
     <span id="beSt" class="pill off">○ Chưa kết nối backend</span>
     <button class="b sm" id="bMute" title="Bật/tắt còi">🔔</button>
   </div>
@@ -135,8 +135,14 @@
       <select id="evType" aria-label="Loại">
         <option value="">Tất cả loại</option>
         <option value="FALL">Ngã</option>
+        <option value="MANDOWN">Không đứng dậy</option>
+        <option value="RECOVERED">Đã đứng dậy</option>
         <option value="POSTURE">Cúi sai</option>
+        <option value="ERGO">REBA tích lũy</option>
+        <option value="ZONE">Vùng nguy hiểm</option>
+        <option value="PPE">Thiếu bảo hộ</option>
         <option value="CAMERA">Camera kém</option>
+        <option value="OFFLINE">Mất tín hiệu</option>
       </select>
       <select id="evHours" aria-label="Thời gian">
         <option value="1">1 giờ qua</option>
@@ -157,7 +163,7 @@
 </div>
 
 <div id="toasts" aria-live="assertive"></div>
-<div id="imgv" hidden><img alt="Ảnh sự kiện"></div>
+<div id="imgv" hidden><img alt="Ảnh sự kiện"><div class="cap"></div></div>
 
 <div id="R">
   <div id="c3d" style="width:100%;height:100%;"></div>

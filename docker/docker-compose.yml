@@ -14,5 +14,10 @@ services:
       ECHO_TELEGRAM_TOKEN: ${ECHO_TELEGRAM_TOKEN:-}
       ECHO_TELEGRAM_CHAT_ID: ${ECHO_TELEGRAM_CHAT_ID:-}
       ECHO_WEBHOOK_URL: ${ECHO_WEBHOOK_URL:-}
+      ECHO_ZALO_OA_TOKEN: ${ECHO_ZALO_OA_TOKEN:-}
+      ECHO_ZALO_USER_ID: ${ECHO_ZALO_USER_ID:-}
+      ECHO_ESCALATE_TELEGRAM_CHAT_ID: ${ECHO_ESCALATE_TELEGRAM_CHAT_ID:-}
+      ECHO_ESCALATE_MIN: ${ECHO_ESCALATE_MIN:-0}
+      ECHO_RETENTION_DAYS: ${ECHO_RETENTION_DAYS:-0}
     volumes:
-      - ../output:/data/output   # MATLAB JSON, echo.db, snapshots/
+      - ../output:/data/output   # MATLAB JSON, echo.db, snapshots/, clips/

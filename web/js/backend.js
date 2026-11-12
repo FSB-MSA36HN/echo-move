@@ -91,7 +91,9 @@
     ws.onopen = () => { retry = 0; };
     ws.onmessage = e => {
       let ev; try { ev = JSON.parse(e.data); } catch (err) { return; }
-      if (ev && ev.type && !ev.ping) emit('event', ev);
+      if (!ev || ev.ping) return;
+      if (ev.update) emit('update', ev);  // e.g. clip attached to an existing event
+      else if (ev.type) emit('event', ev);
     };
     ws.onclose = () => {
       B.ws = null;

@@ -1,5 +1,24 @@
 # Changelog
 
+## 22.0.0 — sẵn sàng cho hiện trường
+- **Ngã đa tín hiệu**: ba tín hiệu là nằm ngang (thân > 65° và khung rộng hơn cao), đầu thấp ngang hông, và sụp người (chiều cao < 50 % chiều cao lúc đứng của chính track đó, hông rơi > 20 %). FALL khi có ≥ 2 tín hiệu, hoặc nằm ngang mà không thấy đầu. Bắt được ngã về phía camera mà luật cũ bỏ sót. Đồng bộ Python và JS. `ECHO_FALL_MULTISIGNAL=0` để dùng luật v21.
+- **MANDOWN**: vẫn nằm sau `ECHO_MANDOWN_S` (10 s) kể từ khi ngã được xác nhận thì báo CRITICAL, ghi rõ "bất động" hay "còn cử động". **RECOVERED** (INFO, không hú còi) khi người đó đứng dậy ≥ 2 s.
+- **Vùng nguy hiểm**: polygon theo từng camera, khai báo trong `ECHO_CAMERAS_FILE` hoặc vẽ ngay trên tab Camera (nút ⚙, lưu vào `output/camera_config.json`). Chân người trong vùng ≥ dwell thì báo ZONE. Có thể tắt từng luật theo camera.
+- **Clip sự kiện**: ring buffer lưu 5 s trước và 5 s sau mỗi sự kiện của camera server, ghi ra MJPEG và MP4. Xem lại ngay trên tab Sự kiện; gửi kèm qua Telegram (`sendVideo`).
+- **REBA và ERGO**: điểm REBA rút gọn cho từng frame; cảnh báo ERGO khi tổng thời gian ở tư thế REBA ≥ 6 vượt 60 s trong 10 phút.
+- **PPE**: model YOLO phát hiện đồ bảo hộ (`ECHO_PPE_MODEL`) là tùy chọn. Mũ được gán theo vùng đầu, áo phản quang theo vùng thân; thiếu đồ ≥ 5 s thì báo PPE.
+- **Tracker kiểu ByteTrack**: ghép hai tầng (detection mạnh trước, detection yếu khi bị che sau), dự đoán vận tốc, ghép theo khoảng cách tâm có giới hạn theo kích thước. Track giữ nguyên ID khi người ngã đột ngột.
+- **Vận hành**:
+  - Cảnh báo OFFLINE khi camera mất tín hiệu > 30 s, mỗi lần mất chỉ báo một lần.
+  - `ECHO_RETENTION_DAYS` tự xoá sự kiện, ảnh và clip cũ.
+  - `ECHO_ESCALATE_MIN` gửi lại sự kiện CRITICAL chưa xác nhận tới `ECHO_ESCALATE_TELEGRAM_CHAT_ID`.
+  - Thêm kênh Zalo OA.
+  - Làm mờ mặt trong ảnh chụp và clip (`ECHO_BLUR_FACES`).
+  - Nút **Báo nhầm**; tỉ lệ báo nhầm hiển thị trong thống kê.
+- **Đánh giá**: `make eval` chạy trên UR Fall, Le2i hoặc một thư mục video có nhãn. Keypoint được cache để chạy lại nhanh. Xuất precision/recall/F1 và độ trễ phát hiện, so sánh luật v21 với luật đa tín hiệu.
+- API mới: `GET/PUT /api/cameras/{id}/config`, `GET /api/events/{id}/clip` (MJPEG), `GET /api/events/{id}/clip.mp4`, `POST /api/events/{id}/false-alarm`.
+- Database v21 tự động thêm cột mới khi khởi động. Cách deploy không đổi; mọi biến mới đều tùy chọn.
+
 ## 21.0.0 — người 3D thật + hệ thống chạy thực tế
 - **Người 3D**: thay robot bằng mô hình người GLTF có xương (Xbot/Mixamo, ~2.9 MB, nhúng base64 để chạy cả khi mở `file://`), mặc đồ bảo hộ (mũ cứng, áo phản quang có dải sáng đổi màu theo mức nguy hiểm, găng, ủng) bằng shader; retarget COCO-17 → xương với ước lượng chiều sâu từ độ co ngắn chi, nhận MediaPipe world landmarks khi có. Cảnh nhà xưởng: sàn bê tông, vạch nguy hiểm, kệ, đèn xoay cảnh báo, khói/bụi, lửa. Fallback: người dựng bằng code (cùng tên xương) → 2D.
 - **Camera server**: `ECHO_CAMERAS` / `ECHO_CAMERAS_FILE` nhận RTSP/HTTP, webcam USB, file video (tự lặp); luôn xử lý frame mới nhất, tự kết nối lại có backoff; ẩn mật khẩu RTSP trong log/API.

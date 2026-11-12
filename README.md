@@ -2,6 +2,8 @@
 
 Hệ thống cảnh báo an toàn lao động (đồ án môn **Xử lý ảnh**): nhận diện tư thế công nhân (cúi sai, nâng đúng kỹ thuật, ngã) bằng pose estimation và **đánh giá chất lượng ảnh (IQA)** để cảnh báo khi camera bị mờ/tối/bụi/che. Bản 21 chạy được ngoài thực tế: đọc **camera IP (RTSP) / USB / file video** ngay trên server, **xác nhận cảnh báo theo thời gian** (theo từng người, có tracking ID), **ghi nhật ký sự kiện** kèm ảnh chụp, gửi **Telegram / webhook**, và hiển thị **công nhân 3D** mặc đồ bảo hộ mô phỏng đúng tư thế.
 
+Bản 22 hướng tới dùng thật tại xưởng: luật ngã **đa tín hiệu** (bắt được cả ngã về phía camera), cảnh báo **bất động sau ngã (MANDOWN)** và **đã đứng dậy**, **vùng nguy hiểm** vẽ trên từng camera, **clip 5 s trước + 5 s sau** mỗi sự kiện, điểm **REBA** và phơi nhiễm tư thế tích lũy (ERGO), phát hiện **thiếu mũ / áo phản quang** (khi có model PPE), cảnh báo **camera mất tín hiệu**, **leo thang** sự kiện chưa xử lý, **Zalo OA**, làm mờ mặt, nút **Báo nhầm**, tự xoá dữ liệu cũ, và `make eval` đo precision/recall trên UR Fall / Le2i.
+
 ```
  Camera IP/USB/file ──▶ ┌───────────────────────────────┐ ── /api/cameras/*/stream (MJPEG) ──▶ ┌──────────────────────┐
                         │ Python (FastAPI) echo_move     │ ── /ws/events (cảnh báo realtime) ─▶ │ Web (Three.js)       │
@@ -43,16 +45,16 @@ MATLAB: mở `matlab/run_iqa_engine.m`, bấm Run. Kết quả ghi vào `output/
 
 ## Cấu trúc thư mục
 ```
-backend/    package Python `echo_move`: camera/, pose/ (detector, tracker, classifier),
-            alerts/ (engine, hub), storage/ (SQLite), notify/ (Telegram, webhook),
-            pipeline.py, app.py; tests/
+backend/    package Python `echo_move`: camera/, pose/ (detector, tracker, classifier, fall, ppe),
+            alerts/ (engine, hub), storage/ (SQLite + clip), notify/ (Telegram, Zalo, webhook),
+            zones.py, maintenance.py, evaluation.py, pipeline.py, app.py; tests/
 matlab/     run_iqa_engine.m, config.m, +iqa/ (hàm metric), tests/
 web/        index.html, css/, js/ (app, human3d, backend, alerts, cameras, events),
             assets/models/ (worker.glb), data/scenarios.json
 docs/       USER_GUIDE.md, ARCHITECTURE.md, ALGORITHMS.md, DEMO_SCRIPT.md
-scripts/    benchmark.py, export_scenarios.py, embed_model.py
+scripts/    benchmark.py, evaluate.py, export_scenarios.py, embed_model.py
 docker/     Dockerfile, docker-compose.yml
-output/     MATLAB JSON, echo.db, snapshots/ (không commit)
+output/     MATLAB JSON, echo.db, snapshots/, clips/, camera_config.json (không commit)
 data/       video mẫu (không commit)
 ```
 
@@ -68,11 +70,12 @@ data/       video mẫu (không commit)
 make test     # pytest (tracker, alert engine, SQLite, notifier, camera worker, API)
 make lint     # ruff + mypy
 make bench    # đo tốc độ & tương quan PIQE fast vs full (số liệu thật)
+make eval DATASET=urfd ROOT=data/urfd   # precision/recall/F1 + độ trễ trên dataset ngã (cần AI)
 ```
 CI (GitHub Actions) chạy lint + test mỗi lần push. Biến môi trường cấu hình: xem [.env.example](.env.example).
 
 ## Trích dẫn
-Pech-Pacheco et al. 2000 (blur) · Immerkær 1996 (noise) · Peli 1990 (contrast) · Venkatanath et al. 2015 (PIQE) · ISO 18434-1 (exposure) · Casiez et al. 2012 (One-Euro filter) · Bewley et al. 2016 (SORT) · Ultralytics YOLOv8-Pose · Google MediaPipe · Mô hình 3D "Xbot" từ ví dụ three.js (Mixamo).
+Pech-Pacheco et al. 2000 (blur) · Immerkær 1996 (noise) · Peli 1990 (contrast) · Venkatanath et al. 2015 (PIQE) · ISO 18434-1 (exposure) · Casiez et al. 2012 (One-Euro filter) · Bewley et al. 2016 (SORT) · Zhang et al. 2022 (ByteTrack) · Hignett & McAtamney 2000 (REBA) · Kwolek & Kepski 2014 (UR Fall) · Charfi et al. 2013 (Le2i) · Ultralytics YOLOv8-Pose · Google MediaPipe · Mô hình 3D "Xbot" từ ví dụ three.js (Mixamo).
 
 ## Giấy phép
 MIT — xem [LICENSE](LICENSE). Mô hình 3D: xem [web/assets/models/README.md](web/assets/models/README.md).

@@ -5,26 +5,38 @@
    - *Camera server* (`ECHO_CAMERAS`): mỗi camera có 1 luồng đọc (luôn giữ frame mới nhất, không dồn hàng đợi RTSP, tự kết nối lại 1 → 30 s) và 1 luồng xử lý chạy ở `ECHO_CAMERA_FPS`.
    - *Webcam/video trên trình duyệt* gửi frame qua `/ws/pose` (chế độ **Server**), hoặc chạy MediaPipe ngay trong trình duyệt.
    - *MATLAB* ghi `output/<video>_iqa.json` (ghi file tạm rồi `movefile`); `MatlabBridge` đọc file mới nhất (cache theo mtime).
-2. **`StreamPipeline`** (một instance cho mỗi nguồn): YOLOv8-Pose (dùng chung, có khoá vì Ultralytics không thread-safe) → `PoseTracker` (ID ổn định + One-Euro theo từng người) → `classify_posture` → IQA → `AlertEngine` (xác nhận theo thời gian, cooldown).
-3. **`AlertHub`**: cảnh báo đã xác nhận → `EventStore` (SQLite `echo.db` + ảnh `snapshots/`) → `Notifier` (Telegram/webhook, luồng nền, hàng đợi có giới hạn, thử lại 3 lần) → đẩy realtime tới mọi client `/ws/events`.
-4. **Web**: tab *Giám sát* (nguồn cục bộ + người 3D), tab *Camera* (lưới MJPEG, chọn 1 camera để điều khiển người 3D), tab *Sự kiện* (lịch sử, thống kê, xác nhận, CSV). Còi WebAudio + thông báo desktop khi có cảnh báo.
+2. **`StreamPipeline`** có một instance cho mỗi nguồn và xử lý theo thứ tự:
+   1. YOLOv8-Pose (dùng chung, có khoá vì Ultralytics không thread-safe).
+   2. `PoseTracker` (kiểu ByteTrack, ID ổn định + One-Euro theo từng người).
+   3. `classify_posture` (tư thế, tín hiệu ngã, REBA) và `FallAnalyzer` (chiều cao lúc đứng của từng track).
+   4. Vùng nguy hiểm và PPE (nếu có model).
+   5. IQA.
+   6. `AlertEngine` (xác nhận theo thời gian, cooldown, luật bị tắt theo camera).
+3. **`AlertHub`**: cảnh báo đã xác nhận → `EventStore` (SQLite `echo.db` + ảnh `snapshots/`, mặt đã làm mờ) → `Notifier` (Telegram/Zalo/webhook, luồng nền, hàng đợi có giới hạn, thử lại 3 lần) → đẩy realtime tới mọi client `/ws/events`. Camera server giữ ring buffer JPEG. Sau mỗi sự kiện, nó ghi thêm `ECHO_CLIP_POST_S` giây rồi gọi `AlertHub.attach_clip`, hàm này lưu `clips/<id>.mjpg` và `.mp4`, gửi `sendVideo`, rồi đẩy `{"update": "clip"}`.
+4. **`Maintenance`** chạy mỗi 60 s: xoá dữ liệu cũ hơn `ECHO_RETENTION_DAYS` (mỗi giờ) và gửi lại sự kiện CRITICAL chưa xác nhận sau `ECHO_ESCALATE_MIN` phút. `CameraWorker` tự phát OFFLINE khi camera mất tín hiệu quá `ECHO_OFFLINE_ALERT_S`.
+5. **Web**: tab *Giám sát* (nguồn cục bộ + người 3D), tab *Camera* (lưới MJPEG, chọn 1 camera để điều khiển người 3D), tab *Sự kiện* (lịch sử, thống kê, xác nhận, CSV). Còi WebAudio + thông báo desktop khi có cảnh báo.
 
 ## Module backend (`backend/src/echo_move`)
 | Module | Nhiệm vụ |
 |---|---|
 | `config.py` | `Settings` đọc từ biến môi trường `ECHO_*` |
 | `iqa/metrics.py`, `iqa/piqe.py` | 5 metric IQA, PIQE block-wise (vector hoá) |
-| `pose/detector.py` | Bọc YOLO + MediaPipe Hands (import tuỳ chọn), `detect_raw` không trạng thái |
-| `pose/tracker.py` | Tracker tham lam IoU + khoảng cách tâm (kiểu SORT, không Kalman) |
+| `pose/detector.py` | Bọc YOLO + MediaPipe Hands + model PPE tuỳ chọn (import tuỳ chọn), `detect_raw` / `detect_ppe` không trạng thái |
+| `pose/tracker.py` | Tracker kiểu ByteTrack: ghép 2 tầng theo điểm tin cậy, dự đoán vận tốc, ghép theo tâm có giới hạn kích thước |
 | `pose/filters.py` | One-Euro filter, `KeypointSmoother` |
-| `pose/classifier.py` | Luật tư thế theo từng frame (có hiệu chỉnh tỉ lệ khung hình) |
-| `alerts/engine.py` | Xác nhận FALL / POSTURE / CAMERA theo thời gian, cooldown |
-| `alerts/hub.py` | Lưu → thông báo → phát realtime (thread-safe) |
-| `storage/db.py` | `EventStore` SQLite (WAL) + ảnh JPEG, thống kê, CSV |
-| `notify/` | Telegram `sendPhoto`/`sendMessage`, webhook JSON |
-| `camera/worker.py`, `camera/manager.py` | Đọc RTSP/USB/file, kết nối lại, che mật khẩu trong log/API |
+| `pose/classifier.py` | Luật tư thế theo từng frame (có hiệu chỉnh tỉ lệ khung hình), tín hiệu ngã, REBA rút gọn |
+| `pose/fall.py` | `FallAnalyzer`: chiều cao lúc đứng của từng track → tín hiệu "sụp người" |
+| `pose/ppe.py` | Chuẩn hoá tên lớp PPE, gán mũ/áo cho người theo vùng đầu/thân |
+| `zones.py` | Vùng nguy hiểm (polygon), `CameraOptions`, `OptionsStore` (`camera_config.json`) |
+| `alerts/engine.py` | Xác nhận FALL / MANDOWN / RECOVERED / POSTURE / ERGO / ZONE / PPE / CAMERA theo thời gian, cooldown |
+| `alerts/hub.py` | Lưu → thông báo → phát realtime (thread-safe), gắn clip |
+| `storage/db.py` | `EventStore` SQLite (WAL, tự migrate cột mới) + ảnh JPEG + clip, thống kê, CSV, leo thang, xoá dữ liệu cũ |
+| `notify/` | Telegram `sendPhoto`/`sendMessage`/`sendVideo`, Zalo OA, webhook JSON |
+| `maintenance.py` | Tác vụ nền: retention + leo thang |
+| `evaluation.py` | Trích keypoint (cache) + phát lại luật + precision/recall/độ trễ |
+| `camera/worker.py`, `camera/manager.py` | Đọc RTSP/USB/file, kết nối lại, che mật khẩu trong log/API, ring buffer clip, cảnh báo OFFLINE |
 | `pipeline.py` | `StreamPipeline` dùng chung cho camera server và `/ws/pose` |
-| `render.py` | Vẽ skeleton + nhãn lên ảnh (MJPEG, ảnh sự kiện) |
+| `render.py` | Vẽ skeleton, nhãn, vùng nguy hiểm lên ảnh (MJPEG, ảnh sự kiện), làm mờ mặt |
 | `matlab_bridge.py` | Đọc JSON MATLAB |
 | `scenarios.py` + `data/scenarios.json` | Kịch bản demo; `scripts/export_scenarios.py` sao chép sang web |
 | `app.py` | `create_app()`: REST + WebSocket + phục vụ thư mục `web/` tại `/` |
@@ -43,6 +55,10 @@
 | POST | `/api/events` | Trình duyệt báo cảnh báo đã xác nhận (`type`, `detail`, `track_id`, `source`, `image` data URL) |
 | GET | `/api/events/{id}`, `/api/events/{id}/image` | Chi tiết, ảnh chụp |
 | POST | `/api/events/{id}/ack` | Đánh dấu đã xử lý |
+| POST | `/api/events/{id}/false-alarm` | Đánh dấu đã xử lý **và** báo nhầm |
+| GET | `/api/events/{id}/clip` | Phát lại clip dạng MJPEG (dùng trong `<img>`) |
+| GET | `/api/events/{id}/clip.mp4` | Tải clip MP4 |
+| GET / PUT | `/api/cameras/{id}/config` | Vùng nguy hiểm + luật bị tắt: `{"zones": [{"name", "points": [[x,y]...], "dwell_s"}], "disabled_rules": ["ERGO"]}` (422 nếu sai) |
 | GET | `/api/stats?hours=24` | Tổng, chưa xử lý, theo loại / mức / nguồn / giờ |
 | WS | `/ws/events` | Đẩy sự kiện mới; `{"ping": t}` mỗi 20 s |
 | WS | `/ws/pose` | Frame từ trình duyệt (xem dưới) |
@@ -62,11 +78,14 @@ Client → server:
 Server → client (rút gọn):
 ```json
 {
-  "detected": true, "mode": "AI", "version": "21.0.0", "source": "browser",
+  "detected": true, "mode": "AI", "version": "22.0.0", "source": "browser",
   "persons": [{"id": 1, "bbox": [x0, y0, x1, y1], "keypoints": [[x, y, conf] x17],
                "safety": {"level": "SAFE|WARNING|RISK", "label": "...", "detail": "...",
                           "technique": "NONE|PROPER_LIFT|IMPROPER|PARTIAL|FALL", "color": [r,g,b],
-                          "spine_deg": 0, "knee_deg": 0, "bbox_ratio": 0}}],
+                          "spine_deg": 0, "knee_deg": 0, "bbox_ratio": 0, "reba": 1,
+                          "signals": {"lying": false, "head_low": false, "collapsed": false}},
+               "zones": [{"name": "Máy ép", "dwell_s": 1}],
+               "ppe": {"helmet": true, "vest": false}}],
   "hands": [], "quality": {"piqe": 0, "piqe_full": 0, "blur": 0, "contrast": 0, "noise": 0, "exposure": 0, "overall": 0, "time_fast_ms": 0, "time_full_ms": 0},
   "env_hazards": {"hazards": [], "overall_level": "SAFE", "overall_color": [0,1,0]},
   "alerts": [],
@@ -77,6 +96,8 @@ Server → client (rút gọn):
 ```
 - `keypoints` là toạ độ **chuẩn hoá 0–1** theo chuẩn COCO-17; `id` là track ID ổn định giữa các frame.
 - `alerts` chỉ chứa cảnh báo **vừa được xác nhận** ở frame này (đã lưu DB nếu có).
+- `zones` chỉ có khi camera có vùng nguy hiểm; `ppe` chỉ có khi có model PPE (giá trị `null` = vùng đầu/thân không nhìn thấy).
+- Sự kiện có thêm `has_clip`, `false_alarm`, `escalated`. `/ws/events` cũng gửi `{"update": "clip"|"escalated", ...}` để web tải lại danh sách (không phải sự kiện mới).
 - Frame bị bỏ qua do giới hạn FPS nhận `{"skip": true}`; lỗi nhận `{"error": "..."}`. Tin nhắn lớn hơn `ECHO_MAX_MESSAGE_BYTES` (4 MB) bị từ chối.
 
 ## Web (`web/js`)

@@ -60,6 +60,13 @@ class Settings:
     lift_spine_max_deg: float = 45.0
     fall_spine_deg: float = 65.0  # torso this far from vertical ...
     fall_bbox_ratio: float = 1.0  # ... and body box wider than tall → lying
+    # Multi-signal fall rule (lying / head at hip level / body collapsed vs. standing height);
+    # 0 = legacy single geometric rule, kept for A/B evaluation.
+    fall_multisignal: bool = field(
+        default_factory=lambda: _env("FALL_MULTISIGNAL", "1") == "1"
+    )
+    fall_collapse_ratio: float = 0.5  # body height below this fraction of standing height
+    head_low_ratio: float = 0.15  # head less than this × body height above the hips
 
     # Temporal alert confirmation (seconds)
     fall_confirm_s: float = field(default_factory=lambda: float(_env("FALL_CONFIRM_S", "1.5")))
@@ -72,6 +79,24 @@ class Settings:
     alert_cooldown_s: float = field(
         default_factory=lambda: float(_env("ALERT_COOLDOWN_S", "30"))
     )
+    mandown_s: float = field(default_factory=lambda: float(_env("MANDOWN_S", "10")))
+    recover_s: float = 2.0
+    zone_dwell_s: float = 1.0
+    # REBA-lite cannot see load/coupling, so a stooped lift scores ~5-7 instead of 8+.
+    ergo_reba_high: int = field(default_factory=lambda: int(_env("ERGO_REBA", "6")))
+    ergo_exposure_s: float = field(
+        default_factory=lambda: float(_env("ERGO_EXPOSURE_S", "60"))
+    )
+    ergo_window_s: float = 600.0
+
+    # Optional PPE detector (YOLO detection model with helmet / vest classes)
+    ppe_model: str = field(default_factory=lambda: _env("PPE_MODEL", ""))
+    ppe_required: tuple[str, ...] = field(
+        default_factory=lambda: tuple(
+            s.strip() for s in _env("PPE_REQUIRED", "helmet,vest").split(",") if s.strip()
+        )
+    )
+    ppe_confirm_s: float = field(default_factory=lambda: float(_env("PPE_CONFIRM_S", "5")))
 
     # Image quality assessment
     piqe_mode: PiqeMode = field(default_factory=lambda: cast(PiqeMode, _env("PIQE_MODE", "both")))
@@ -92,11 +117,26 @@ class Settings:
     record_browser_events: bool = field(
         default_factory=lambda: _env("RECORD_BROWSER_EVENTS", "1") == "1"
     )
+    event_clips: bool = field(default_factory=lambda: _env("EVENT_CLIPS", "1") == "1")
+    clip_pre_s: float = field(default_factory=lambda: float(_env("CLIP_PRE_S", "5")))
+    clip_post_s: float = field(default_factory=lambda: float(_env("CLIP_POST_S", "5")))
+    blur_faces: bool = field(default_factory=lambda: _env("BLUR_FACES", "1") == "1")
+    retention_days: float = field(default_factory=lambda: float(_env("RETENTION_DAYS", "0")))
+    offline_alert_s: float = field(
+        default_factory=lambda: float(_env("OFFLINE_ALERT_S", "30"))
+    )
 
     # Notifications (disabled unless configured)
     telegram_token: str = field(default_factory=lambda: _env("TELEGRAM_TOKEN", ""))
     telegram_chat_id: str = field(default_factory=lambda: _env("TELEGRAM_CHAT_ID", ""))
     webhook_url: str = field(default_factory=lambda: _env("WEBHOOK_URL", ""))
+    zalo_token: str = field(default_factory=lambda: _env("ZALO_OA_TOKEN", ""))
+    zalo_user_id: str = field(default_factory=lambda: _env("ZALO_USER_ID", ""))
+    # Unacknowledged CRITICAL events are re-sent after this many minutes (0 = off)
+    escalate_min: float = field(default_factory=lambda: float(_env("ESCALATE_MIN", "0")))
+    escalate_chat_id: str = field(
+        default_factory=lambda: _env("ESCALATE_TELEGRAM_CHAT_ID", "")
+    )
 
     # MATLAB bridge
     matlab_dir: Path = field(
