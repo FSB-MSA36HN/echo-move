@@ -56,7 +56,7 @@ Phân loại từng frame nhiễu (che khuất, mờ chuyển động, ngồi x�
 | MANDOWN | vẫn FALL sau khi đã báo ngã (lệch ≤ 2 s không reset) | `FALL_CONFIRM_S + ECHO_MANDOWN_S` (10 s) | CRITICAL |
 | RECOVERED | đã ngã, nay đứng / nâng / cúi nhẹ | 2 s | INFO (không còi) |
 | ERGO | REBA ≥ 6 tích lũy trong 10 phút | ≥ 60 s | WARNING |
-| ZONE | chân trong polygon vùng cấm | `dwell_s` của vùng (mặc định 1 s) | CRITICAL |
+| ZONE | chân trong polygon vùng cấm | `dwell_s` của vùng (mặc định 1 s) | WARNING |
 | PPE | thiếu đồ bắt buộc (`ECHO_PPE_REQUIRED`) | `ECHO_PPE_CONFIRM_S` = 5 s | WARNING |
 | CAMERA | IQA tổng < 40 | `ECHO_QUALITY_CONFIRM_S` = 5 s | WARNING |
 | OFFLINE | camera ở trạng thái reconnecting/stalled | `ECHO_OFFLINE_ALERT_S` = 30 s, mỗi lần mất 1 lần | WARNING |

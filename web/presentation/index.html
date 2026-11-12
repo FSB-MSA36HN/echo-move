@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ECHO MOVE — Thuyết trình · Hệ thống cảnh báo an toàn lao động</title>
+<meta name="description" content="Slide thuyết trình ECHO MOVE v22: nhận diện tư thế, phát hiện ngã đa tín hiệu, đánh giá chất lượng ảnh và cảnh báo an toàn lao động theo thời gian thực.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fffaf7; --ink:#14141a; --ink2:#4a4955; --muted:#8a8892; --line:rgba(20,20,26,.09);
+  --red:#e0314a; --red-soft:#ffecee; --amber:#d97706; --amber-soft:#fff5e6;
+  --green:#067647; --green-soft:#e8f8ee; --blue:#2563eb; --blue-soft:#eaf1ff;
+  --font:'Be Vietnam Pro','Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;
+  --mono:'JetBrains Mono','SFMono-Regular',Menlo,Consolas,monospace;
+  --ease:cubic-bezier(.4,0,.2,1);
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#0d0e12;overflow:hidden;font-family:var(--font);color:var(--ink);-webkit-font-smoothing:antialiased}
+b,strong{font-weight:800}
+code{font-family:var(--mono);font-size:.9em;background:rgba(20,20,26,.06);padding:2px 10px;border-radius:8px}
+
+/* ===== fixed 1920×1080 canvas, scaled to the viewport ===== */
+.deck{position:absolute;left:50%;top:50%;width:1920px;height:1080px;transform:translate(-50%,-50%) scale(var(--s,1));transform-origin:center;background:var(--bg);overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+.slide{position:absolute;inset:0;padding:120px 132px 110px;display:flex;flex-direction:column;opacity:0;pointer-events:none;transform:translateX(40px);transition:opacity .45s var(--ease),transform .45s var(--ease);background:var(--bg)}
+.slide.is-active{opacity:1;pointer-events:auto;transform:none;z-index:2}
+.slide.is-prev{transform:translateX(-40px)}
+.slide.center-v>.body{margin:auto 0}
+
+/* ===== chrome ===== */
+.stripe{position:absolute;top:0;left:0;right:0;height:22px;background:repeating-linear-gradient(45deg,var(--red) 0 26px,#111318 26px 52px)}
+.stripe-b{position:absolute;bottom:0;left:0;right:0;height:9px;background:repeating-linear-gradient(45deg,var(--red) 0 14px,#111318 14px 28px);opacity:.6}
+.chrome{position:absolute;top:50px;left:132px;right:132px;display:flex;justify-content:space-between;align-items:center}
+.tag{display:inline-flex;align-items:center;gap:12px;padding:10px 24px;border-radius:12px;font-size:20px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;background:var(--red);color:#fff;box-shadow:0 8px 22px rgba(224,49,74,.28)}
+.tag::before{content:'⚠';font-size:22px}
+.tag.amber{background:var(--amber);box-shadow:0 8px 22px rgba(217,119,6,.25)}
+.tag.green{background:var(--green);box-shadow:0 8px 22px rgba(6,118,71,.22)}
+.tag.green::before{content:'✓'}
+.tag.blue{background:var(--blue);box-shadow:0 8px 22px rgba(37,99,235,.22)}
+.tag.blue::before{content:'◆'}
+.page{font-size:20px;color:var(--muted);letter-spacing:.15em;font-weight:700}
+.footer{position:absolute;left:132px;right:132px;bottom:34px;display:flex;justify-content:space-between;font-size:18px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase}
+
+/* ===== type ===== */
+.kicker{font-size:24px;font-weight:800;color:var(--red);letter-spacing:.08em;text-transform:uppercase;margin:20px 0 8px}
+.h1{font-size:124px;font-weight:900;line-height:1.02;letter-spacing:-3px;margin:8px 0 22px}
+.h2{font-size:76px;font-weight:900;line-height:1.08;letter-spacing:-1.5px;margin:20px 0 18px}
+.red{color:var(--red)} .amb{color:var(--amber)} .grn{color:var(--green)} .blu{color:var(--blue)}
+.strike{position:relative;display:inline-block}
+.strike::after{content:'';position:absolute;left:-3%;right:-3%;top:52%;height:14px;background:var(--red);transform:skewX(-12deg);opacity:.85}
+.sub{font-size:34px;line-height:1.5;color:var(--ink2);max-width:1400px;margin:0}
+.hl-red{display:inline-block;padding:2px 18px;background:var(--red);color:#fff;border-radius:10px;font-weight:800}
+.hl-amber{display:inline-block;padding:2px 18px;background:var(--amber-soft);color:var(--amber);border-radius:10px;font-weight:800;border:1px solid rgba(217,119,6,.25)}
+.hl-green{display:inline-block;padding:2px 18px;background:var(--green-soft);color:var(--green);border-radius:10px;font-weight:800;border:1px solid rgba(6,118,71,.25)}
+
+/* ===== blocks ===== */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:32px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:28px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:24px}
+.card{border:1px solid var(--line);border-radius:22px;padding:30px 34px;background:#fff;box-shadow:0 8px 26px rgba(17,19,24,.05)}
+.card .lbl{font-size:18px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.card h4{font-size:36px;font-weight:900;line-height:1.2;margin:0 0 12px}
+.card p,.card li{font-size:26px;line-height:1.5;color:var(--ink2);margin:0}
+.card ul{margin:0;padding-left:30px}
+.card li+li{margin-top:6px}
+.t-red{border-top:6px solid var(--red)} .t-amber{border-top:6px solid var(--amber)} .t-green{border-top:6px solid var(--green)} .t-blue{border-top:6px solid var(--blue)}
+.alert{border:3px solid var(--red);border-radius:22px;padding:30px 38px;background:linear-gradient(180deg,#fff 0%,var(--red-soft) 100%);box-shadow:0 16px 40px rgba(224,49,74,.14);position:relative}
+.alert::before{content:'';position:absolute;top:-15px;left:32px;width:28px;height:28px;background:var(--red);border-radius:50%;box-shadow:0 0 0 8px rgba(224,49,74,.2)}
+.alert.amber{border-color:var(--amber);background:linear-gradient(180deg,#fff 0%,var(--amber-soft) 100%);box-shadow:0 16px 40px rgba(217,119,6,.14)}
+.alert.amber::before{background:var(--amber);box-shadow:0 0 0 8px rgba(217,119,6,.2)}
+.alert.green{border-color:var(--green);background:linear-gradient(180deg,#fff 0%,var(--green-soft) 100%);box-shadow:0 16px 40px rgba(6,118,71,.14)}
+.alert.green::before{background:var(--green);box-shadow:0 0 0 8px rgba(6,118,71,.2)}
+.alert h3{font-size:40px;font-weight:900;margin:0 0 8px}
+.alert p{font-size:28px;line-height:1.5;color:var(--ink2);margin:0}
+.code{background:#141418;color:#fff5ea;border-radius:20px;padding:30px 38px;font-family:var(--mono);font-size:26px;line-height:1.75;border-left:10px solid var(--red);margin:0;white-space:pre}
+.code .cm{color:#8b857c} .code .kw{color:#ffb38a} .code .st{color:#b3e6c2} .code .bad{color:#ff9aa8;font-weight:700}
+.checks{display:flex;flex-direction:column;gap:16px}
+.check{display:flex;gap:22px;align-items:center;padding:18px 26px;border:1px solid var(--line);border-radius:18px;background:#fff}
+.check .box{flex:0 0 46px;height:46px;border-radius:12px;border:3px solid var(--red);display:grid;place-items:center;font-weight:900;font-size:24px;color:var(--red);background:var(--red-soft)}
+.check.ok .box{border-color:var(--green);color:var(--green);background:var(--green-soft)}
+.check.wip .box{border-color:var(--amber);color:var(--amber);background:var(--amber-soft)}
+.check .txt{font-size:28px;line-height:1.4;font-weight:600}
+.check .txt span{font-weight:400;color:var(--ink2)}
+table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;background:#fff;border:1px solid var(--line);border-radius:20px;overflow:hidden}
+.tbl th{background:#141418;color:#fff;text-align:left;padding:16px 24px;font-size:20px;letter-spacing:.1em;text-transform:uppercase}
+.tbl td{padding:13px 24px;border-top:1px solid var(--line);color:var(--ink2)}
+.tbl td:first-child{font-family:var(--mono);font-weight:700;color:var(--ink)}
+.lv{display:inline-block;padding:2px 14px;border-radius:8px;font-size:19px;font-weight:800;letter-spacing:.06em}
+.lv.c{background:var(--red);color:#fff} .lv.w{background:var(--amber-soft);color:var(--amber)} .lv.i{background:var(--green-soft);color:var(--green)}
+
+/* pipeline chips */
+.flow{display:flex;flex-wrap:wrap;align-items:center;gap:18px 14px}
+.chip{padding:20px 28px;border-radius:18px;background:#fff;border:2px solid var(--line);font-size:28px;font-weight:800;box-shadow:0 6px 18px rgba(17,19,24,.05)}
+.chip small{display:block;font-size:19px;font-weight:500;color:var(--muted);margin-top:4px}
+.chip.r{border-color:var(--red);background:var(--red-soft)} .chip.a{border-color:var(--amber);background:var(--amber-soft)} .chip.g{border-color:var(--green);background:var(--green-soft)} .chip.b{border-color:var(--blue);background:var(--blue-soft)}
+.arrow{font-size:40px;color:var(--muted);font-weight:900}
+
+/* architecture */
+.arch{display:grid;grid-template-columns:1fr 1.25fr 1fr;gap:28px;align-items:stretch}
+.arch .col{border-radius:24px;padding:30px 32px;background:#fff;border:2px solid var(--line)}
+.arch .col h4{font-size:40px;font-weight:900;margin:0 0 4px}
+.arch .col .role{font-size:21px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;margin-bottom:16px}
+.arch .col li{font-size:25px;line-height:1.5;color:var(--ink2)}
+.arch .col ul{margin:0;padding-left:28px}
+.links{display:flex;justify-content:space-around;margin:18px 0 0;font-family:var(--mono);font-size:22px;color:var(--ink2)}
+
+.big-num{font-size:120px;font-weight:900;line-height:1;letter-spacing:-3px}
+.muted{color:var(--muted)}
+.mt{margin-top:30px} .mt2{margin-top:48px}
+.notes{display:none}
+
+/* ===== UI overlays (outside the canvas) ===== */
+.progress{position:fixed;left:0;right:0;bottom:0;height:5px;z-index:30}
+.progress span{display:block;height:100%;width:0;background:var(--red);transition:width .3s var(--ease)}
+.hint{position:fixed;right:18px;bottom:16px;z-index:30;font:13px/1.4 var(--font);color:#9a9aa6;background:rgba(0,0,0,.45);padding:6px 12px;border-radius:8px;opacity:1;transition:opacity .6s}
+.hint.hide{opacity:0}
+.notes-panel{position:fixed;left:0;right:0;bottom:0;max-height:38vh;overflow:auto;z-index:40;background:rgba(18,19,26,.96);color:#eceef6;padding:18px 28px 24px;font:18px/1.6 var(--font);transform:translateY(100%);transition:transform .3s var(--ease);border-top:3px solid var(--red)}
+.notes-panel.open{transform:none}
+.notes-panel b{color:#ff9aa8}
+.overview{position:fixed;inset:0;z-index:50;background:rgba(10,11,16,.95);display:none;grid-template-columns:repeat(4,1fr);gap:18px;padding:30px;overflow:auto;align-content:start}
+.overview.open{display:grid}
+.overview button{all:unset;cursor:pointer;background:#fffaf7;border-radius:12px;padding:16px 18px;min-height:120px;font:600 17px/1.35 var(--font);color:#14141a;border-top:6px solid var(--red);position:relative}
+.overview button.cur{outline:4px solid #ffb38a}
+.overview button i{display:block;font-style:normal;color:#8a8892;font-size:14px;margin-bottom:6px;letter-spacing:.12em}
+
+@media print{
+  @page{size:1920px 1080px;margin:0}
+  html,body{overflow:visible;background:#fff}
+  .deck{position:static;transform:none;width:1920px;height:auto;box-shadow:none}
+  .slide{position:relative;opacity:1;transform:none;height:1080px;page-break-after:always;break-after:page}
+  .progress,.hint,.notes-panel,.overview{display:none!important}
+}
+</style>
+</head>
+<body>
+<main class="deck" id="deck">
+
+  <!-- 1. COVER -->
+  <section class="slide center-v" data-title="ECHO MOVE">
+    <div class="stripe"></div>
+    <div class="chrome"><span class="tag">Xử lý ảnh · Đồ án</span><span class="page"></span></div>
+    <div class="body">
+      <div class="kicker">ECHO MOVE v22 · Worker Safety Warning System</div>
+      <h1 class="h1" style="font-size:132px">Camera không chỉ <span class="strike">ghi hình</span><br>mà phải <span class="red">kịp cảnh báo</span></h1>
+      <p class="sub" style="font-size:38px">Nhận diện tư thế, phát hiện ngã và bất động, đánh giá chất lượng ảnh, rồi gửi cảnh báo an toàn lao động theo thời gian thực.</p>
+      <div class="alert mt2" style="max-width:1450px">
+        <h3>Một câu tóm tắt</h3>
+        <p>Pose estimation (YOLOv8-Pose) + luật hình học + <b>xác nhận theo thời gian</b> + IQA, chạy trên camera IP/USB, ghi nhật ký, gửi Telegram/Zalo, có người 3D trực quan hoá.</p>
+      </div>
+    </div>
+    <div class="stripe-b"></div>
+    <div class="footer"><span>Nhóm FSB · MSA36HN · Môn Xử lý ảnh</span><span>2026</span></div>
+    <aside class="notes">Mở đầu: giới thiệu nhóm và đề tài. Nhấn mạnh hệ thống chạy được ngoài thực tế (camera RTSP thật), không chỉ demo.</aside>
+  </section>
+
+  <!-- 2. PROBLEM -->
+  <section class="slide" data-title="Vấn đề">
+    <div class="stripe"></div>
+    <div class="chrome"><span class="tag">Vấn đề</span><span class="page"></span></div>
+    <div class="kicker">Tại sao cần hệ thống này</div>
+    <h2 class="h2">Ba rủi ro mà <span class="red">giám sát thủ công</span> hay bỏ lỡ</h2>
+    <div class="grid3 mt">
+      <div class="card t-red"><div class="lbl">Rủi ro 1 · Khẩn cấp</div><h4>Ngã và bất động</h4><p>Người ngã ở góc khuất, không ai thấy. Mỗi phút chậm trễ đều làm tăng hậu quả.</p></div>
+      <div class="card t-amber"><div class="lbl">Rủi ro 2 · Tích lũy</div><h4>Tư thế sai khi nâng</h4><p>Cúi lưng nâng vật nặng lặp lại cả ca, gây chấn thương cột sống về lâu dài.</p></div>
+      <div class="card t-blue"><div class="lbl">Rủi ro 3 · Âm thầm</div><h4>Camera "mù"</h4><p>Ống kính bám bụi, bị che, thiếu sáng: có camera nhưng thực chất không giám sát được.</p></div>
+    </div>
+    <div class="alert amber mt2">
+      <h3>Một người bảo vệ không thể nhìn 10 màn hình suốt 8 giờ</h3>
+      <p>Hệ thống phải tự phát hiện, <b>tự lọc báo nhầm</b>, và chỉ gọi người khi thật sự cần.</p>
+    </div>
+    <div class="stripe-b"></div>
+    <div class="footer"><span>problem · 3 risks</span><span>ECHO MOVE</span></div>
+    <aside class="notes">Không dùng số liệu thống kê chưa kiểm chứng. Tập trung vào 3 loại rủi ro mà hệ thống giải quyết.</aside>
+  </section>
+
+  <!-- 3. GOALS -->
+  <section class="slide" data-title="Mục tiêu">
+    <div class="stripe"></div>
+    <div class="chrome"><span class="tag green">Mục tiêu</span><span class="page"></span></div>
+    <div class="kicker">Yêu cầu đặt ra</div>
+    <h2 class="h2">Hệ thống phải đạt <span class="hl-red">6 tiêu chí</span></h2>
+    <div class="checks mt">
+      <div class="check ok"><div class="box">✓</div><div class="txt">Realtime trên CPU <span>— YOLOv8n-Pose, luôn xử lý frame mới nhất, không dồn trễ</span></div></div>
+      <div class="check ok"><div class="box">✓</div><div class="txt">Ít báo nhầm <span>— điều kiện phải kéo dài mới thành cảnh báo, cooldown theo từng người</span></div></div>
+      <div class="check ok"><div class="box">✓</div><div class="txt">Nhiều người, nhiều camera <span>— tracking ID ổn định, mỗi camera một pipeline</span></div></div>
+      <div class="check ok"><div class="box">✓</div><div class="txt">Biết khi chính camera kém <span>— 5 chỉ số IQA, cảnh báo camera kém và mất tín hiệu</span></div></div>
+      <div class="check ok"><div class="box">✓</div><div class="txt">Có bằng chứng và truy vết <span>— ảnh, clip 10 s, nhật ký SQLite, xuất CSV</span></div></div>
+      <div class="check ok"><div class="box">✓</div><div class="txt">Luôn demo được <span>— web chạy offline 8 kịch bản, không cần backend</span></div></div>
+    </div>
+    <div class="stripe-b"></div>
+    <div class="footer"><span>goals · requirements</span><span>ECHO MOVE</span></div>
+  </section>
+
+  <!-- 4. ARCHITECTURE -->
+  <section class="slide" data-title="Kiến trúc 3 tầng">
+    <div class="stripe"></div>
+    <div class="chrome"><span class="tag blue">Kiến trúc</span><span class="page"></span></div>
+    <div class="kicker">Mỗi tầng làm đúng một việc</div>
+    <h2 class="h2">Ba tầng: <span class="amb">MATLAB</span> · <span class="red">Python</span> · <span class="blu">Web</span></h2>
+    <div class="arch mt">
+      <div class="col" style="border-color:var(--amber)">
+        <h4>MATLAB</h4><div class="role amb">Phân tích offline</div>
+        <ul><li>IQA trên toàn video</li><li>9 biểu đồ: Canny, Laplacian, histogram, Otsu…</li><li>So sánh PIQE fast và full</li><li>Xuất JSON / CSV / PNG</li></ul>
+      </div>
+      <div class="col" style="border-color:var(--red);background:var(--red-soft)">
+        <h4>Python · FastAPI</h4><div class="role red">Bộ não realtime</div>
+        <ul><li>Camera RTSP / USB / file video</li><li>YOLOv8-Pose → tracker → luật → xác nhận theo thời gian</li><li>SQLite + ảnh + clip, Telegram / Zalo / webhook</li><li>REST + WebSocket, phục vụ luôn giao diện web</li></ul>
+      </div>
+      <div class="col" style="border-color:var(--blue)">
+        <h4>Web · Three.js</h4><div class="role blu">Giao diện</div>
+        <ul><li>3 tab: Giám sát · Camera · Sự kiện</li><li>Công nhân 3D mặc đồ bảo hộ</li><li>Còi, toast, thông báo desktop</li><li>Chạy offline khi mất backend</li></ul>
+      </div>
+    </div>
+    <div class="links"><span>MATLAB → <b>*_iqa.json</b> → Python</span><span>Python ⇄ <b>/ws/pose · /ws/events · MJPEG</b> ⇄ Web</span></div>
+    <div class="stripe-b"></div>
+    <div class="footer"><span>architecture · 3 tiers</span><span>ECHO MOVE</span></div>
+    <aside class="notes">Câu hỏi hay gặp: tại sao 3 ngôn ngữ? MATLAB cho phân tích và biểu đồ, Python cho AI realtime, HTML/JS cho UI và demo offline.</aside>
+  </section>
+
+  <!-- 5. PIPELINE -->
+  <section class="slide" data-title="Pipeline mỗi frame">
+    <div class="stripe"></div>
+    <div class="chrome"><span class="tag blue">Pipeline</span><span class="page"></span></div>
+    <div class="kicker">StreamPipeline · một instance cho mỗi nguồn</div>
+    <h2 class="h2">Một frame đi qua <span class="red">8 bước</span></h2>
+    <div class="flow mt">
+      <div class="chip b">1 · YOLOv8-Pose<small>17 keypoint COCO, chuẩn hoá 0–1</small></div><span class="arrow">→</span>
+      <div class="chip b">2 · Tracker<small>ID ổn định + One-Euro</small></div><span class="arrow">→</span>
+      <div class="chip a">3 · Phân loại tư thế<small>góc lưng, gối, REBA</small></div><span class="arrow">→</span>
+      <div class="chip a">4 · FallAnalyzer<small>chiều cao lúc đứng</small></div>
+    </div>
+    <div class="flow" style="margin-top:22px">
+      <span class="arrow">→</span>
+      <div class="chip a">5 · Vùng cấm + PPE<small>polygon, mũ / áo</small></div><span class="arrow">→</span>
+      <div class="chip g">6 · IQA<small>5 chỉ số chất lượng</small></div><span class="arrow">→</span>
+      <div class="chip r">7 · AlertEngine<small>xác nhận theo thời gian</small></div><span class="arrow">→</span>
+      <div class="chip r">8 · AlertHub<small>lưu → gửi → đẩy realtime</small></div>
+    </div>
+    <div class="grid2 mt2">
+      <div class="alert green"><h3>Model dùng chung, có khoá</h3><p>Ultralytics không thread-safe nên mọi camera chia sẻ <b>một</b> model; tracking tách riêng theo từng camera.</p></div>
+      <div class="alert amber"><h3>Không chặn event loop</h3><p>Suy luận chạy trong executor; gửi thông báo ở luồng nền, thử lại 3 lần.</p></div>
+    </div>
+    <div class="stripe-b"></div>
+    <div class="footer"><span>pipeline · per frame</span><span>ECHO MOVE</span></div>
+  </section>
+
+  <!-- 6. IQA -->
+  <section class="slide" data-title="Đánh giá chất lượng ảnh">
+    <div class="stripe"></div>
+    <div class="chrome"><span class="tag amber">Xử lý ảnh · IQA</span><span class="page"></span></div>
+    <div class="kicker">Image Quality Assessment</div>
+    <h2 class="h2">Camera kém thì <span class="red">mọi luật đều sai</span></h2>
+    <table class="tbl mt">
+      <tr><th>Chỉ số</th><th>Cách tính</th><th>Nguồn</th></tr>
+      <tr><td>Blur</td><td>Phương sai Laplacian</td><td>Pech-Pacheco et al., 2000</td></tr>
+      <tr><td>Noise</td><td>Độ lệch chuẩn của ảnh trừ ảnh lọc Gauss 5×5</td><td>Biến thể của Immerkær, 1996</td></tr>
+      <tr><td>Contrast</td><td>RMS contrast (độ lệch chuẩn mức xám)</td><td>Peli, 1990</td></tr>
+      <tr><td>PIQE</td><td>Khối 16×16 trên MSCN; bản "fast" dùng toàn ảnh</td><td>Venkatanath et al., 2015 (xấp xỉ)</td></tr>
+      <tr><td>Exposure</td><td>Tỉ lệ điểm ảnh cháy sáng (&gt; 0.95) và tối (&lt; 0.05)</td><td>Tinh thần ISO 18434-1</td></tr>
+    </table>
+    <pre class="code mt"><span class="kw">Overall</span> = <span class="st">0.25</span>·PIQE + <span class="st">0.25</span>·Blur + <span class="st">0.20</span>·Contrast + <span class="st">0.15</span>·Noise + <span class="st">0.15</span>·Exposure
+<span class="cm"># Overall &lt; 40 kéo dài 5 s  →</span> <span class="bad">CAMERA WARNING</span></pre>
+    <div class="stripe-b"></div>
+    <div class="footer"><span>iqa · 5 metrics</span><span>ECHO MOVE</span></div>
+    <aside class="notes">Trung thực: PIQE ở đây là bản xấp xỉ, trọng số là giá trị thực nghiệm. PIQE full chỉ tính mỗi 30 frame để giữ realtime.</aside>
+  </section>
+
+  <!-- 7. POSTURE -->
+  <section class="slide" data-title="Phân loại tư thế">
+    <div class="stripe"></div>
+    <div class="chrome"><span class="tag amber">Tư thế</span><span class="page"></span></div>
+    <div class="kicker">Luật hình học trên 17 keypoint</div>
+    <h2 class="h2">Từ keypoint đến <span class="red">mức nguy hiểm</span></h2>
+    <div class="grid2 mt">
+      <div>
+        <pre class="code" style="font-size:24px"><span class="cm"># x nhân W/H trước khi tính góc</span>
+<span class="kw">spine</span> = atan2(|x_vai − x_hông|, |y_vai − y_hông|)
+<span class="kw">knee</span>  = góc hông–gối–cổ chân
+<span class="kw">ratio</span> = rộng / cao khung keypoint
+
+<span class="kw">if</span> spine &gt; <span class="st">65°</span> <span class="kw">and</span> ratio &gt; <span class="st">1</span>  → <span class="bad">NẰM NGANG</span>
+<span class="kw">if</span> knee &lt; <span class="st">140°</span> <span class="kw">and</span> spine &lt; <span class="st">45°</span> → <span class="st">NÂNG ĐÚNG</span>
+<span class="kw">if</span> spine &gt; <span class="st">60°</span>               → <span class="bad">SAI TƯ THẾ</span>
+<span class="kw">if</span> spine &gt; <span class="st">30°</span>               → CHÚ Ý</pre>
+      </div>
+      <div class="checks">
+        <div class="check ok"><div class="box">✓</div><div class="txt">Hiệu chỉnh tỉ lệ khung hình <span>— khung 16:9 từng làm lệch góc lưng tới ~40 %</span></div></div>
+        <div class="check ok"><div class="box">✓</div><div class="txt">Bỏ luật cũ |y_vai − y_hông| &lt; 0.08 <span>— báo nhầm khi cúi sâu</span></div></div>
+        <div class="check ok"><div class="box">✓</div><div class="txt">Thiếu điểm vai / hông <span>— coi là an toàn, không đoán</span></div></div>
+        <div class="check ok"><div class="box">✓</div><div class="txt">Python và JS dùng <b>cùng một luật</b> <span>— kiểm tra chéo bằng Node</span></div></div>
+      </div>
+    </div>
+    <div class="stripe-b"></div>
+    <div class="footer"><span>posture · geometry rules</span><span>ECHO MOVE</span></div>
+  </section>
+
+  <!-- 8. MULTI-SIGNAL FALL -->
+  <section class="slide" data-title="Ngã đa tín hiệu">
+    <div class="stripe"></div>
+    <div class="chrome"><span class="tag">Phát hiện ngã · v22</span><span class="page"></span></div>
+    <div class="kicker">Ngã về phía camera thì góc lưng vẫn nhỏ</div>
+    <h2 class="h2">Một tín hiệu là <span class="strike">đủ</span> → cần <span class="hl-red">≥ 2 / 3</span></h2>
+    <div class="grid3 mt">
+      <div class="card t-red">
+        <svg viewBox="0 0 300 120" style="width:100%;height:130px"><g stroke="#14141a" stroke-width="7" stroke-linecap="round" fill="none"><circle cx="50" cy="80" r="16" fill="#e0314a" stroke="none"/><line x1="70" y1="82" x2="170" y2="86"/><line x1="170" y1="86" x2="250" y2="70"/><line x1="170" y1="86" x2="255" y2="100"/><line x1="100" y1="83" x2="130" y2="55"/></g><line x1="10" y1="112" x2="290" y2="112" stroke="#8a8892" stroke-width="3"/></svg>
+        <div class="lbl">Tín hiệu 1</div><h4>Nằm ngang</h4><p>Thân &gt; 65° <b>và</b> khung rộng hơn cao.</p>
+      </div>
+      <div class="card t-red">
+        <svg viewBox="0 0 300 120" style="width:100%;height:130px"><g stroke="#14141a" stroke-width="7" stroke-linecap="round" fill="none"><circle cx="110" cy="92" r="16" fill="#e0314a" stroke="none"/><line x1="125" y1="80" x2="170" y2="55"/><line x1="170" y1="55" x2="185" y2="110"/><line x1="170" y1="55" x2="205" y2="110"/></g><line x1="20" y1="58" x2="280" y2="58" stroke="#d97706" stroke-width="3" stroke-dasharray="10 8"/><text x="225" y="48" font-size="20" fill="#d97706" font-family="sans-serif">hông</text><line x1="10" y1="112" x2="290" y2="112" stroke="#8a8892" stroke-width="3"/></svg>
+        <div class="lbl">Tín hiệu 2</div><h4>Đầu thấp ngang hông</h4><p>y_đầu &gt; y_hông − 0.15 × chiều cao khung.</p>
+      </div>
+      <div class="card t-red">
+        <svg viewBox="0 0 300 120" style="width:100%;height:130px"><rect x="40" y="6" width="60" height="106" rx="8" fill="none" stroke="#8a8892" stroke-width="3" stroke-dasharray="8 6"/><text x="108" y="30" font-size="20" fill="#8a8892" font-family="sans-serif">đứng</text><rect x="170" y="62" width="90" height="50" rx="8" fill="#ffecee" stroke="#e0314a" stroke-width="4"/><text x="268" y="80" font-size="20" fill="#e0314a" font-family="sans-serif">&lt;50%</text><line x1="10" y1="112" x2="290" y2="112" stroke="#8a8892" stroke-width="3"/></svg>
+        <div class="lbl">Tín hiệu 3</div><h4>Sụp người</h4><p>Cao &lt; 50 % lúc đứng của <b>chính track đó</b>, hông rơi &gt; 20 %.</p>
+      </div>
+    </div>
+    <div class="alert mt">
+      <h3>FALL = ≥ 2 tín hiệu, hoặc nằm ngang mà không thấy đầu</h3>
+      <p>Ngồi xổm hay nâng đồ (gối gập) không bị tính là ngã dù chiều cao giảm. <code>ECHO_FALL_MULTISIGNAL=0</code> quay về luật v21.</p>
+    </div>
+    <div class="stripe-b"></div>
+    <div class="footer"><span>fall · multi-signal</span><span>ECHO MOVE</span></div>
+    <aside class="notes">FallAnalyzer giữ chiều cao lúc đứng của từng track (median của các frame đứng thẳng, cần ít nhất 5 mẫu). Luật đồng bộ Python và JavaScript.</aside>
+  </section>
+
+  <!-- 9. TEMPORAL CONFIRMATION -->
+  <section class="slide" data-title="Xác nhận theo thời gian">
+    <div class="stripe"></div>
+    <div class="chrome"><span class="tag">Chống báo nhầm</span><span class="page"></span></div>
+    <div class="kicker">Một frame không đủ để kết luận</div>
+    <h2 class="h2">Điều kiện phải <span class="red">kéo dài</span> mới thành cảnh báo</h2>
+    <table class="tbl mt">
+      <tr><th>Loại</th><th>Điều kiện mỗi frame</th><th>Phải kéo dài</th><th>Mức</th></tr>
+      <tr><td>FALL</td><td>technique = FALL</td><td>1.5 s (0.75 s nếu hông rơi nhanh)</td><td><span class="lv c">CRITICAL</span></td></tr>
+      <tr><td>MANDOWN</td><td>vẫn nằm sau khi đã báo ngã</td><td>+ 10 s</td><td><span class="lv c">CRITICAL</span></td></tr>
+      <tr><td>ZONE</td><td>chân trong vùng cấm</td><td>dwell của vùng (1 s)</td><td><span class="lv w">WARNING</span></td></tr>
+      <tr><td>POSTURE</td><td>cúi sai tư thế</td><td>3 s</td><td><span class="lv w">WARNING</span></td></tr>
+      <tr><td>ERGO</td><td>REBA ≥ 6, tích lũy trong 10 phút</td><td>60 s</td><td><span class="lv w">WARNING</span></td></tr>
+      <tr><td>PPE</td><td>thiếu mũ / áo phản quang</td><td>5 s</td><td><span class="lv w">WARNING</span></td></tr>
+      <tr><td>CAMERA · OFFLINE</td><td>IQA &lt; 40 · mất tín hiệu</td><td>5 s · 30 s</td><td><span class="lv w">WARNING</span></td></tr>
+      <tr><td>RECOVERED</td><td>đã ngã, nay đứng dậy</td><td>2 s</td><td><span class="lv i">INFO</span></td></tr>
+    </table>
+    <p class="sub mt" style="font-size:28px">Mất dấu &lt; 0.5 s không reset · mỗi (loại, người) chỉ báo một lần · cooldown 30 s để không spam.</p>
+    <div class="stripe-b"></div>
+    <div class="footer"><span>alerts · temporal confirmation</span><span>ECHO MOVE</span></div>
+  </section>
+
+  <!-- 10. MAN-DOWN TIMELINE -->
+  <section class="slide" data-title="Ngã → bất động → đứng dậy">
+    <div class="stripe"></div>
+    <div class="chrome"><span class="tag">Man-down</span><span class="page"></span></div>
+    <div class="kicker">Ngã rồi đứng dậy khác hẳn ngã rồi nằm im</div>
+    <h2 class="h2">Một sự cố, <span class="red">ba thông điệp</span></h2>
+    <svg viewBox="0 0 1660 330" style="width:100%;margin-top:30px" xmlns="http://www.w3.org/2000/svg" font-family="Be Vietnam Pro, sans-serif">
+      <line x1="40" y1="230" x2="1620" y2="230" stroke="#14141a" stroke-width="4"/>
+      <rect x="140" y="170" width="1100" height="60" fill="#ffecee"/>
+      <rect x="140" y="170" width="110" height="60" fill="#e0314a" opacity=".35"/>
+      <rect x="1240" y="170" width="220" height="60" fill="#e8f8ee"/>
+      <text x="690" y="208" text-anchor="middle" font-size="26" fill="#e0314a" font-weight="700">nằm trên sàn</text>
+      <text x="1350" y="208" text-anchor="middle" font-size="26" fill="#067647" font-weight="700">đứng dậy</text>
+      <g font-size="22" fill="#8a8892" text-anchor="middle">
+        <text x="140" y="270">0 s</text><text x="250" y="270">1.5 s</text><text x="1150" y="270">11.5 s</text><text x="1460" y="270">+2 s</text>
+      </g>
+      <g>
+        <line x1="250" y1="170" x2="250" y2="100" stroke="#e0314a" stroke-width="4"/>
+        <rect x="160" y="30" width="250" height="70" rx="14" fill="#e0314a"/><text x="285" y="76" text-anchor="middle" font-size="30" font-weight="900" fill="#fff">FALL</text>
+        <line x1="1150" y1="170" x2="1150" y2="100" stroke="#e0314a" stroke-width="4"/>
+        <rect x="1010" y="30" width="280" height="70" rx="14" fill="#14141a"/><text x="1150" y="76" text-anchor="middle" font-size="30" font-weight="900" fill="#ff9aa8">MANDOWN</text>
+        <line x1="1460" y1="170" x2="1460" y2="100" stroke="#067647" stroke-width="4"/>
+        <rect x="1310" y="30" width="300" height="70" rx="14" fill="#067647"/><text x="1460" y="76" text-anchor="middle" font-size="30" font-weight="900" fill="#fff">RECOVERED</text>
+      </g>
+      <text x="40" y="320" font-size="22" fill="#4a4955">MANDOWN tính từ lúc ngã được xác nhận: 1.5 s + ECHO_MANDOWN_S (10 s); lệch ≤ 2 s không reset.</text>
+    </svg>
+    <div class="grid3 mt">
+      <div class="card t-red"><div class="lbl">Còi hú</div><h4>FALL</h4><p>Có người vừa ngã, kèm ảnh có skeleton.</p></div>
+      <div class="card t-red"><div class="lbl">Ưu tiên cứu hộ</div><h4>MANDOWN</h4><p>Ghi rõ "<b>bất động</b>" hay "còn cử động" (chuyển động keypoint &lt; 0.05).</p></div>
+      <div class="card t-green"><div class="lbl">Không còi</div><h4>RECOVERED</h4><p>Toast xanh: người đã đứng dậy ≥ 2 s.</p></div>
+    </div>
+    <div class="stripe-b"></div>
+    <div class="footer"><span>man-down · timeline</span><span>ECHO MOVE</span></div>
+  </section>
+
+  <!-- 11. REBA / ZONE / PPE -->
+  <section class="slide" data-title="REBA · Vùng cấm · PPE">
+    <div class="stripe"></div>
+    <div class="chrome"><span class="tag amber">Luật mở rộng</span><span class="page"></span></div>
+    <div class="kicker">Từ "một khoảnh khắc" đến "cả ca làm việc"</div>
+    <h2 class="h2">Ba luật cho <span class="amb">hiện trường thật</span></h2>
+    <div class="grid3 mt">
+      <div class="card t-amber">
+        <div class="lbl">Ergonomics</div><h4>REBA &amp; ERGO</h4>
+        <ul><li>Điểm REBA rút gọn từ bảng A/B/C (Hignett &amp; McAtamney 2000)</li><li>Thân, cổ, chân, cánh tay, cẳng tay</li><li>ERGO: REBA ≥ 6 cộng dồn &gt; 60 s trong 10 phút</li></ul>
+      </div>
+      <div class="card t-red">
+        <div class="lbl">Danger zone</div><h4>Vùng cấm</h4>
+        <ul><li>Polygon vẽ trực tiếp trên tab Camera (nút ⚙)</li><li>Lấy điểm <b>chân</b> (cổ chân hoặc đáy khung)</li><li>Bật / tắt luật theo từng camera</li></ul>
+      </div>
+      <div class="card t-blue">
+        <div class="lbl">Tuỳ chọn</div><h4>Đồ bảo hộ (PPE)</h4>
+        <ul><li>Model YOLO PPE riêng (<code>ECHO_PPE_MODEL</code>)</li><li>Mũ gán theo vùng đầu, áo theo vùng thân</li><li>Không thấy vùng → "không rõ", không báo</li></ul>
+      </div>
+    </div>
+    <div class="alert amber mt2">
+      <h3>Cấu hình lưu ngay, áp dụng ngay</h3>
+      <p>Vùng và luật lưu vào <code>output/camera_config.json</code>, không cần khởi động lại server.</p>
+    </div>
+    <div class="stripe-b"></div>
+    <div class="footer"><span>rules · reba · zones · ppe</span><span>ECHO MOVE</span></div>
+  </section>
+
+  <!-- 12. TRACKER -->
+  <section class="slide" data-title="Tracking nhiều người">
+    <div class="stripe"></div>
+    <div class="chrome"><span class="tag blue">Tracking</span><span class="page"></span></div>
+    <div class="kicker">Luật theo thời gian chỉ đúng khi ID không đổi</div>
+    <h2 class="h2">Tracker kiểu <span class="blu">ByteTrack</span></h2>
+    <div class="grid2 mt">
+      <div class="checks">
+        <div class="check ok"><div class="box">1</div><div class="txt">Ghép hai tầng <span>— detection mạnh (≥ 0.5) trước, detection yếu (bị che) chỉ nối tiếp track cũ</span></div></div>
+        <div class="check ok"><div class="box">2</div><div class="txt">Dự đoán vận tốc <span>— IoU với khung dự đoán, người đi nhanh vẫn giữ ID</span></div></div>
+        <div class="check ok"><div class="box">3</div><div class="txt">Ghép theo tâm có giới hạn <span>— đứng → nằm đột ngột (IoU = 0) vẫn cùng ID</span></div></div>
+        <div class="check ok"><div class="box">4</div><div class="txt">One-Euro riêng từng người <span>— giảm rung, mất dấu &gt; 1.5 s thì xoá track</span></div></div>
+      </div>
+      <div class="alert amber" style="align-self:start">
+        <h3>Vì sao không dùng model.track?</h3>
+        <p>Một model YOLO dùng chung cho mọi camera. Tracker có sẵn của Ultralytics sẽ <b>trộn trạng thái</b> giữa các camera, nên mỗi camera có tracker riêng.</p>
+      </div>
+    </div>
+    <div class="stripe-b"></div>
+    <div class="footer"><span>tracking · bytetrack-style</span><span>ECHO MOVE</span></div>
+  </section>
+
+  <!-- 13. OPERATIONS -->
+  <section class="slide" data-title="Vận hành thực tế">
+    <div class="stripe"></div>
+    <div class="chrome"><span class="tag green">Sẵn sàng hiện trường</span><span class="page"></span></div>
+    <div class="kicker">Phát hiện mới là một nửa · nửa còn lại là quy trình</div>
+    <h2 class="h2">Cảnh báo phải <span class="red">đến đúng người</span>, có bằng chứng</h2>
+    <div class="grid2 mt">
+      <div class="checks">
+        <div class="check ok"><div class="box">▶</div><div class="txt">Clip 5 s trước + 5 s sau <span>— xem lại trên web, gửi qua Telegram</span></div></div>
+        <div class="check ok"><div class="box">⏫</div><div class="txt">Leo thang <span>— CRITICAL chưa xử lý sau N phút gửi tới quản đốc</span></div></div>
+        <div class="check ok"><div class="box">✉</div><div class="txt">Telegram · Zalo OA · webhook <span>— chạy nền, thử lại</span></div></div>
+        <div class="check ok"><div class="box">📡</div><div class="txt">Cảnh báo mất tín hiệu <span>— tự kết nối lại, báo một lần mỗi sự cố</span></div></div>
+      </div>
+      <div class="checks">
+        <div class="check ok"><div class="box">✗</div><div class="txt">Nút "Báo nhầm" <span>— thống kê tỉ lệ báo nhầm để chỉnh ngưỡng</span></div></div>
+        <div class="check ok"><div class="box">◐</div><div class="txt">Làm mờ mặt <span>— trong ảnh và clip lưu lại</span></div></div>
+        <div class="check ok"><div class="box">🗑</div><div class="txt">Tự xoá dữ liệu cũ <span>— ECHO_RETENTION_DAYS</span></div></div>
+        <div class="check ok"><div class="box">⬇</div><div class="txt">Nhật ký SQLite <span>— lọc, thống kê theo giờ, xuất CSV</span></div></div>
+      </div>
+    </div>
+    <div class="stripe-b"></div>
+    <div class="footer"><span>operations · evidence · escalation</span><span>ECHO MOVE</span></div>
+  </section>
+
+  <!-- 14. DEPLOY -->
+  <section class="slide" data-title="Triển khai">
+    <div class="stripe"></div>
+    <div class="chrome"><span class="tag blue">Triển khai</span><span class="page"></span></div>
+    <div class="kicker">Mọi tính năng mới chỉ là biến môi trường tuỳ chọn</div>
+    <h2 class="h2">Bốn cách chạy, <span class="grn">không đổi lệnh</span></h2>
+    <div class="grid2 mt">
+      <pre class="code" style="font-size:24px"><span class="cm"># 1. Chỉ giao diện: mở web/index.html, phím 1–8</span>
+<span class="cm"># 2. Backend + giao diện tại :8000</span>
+<span class="kw">make</span> install &amp;&amp; <span class="kw">make</span> demo
+<span class="kw">make</span> install-ai &amp;&amp; <span class="kw">make</span> run
+<span class="cm"># 3. Docker</span>
+<span class="kw">cd</span> docker &amp;&amp; <span class="kw">docker</span> compose up --build
+<span class="cm"># 4. Colab GPU + GitHub Pages</span>
+
+<span class="cm"># camera thật + thông báo</span>
+<span class="kw">export</span> ECHO_CAMERAS=<span class="st">"kho=rtsp://…,cong=0"</span>
+<span class="kw">export</span> ECHO_TELEGRAM_TOKEN=<span class="st">…</span></pre>
+      <div>
+        <div class="grid2">
+          <div class="card t-green" style="text-align:center"><div class="big-num grn">67</div><p>test tự động (pytest)</p></div>
+          <div class="card t-blue" style="text-align:center"><div class="big-num blu">8</div><p>kịch bản offline</p></div>
+        </div>
+        <div class="alert green mt">
+          <h3>CI mỗi lần push</h3>
+          <p>ruff + mypy + pytest; web tự deploy lên GitHub Pages.</p>
+        </div>
+      </div>
+    </div>
+    <div class="stripe-b"></div>
+    <div class="footer"><span>deploy · unchanged</span><span>ECHO MOVE</span></div>
+  </section>
+
+  <!-- 15. EVALUATION -->
+  <section class="slide" data-title="Đánh giá">
+    <div class="stripe"></div>
+    <div class="chrome"><span class="tag amber">Đánh giá</span><span class="page"></span></div>
+    <div class="kicker">Con số phải tự đo</div>
+    <h2 class="h2">Đo bằng dataset, <span class="strike">không đoán</span></h2>
+    <div class="grid2 mt">
+      <div class="checks">
+        <div class="check ok"><div class="box">1</div><div class="txt">Trích keypoint một lần <span>— cache trong output/eval_cache</span></div></div>
+        <div class="check ok"><div class="box">2</div><div class="txt">Phát lại qua toàn bộ luật <span>— so sánh luật v21 và đa tín hiệu</span></div></div>
+        <div class="check ok"><div class="box">3</div><div class="txt">Precision · Recall · F1 <span>— cộng độ trễ phát hiện và báo nhầm / giờ</span></div></div>
+        <div class="check wip"><div class="box">!</div><div class="txt">Kết quả trên UR Fall / Le2i <span>— chạy make eval khi có GPU</span></div></div>
+      </div>
+      <div>
+        <pre class="code" style="font-size:24px"><span class="kw">make</span> eval DATASET=<span class="st">urfd</span> ROOT=<span class="st">data/urfd</span>
+<span class="kw">make</span> eval DATASET=<span class="st">le2i</span> ROOT=<span class="st">data/le2i</span>
+<span class="cm"># video tự quay + labels.csv</span>
+<span class="kw">make</span> eval DATASET=<span class="st">folder</span> ROOT=<span class="st">data/xuong</span></pre>
+        <div class="alert amber mt">
+          <h3>Trung thực khi báo cáo</h3>
+          <p>Số liệu IQA và độ chính xác đều phải lấy từ <code>make bench</code> / <code>make eval</code> trên dữ liệu của nhóm.</p>
+        </div>
+      </div>
+    </div>
+    <div class="stripe-b"></div>
+    <div class="footer"><span>evaluation · urfd · le2i</span><span>ECHO MOVE</span></div>
+    <aside class="notes">Nếu đã chạy make eval, thay ô "!" bằng số liệu thật (precision, recall, F1, độ trễ trung vị). Nếu chưa, nói rõ là chưa đo.</aside>
+  </section>
+
+  <!-- 16. DEMO -->
+  <section class="slide" data-title="Demo">
+    <div class="stripe"></div>
+    <div class="chrome"><span class="tag">Live demo</span><span class="page"></span></div>
+    <div class="kicker">Khoảng 6 phút</div>
+    <h2 class="h2">Kịch bản <span class="red">demo</span></h2>
+    <div class="grid2 mt">
+      <div class="checks">
+        <div class="check ok"><div class="box">1</div><div class="txt">MATLAB chạy IQA <span>— 9 biểu đồ, JSON tự nạp sang web</span></div></div>
+        <div class="check ok"><div class="box">2</div><div class="txt">Phím 4: ngã <span>— người 3D nằm xuống, sau 1.5 s còi hú</span></div></div>
+        <div class="check ok"><div class="box">3</div><div class="txt">Tab Camera <span>— MJPEG có skeleton, người 3D theo camera</span></div></div>
+        <div class="check ok"><div class="box">4</div><div class="txt">Cúi sai trước webcam <span>— cảnh báo sau 3 s, Telegram nhận ảnh</span></div></div>
+      </div>
+      <div class="checks">
+        <div class="check ok"><div class="box">5</div><div class="txt">Nằm yên 10 s rồi đứng dậy <span>— MANDOWN → RECOVERED</span></div></div>
+        <div class="check ok"><div class="box">6</div><div class="txt">Tab Sự kiện <span>— ▶ Clip, Xác nhận, Báo nhầm, CSV</span></div></div>
+        <div class="check ok"><div class="box">7</div><div class="txt">Vẽ vùng cấm, bước vào <span>— cảnh báo ZONE</span></div></div>
+        <div class="check ok"><div class="box">8</div><div class="txt">Rút mạng camera, tắt backend <span>— OFFLINE, web vẫn chạy</span></div></div>
+      </div>
+    </div>
+    <div class="stripe-b"></div>
+    <div class="footer"><span>demo · live</span><span>ECHO MOVE</span></div>
+    <aside class="notes">Nếu demo hỏng: F5 → phím T (self-test) → phím 1 (offline) → video quay sẵn.</aside>
+  </section>
+
+  <!-- 17. LIMITS -->
+  <section class="slide" data-title="Hạn chế & hướng phát triển">
+    <div class="stripe"></div>
+    <div class="chrome"><span class="tag amber">Hạn chế</span><span class="page"></span></div>
+    <div class="kicker">Biết rõ giới hạn của mình</div>
+    <h2 class="h2">Hạn chế và <span class="grn">hướng phát triển</span></h2>
+    <div class="grid2 mt">
+      <div class="card t-red">
+        <div class="lbl">Hạn chế hiện tại</div>
+        <ul><li>Luật dựa trên 2D, nhạy với góc đặt camera (nên đặt cao 2–3 m)</li><li>Chưa có re-ID: người mặc giống nhau che nhau lâu có thể đổi ID</li><li>Ngưỡng góc, thời gian, IQA là giá trị thực nghiệm</li><li>Chiều sâu 3D chỉ là ước lượng từ một camera</li></ul>
+      </div>
+      <div class="card t-green">
+        <div class="lbl">Hướng phát triển</div>
+        <ul><li>Hiệu chỉnh ngưỡng bằng dữ liệu nhà xưởng thật và nút "Báo nhầm"</li><li>Mô hình học chuỗi thời gian (LSTM / ST-GCN) trên keypoint</li><li>Thêm re-ID theo ngoại hình</li><li>Huấn luyện model PPE trên ảnh công trường Việt Nam</li></ul>
+      </div>
+    </div>
+    <div class="stripe-b"></div>
+    <div class="footer"><span>limits · roadmap</span><span>ECHO MOVE</span></div>
+  </section>
+
+  <!-- 18. THANKS -->
+  <section class="slide center-v" data-title="Cảm ơn · Q&A">
+    <div class="stripe"></div>
+    <div class="chrome"><span class="tag green">Q &amp; A</span><span class="page"></span></div>
+    <div class="body">
+      <div class="kicker">Hết phần trình bày</div>
+      <h1 class="h1" style="font-size:170px">Cảm ơn <span class="red">·</span> Q&amp;A</h1>
+      <p class="sub" style="font-size:36px">Demo trực tuyến: <a href="../" style="color:var(--red);font-weight:800">fsb-msa36hn.github.io/echo-move</a><br>Mã nguồn, tài liệu thuật toán và hướng dẫn sử dụng trong thư mục <code>docs/</code>.</p>
+      <div class="grid4 mt2">
+        <div class="card t-red"><div class="lbl">Pose</div><p>YOLOv8-Pose · MediaPipe</p></div>
+        <div class="card t-amber"><div class="lbl">IQA</div><p>Pech-Pacheco · Immerkær · Peli · PIQE</p></div>
+        <div class="card t-blue"><div class="lbl">Tracking</div><p>SORT · ByteTrack · One-Euro</p></div>
+        <div class="card t-green"><div class="lbl">Ergonomics · Data</div><p>REBA · UR Fall · Le2i</p></div>
+      </div>
+    </div>
+    <div class="stripe-b"></div>
+    <div class="footer"><span>end · thank you</span><span>ECHO MOVE</span></div>
+  </section>
+
+</main>
+
+<div class="progress"><span id="bar"></span></div>
+<div class="hint" id="hint">← / → chuyển slide · F toàn màn hình · N ghi chú · O tổng quan</div>
+<div class="notes-panel" id="notes"></div>
+<nav class="overview" id="overview" aria-label="Tổng quan slide"></nav>
+
+<script>
+(() => {
+  const deck = document.getElementById('deck');
+  const slides = [...deck.querySelectorAll('.slide')];
+  const N = slides.length;
+  const bar = document.getElementById('bar');
+  const notes = document.getElementById('notes');
+  const overview = document.getElementById('overview');
+  const pad = n => String(n).padStart(2, '0');
+  let cur = 0;
+
+  slides.forEach((s, i) => s.querySelectorAll('.page').forEach(p => { p.textContent = `${pad(i + 1)} / ${pad(N)}`; }));
+
+  function fit() {
+    const s = Math.min(innerWidth / 1920, innerHeight / 1080);
+    deck.style.setProperty('--s', s);
+  }
+
+  function renderNotes() {
+    const n = slides[cur].querySelector('.notes');
+    notes.innerHTML = `<b>${pad(cur + 1)} · ${slides[cur].dataset.title || ''}</b><br>` +
+      (n ? n.innerHTML : '<i>Không có ghi chú cho slide này.</i>');
+  }
+
+  function go(n) {
+    cur = Math.max(0, Math.min(N - 1, n));
+    slides.forEach((s, i) => {
+      s.classList.toggle('is-active', i === cur);
+      s.classList.toggle('is-prev', i < cur);
+    });
+    bar.style.width = `${((cur + 1) / N) * 100}%`;
+    history.replaceState(null, '', `#${cur + 1}`);
+    renderNotes();
+    overview.querySelectorAll('button').forEach((b, i) => b.classList.toggle('cur', i === cur));
+  }
+
+  slides.forEach((s, i) => {
+    const b = document.createElement('button');
+    b.innerHTML = `<i>${pad(i + 1)}</i>${s.dataset.title || ''}`;
+    b.onclick = () => { go(i); overview.classList.remove('open'); };
+    overview.appendChild(b);
+  });
+
+  addEventListener('keydown', e => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const k = e.key;
+    if (['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter'].includes(k)) { e.preventDefault(); go(cur + 1); }
+    else if (['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'].includes(k)) { e.preventDefault(); go(cur - 1); }
+    else if (k === 'Home') go(0);
+    else if (k === 'End') go(N - 1);
+    else if (k === 'f' || k === 'F') {
+      document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.();
+    }
+    else if (k === 'n' || k === 'N') notes.classList.toggle('open');
+    else if (k === 'o' || k === 'O' || k === 'Escape') overview.classList.toggle('open', k !== 'Escape' && !overview.classList.contains('open'));
+  });
+
+  deck.addEventListener('click', e => {
+    if (e.target.closest('a,button,code')) return;
+    const r = deck.getBoundingClientRect();
+    go(e.clientX - r.left < r.width / 3 ? cur - 1 : cur + 1);
+  });
+
+  let x0 = null;
+  addEventListener('touchstart', e => { x0 = e.touches[0].clientX; }, { passive: true });
+  addEventListener('touchend', e => {
+    if (x0 === null) return;
+    const dx = e.changedTouches[0].clientX - x0;
+    if (Math.abs(dx) > 50) go(cur + (dx < 0 ? 1 : -1));
+    x0 = null;
+  });
+
+  addEventListener('resize', fit);
+  addEventListener('hashchange', () => {
+    const n = parseInt(location.hash.slice(1), 10);
+    if (n && n - 1 !== cur) go(n - 1);
+  });
+  setTimeout(() => document.getElementById('hint').classList.add('hide'), 5000);
+
+  fit();
+  go((parseInt(location.hash.slice(1), 10) || 1) - 1);
+})();
+</script>
+</body>
+</html>

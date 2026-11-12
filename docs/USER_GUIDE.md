@@ -155,7 +155,7 @@ Mỗi cảnh báo gửi 1 tin kèm ảnh có vẽ skeleton. Webhook (`ECHO_WEBHO
 
 **Zalo OA**: tạo Official Account tại oa.zalo.me, lấy *access token* (API → Official Account API) và `user_id` của người nhận, tức là người đã quan tâm OA. Đặt `ECHO_ZALO_OA_TOKEN` và `ECHO_ZALO_USER_ID`. Tin gửi đi là tin tư vấn dạng văn bản. Token Zalo hết hạn định kỳ nên cần làm mới.
 
-**Leo thang**: đặt `ECHO_ESCALATE_MIN=3` thì sự kiện CRITICAL (ngã, bất động, vùng cấm) chưa được bấm *Đã xử lý* sau 3 phút sẽ được gửi lại kèm tiêu đề "⏫ LEO THANG". Tin đi tới `ECHO_ESCALATE_TELEGRAM_CHAT_ID` (ví dụ nhóm quản đốc) và Zalo. Mỗi sự kiện chỉ leo thang 1 lần, và có thẻ **LEO THANG** trong tab Sự kiện.
+**Leo thang**: đặt `ECHO_ESCALATE_MIN=3` thì sự kiện CRITICAL (ngã, bất động sau ngã) chưa được bấm *Đã xử lý* sau 3 phút sẽ được gửi lại kèm tiêu đề "⏫ LEO THANG". Tin đi tới `ECHO_ESCALATE_TELEGRAM_CHAT_ID` (ví dụ nhóm quản đốc) và Zalo. Mỗi sự kiện chỉ leo thang 1 lần, và có thẻ **LEO THANG** trong tab Sự kiện.
 
 ### 4.3 Nhật ký sự kiện
 SQLite tại `output/echo.db` (bảng `events`), ảnh tại `output/snapshots/`, clip tại `output/clips/`. Sao lưu: copy cả thư mục `output/`. Xem/xuất trong tab **Sự kiện** hoặc API (`/api/events`, `/api/events.csv`, `/api/stats` — xem [ARCHITECTURE.md](ARCHITECTURE.md)).
