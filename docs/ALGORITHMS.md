@@ -50,8 +50,8 @@ FALL khi ≥ 2 tín hiệu, hoặc lying mà không thấy đầu. SQUAT không 
 ### REBA rút gọn (metric, không còn event)
 Điểm REBA 1–15 vẫn trả trong `safety.reba` (bảng A/B/C, Hignett & McAtamney 2000) để hiển thị / phân tích — **không** phát sự kiện ERGO.
 
-### Vùng nguy hiểm và PPE (metric / overlay, không còn event)
-Vùng polygon và PPE vẫn có thể tính/vẽ trên MJPEG; **không** phát sự kiện ZONE/PPE. Event chỉ còn 5 loại tư thế ở trên.
+### Vùng nguy hiểm (overlay, không còn event)
+Vùng polygon vẫn có thể vẽ trên MJPEG; **không** phát sự kiện ZONE. Event chỉ còn 5 loại tư thế ở trên.
 
 ## Tracking nhiều người
 `PoseTracker` theo kiểu ByteTrack (Zhang 2022) và bỏ Kalman vì pose đã được làm mượt. Mỗi detection lấy khung bao keypoint, điểm tin cậy là trung bình confidence của các keypoint.

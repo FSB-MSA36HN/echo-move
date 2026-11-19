@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ECHO MOVE — Thuyết trình · Hệ thống cảnh báo an toàn lao động</title>
-<meta name="description" content="ECHO MOVE: FALL·STANDING·SQUAT·STOOP (+ PARTIAL bbox-only), YOLOv8-Pose, ngã đa tín hiệu, IQA panel, SOC dashboard.">
+<meta name="description" content="ECHO MOVE: FALL·STANDING·SQUAT·STOOP (+ PARTIAL bbox-only), YOLOv8-Pose, ngã đa tín hiệu, IQA panel, dashboard giám sát.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -189,7 +189,7 @@ body.practice-mode .hint{bottom:52px}
       <p class="sub" style="font-size:38px">Bốn loại cảnh báo tư thế (FALL · STANDING · SQUAT · STOOP); PARTIAL chỉ bbox, IQA trên dashboard.</p>
       <div class="alert mt2" style="max-width:1450px">
         <h3>Một câu tóm tắt</h3>
-        <p>YOLOv8-Pose + luật hình học + <b>xác nhận theo thời gian</b> + IQA panel, camera IP/USB, nhật ký + Telegram, SOC dashboard + người 3D.</p>
+        <p>YOLOv8-Pose + luật hình học + <b>xác nhận theo thời gian</b> + IQA panel, camera IP/USB, nhật ký + Telegram, giao diện giám sát + người 3D.</p>
       </div>
     </div>
     <div class="stripe-b"></div>
@@ -252,7 +252,7 @@ body.practice-mode .hint{bottom:52px}
       </div>
       <div class="col" style="border-color:var(--blue)">
         <h4>Web · Three.js</h4><div class="role blu">Giao diện</div>
-        <ul><li>SOC: live · Worker 3D lớn + Detect · Events · IQA · Cameras</li><li>Worker 3D ẩn trên mobile; không còn MATLAB IQA trên UI</li><li>Zoom fullscreen từng section (⛶)</li><li>Webcam: chọn cam / ↻ trước·sau</li></ul>
+        <ul><li>Live · Worker 3D lớn + Detect · Events · IQA · Cameras</li><li>Worker 3D ẩn trên mobile; không còn MATLAB IQA trên UI</li><li>Zoom fullscreen từng section (⛶)</li><li>Webcam: chọn cam / ↻ trước·sau</li></ul>
       </div>
     </div>
     <div class="links"><span>MATLAB → <b>*_iqa.json</b> → Python</span><span>Python ⇄ <b>/ws/pose · /ws/events · MJPEG</b> ⇄ Web</span></div>
@@ -278,7 +278,7 @@ body.practice-mode .hint{bottom:52px}
     <div class="pipe-out">
       <div class="card t-blue"><div class="lbl">Đầu vào</div><h4>Camera / video</h4><p>RTSP · USB · file · webcam — frame mới nhất, không xếp hàng trễ.</p></div>
       <div class="card t-green"><div class="lbl">Song song an toàn</div><h4>1 model · N tracker</h4><p>YOLO dùng chung + khoá; mỗi camera một tracker/engine.</p></div>
-      <div class="card t-amber"><div class="lbl">Đầu ra SOC</div><h4>UI realtime</h4><p>Overlay bbox/skeleton · IQA Live · Events · Worker 3D.</p></div>
+      <div class="card t-amber"><div class="lbl">Đầu ra UI</div><h4>Giao diện realtime</h4><p>Overlay bbox/skeleton · IQA Live · Events · Worker 3D.</p></div>
     </div>
     <div class="stripe-b"></div>
     <div class="footer"><span>pipeline · per frame</span><span>ECHO MOVE</span></div>
@@ -551,7 +551,7 @@ body.practice-mode .hint{bottom:52px}
     <h2 class="h2">Kịch bản <span class="red">demo</span></h2>
     <div class="grid2 mt">
       <div class="checks">
-        <div class="check ok"><div class="box">1</div><div class="txt">SOC · deck Cameras <span>— MJPEG, chọn cam → Worker 3D</span></div></div>
+        <div class="check ok"><div class="box">1</div><div class="txt">Deck Cameras <span>— MJPEG, chọn cam → Worker 3D</span></div></div>
         <div class="check ok"><div class="box">2</div><div class="txt">IQA Live | Cảnh báo IQA <span>— badge trên panel, không event CAMERA</span></div></div>
         <div class="check ok"><div class="box">3</div><div class="txt">Video / Ảnh curated <span>— <code>data/test_videos/curated/</code> · <code>data/test_images/</code> (nhiều CN / ngã)</span></div></div>
         <div class="check ok"><div class="box">4</div><div class="txt">Cúi khom trước webcam <span>— STOOP sau 3 s, Telegram nhận ảnh</span></div></div>
@@ -661,7 +661,7 @@ body.practice-mode .hint{bottom:52px}
       '[Người 1 kết · ~1 phút] Hệ thống chia ba tầng, mỗi tầng một việc. ' +
       'MATLAB làm phân tích offline: IQA trên video, biểu đồ Canny Laplacian histogram, xuất JSON CSV PNG. ' +
       'Python FastAPI là bộ não realtime: nhận camera RTSP USB hoặc file, YOLO-Pose, tracker, luật tư thế, xác nhận theo thời gian, lưu SQLite, gửi Telegram. ' +
-      'Web Three.js là SOC dashboard: live feed, Worker 3D, Events, IQA, Cameras. ' +
+      'Web Three.js là giao diện giám sát: live feed, Worker 3D, Events, IQA, Cameras. ' +
       'Luồng dữ liệu: MATLAB ra file JSON cho Python; Python nối WebSocket và MJPEG với giao diện. ' +
       'Em xin chuyển sang phần pipeline từng frame — do bạn … trình bày.',
 
@@ -705,7 +705,7 @@ body.practice-mode .hint{bottom:52px}
     'Năm sự kiện tư thế':
       '[Người 3 · mở ~50s] Cảm ơn. Em tóm tắt taxonomy. ' +
       'FALL là CRITICAL — có ảnh, clip, còi. STOOP là WARNING. SQUAT là INFO. STANDING chỉ tăng ô thống kê, không list không toast. ' +
-      'PARTIAL chỉ overlay bbox vàng — không event. Cách xử lý khác nhau giúp SOC không bị ngập thông tin vô ích.',
+      'PARTIAL chỉ overlay bbox vàng — không event. Cách xử lý khác nhau giúp giao diện không bị ngập thông tin vô ích.',
 
     'PARTIAL bbox-only':
       '[Người 3 · ~50s] PARTIAL là “một phần của người”: thiếu mặt, tay, chân, hoặc chân bịa quá ngắn so với mặt trên crop cận cảnh. ' +
@@ -726,7 +726,7 @@ body.practice-mode .hint{bottom:52px}
       'Độ chính xác ngã đo bằng make eval trên UR Fall, Le2i hoặc video tự quay. Chưa chạy phần nào thì nói rõ chưa đo — giữ trung thực khi bảo vệ đồ án.',
 
     'Demo':
-      '[Người 3 · ~1 phút] Kịch bản demo khoảng vài phút: mở SOC — cameras và Worker 3D; nhìn IQA Live; chọn video hoặc ảnh curated; cúi khom để ra STOOP; nằm xuống để ra FALL; đứng hoặc ngồi xổm; đứng sát mép khung để thấy PARTIAL; mở Events xem ảnh bằng chứng, tối đa tám ảnh rồi Load more. ' +
+      '[Người 3 · ~1 phút] Kịch bản demo khoảng vài phút: mở giao diện — cameras và Worker 3D; nhìn IQA Live; chọn video hoặc ảnh curated; cúi khom để ra STOOP; nằm xuống để ra FALL; đứng hoặc ngồi xổm; đứng sát mép khung để thấy PARTIAL; mở Events xem ảnh bằng chứng, tối đa tám ảnh rồi Load more. ' +
       'Nếu demo hỏng: F5, phím T self-test, đổi sang video sẵn, hoặc Server nếu backend còn sống.',
 
     'Hạn chế & hướng phát triển':

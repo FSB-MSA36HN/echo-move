@@ -47,7 +47,7 @@ MATLAB: mở `matlab/run_iqa_engine.m`, bấm Run. Kết quả ghi vào `output/
 
 ## Cấu trúc thư mục
 ```
-backend/    package Python `echo_move`: camera/, pose/ (detector, tracker, classifier, fall, ppe),
+backend/    package Python `echo_move`: camera/, pose/ (detector, tracker, classifier, fall),
             alerts/ (engine, hub), storage/ (SQLite + clip), notify/ (Telegram, webhook),
             zones.py, maintenance.py, evaluation.py, pipeline.py, app.py; tests/
 matlab/     run_iqa_engine.m, config.m, +iqa/ (hàm metric), tests/

@@ -85,9 +85,6 @@ def annotate(frame: np.ndarray, persons: list[dict[str, Any]], *, title: str = "
                 label = ascii_text(f"P{pid} - Chi hien thi mot phan nguoi")
             else:
                 label = f"#{pid} {LABELS.get(tech, '')}"
-            missing = [k for k, v in (p.get("ppe") or {}).items() if v is False]
-            if missing:
-                label += " NO-" + "/".join(m.upper() for m in missing)
             (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
             cv2.rectangle(out, (x1, y1 - th - 8), (x1 + tw + 8, y1), color, -1)
             ink = (0, 0, 0) if tech == PARTIAL_TECH else (255, 255, 255)

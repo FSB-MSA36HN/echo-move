@@ -6,7 +6,7 @@
 - **Vùng nguy hiểm**: polygon theo từng camera, khai báo trong `ECHO_CAMERAS_FILE` hoặc vẽ ngay trên tab Camera (nút ⚙, lưu vào `output/camera_config.json`). Chân người trong vùng ≥ dwell thì báo ZONE. Có thể tắt từng luật theo camera.
 - **Clip sự kiện**: ring buffer lưu 5 s trước và 5 s sau mỗi sự kiện của camera server, ghi ra MJPEG và MP4. Xem lại ngay trên tab Sự kiện; gửi kèm qua Telegram (`sendVideo`).
 - **REBA và ERGO**: điểm REBA rút gọn cho từng frame; cảnh báo ERGO khi tổng thời gian ở tư thế REBA ≥ 6 vượt 60 s trong 10 phút.
-- **PPE**: model YOLO phát hiện đồ bảo hộ (`ECHO_PPE_MODEL`) là tùy chọn. Mũ được gán theo vùng đầu, áo phản quang theo vùng thân; thiếu đồ ≥ 5 s thì báo PPE.
+- **PPE**: đã gỡ toàn bộ (model YOLO đồ bảo hộ, `detect_ppe`, event/overlay PPE).
 - **Tracker kiểu ByteTrack**: ghép hai tầng (detection mạnh trước, detection yếu khi bị che sau), dự đoán vận tốc, ghép theo khoảng cách tâm có giới hạn theo kích thước. Track giữ nguyên ID khi người ngã đột ngột.
 - **Vận hành**:
   - Cảnh báo OFFLINE khi camera mất tín hiệu > 30 s, mỗi lần mất chỉ báo một lần.

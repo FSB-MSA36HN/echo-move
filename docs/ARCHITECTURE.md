@@ -9,7 +9,7 @@
    1. YOLOv8-Pose (dùng chung, có khoá vì Ultralytics không thread-safe).
    2. `PoseTracker` (kiểu ByteTrack, ID ổn định + One-Euro theo từng người).
    3. `classify_posture` (tư thế, tín hiệu ngã, REBA) và `FallAnalyzer` (chiều cao lúc đứng của từng track).
-   4. Vùng nguy hiểm và PPE (nếu có model).
+   4. Vùng nguy hiểm (nếu cấu hình polygon).
    5. IQA.
    6. `AlertEngine` (xác nhận theo thời gian, cooldown, luật bị tắt theo camera).
 3. **`AlertHub`**: cảnh báo đã xác nhận → `EventStore` (SQLite `echo.db` + ảnh `snapshots/`, mặt đã làm mờ) → `Notifier` (Telegram/webhook, luồng nền, hàng đợi có giới hạn, thử lại 3 lần) → đẩy realtime tới mọi client `/ws/events`. Camera server giữ ring buffer JPEG. Sau mỗi sự kiện, nó ghi thêm `ECHO_CLIP_POST_S` giây rồi gọi `AlertHub.attach_clip`, hàm này lưu `clips/<id>.mjpg` và `.mp4`, gửi `sendVideo`, rồi đẩy `{"update": "clip"}`.
@@ -21,12 +21,11 @@
 |---|---|
 | `config.py` | `Settings` đọc từ biến môi trường `ECHO_*` |
 | `iqa/metrics.py`, `iqa/piqe.py` | 5 metric IQA, PIQE block-wise (vector hoá) |
-| `pose/detector.py` | Bọc YOLO + MediaPipe Hands + model PPE tuỳ chọn (import tuỳ chọn), `detect_raw` / `detect_ppe` không trạng thái |
+| `pose/detector.py` | Bọc YOLO + MediaPipe Hands (import tuỳ chọn), `detect_raw` không trạng thái |
 | `pose/tracker.py` | Tracker kiểu ByteTrack: ghép 2 tầng theo điểm tin cậy, dự đoán vận tốc, ghép theo tâm có giới hạn kích thước |
 | `pose/filters.py` | One-Euro filter, `KeypointSmoother` |
 | `pose/classifier.py` | Luật tư thế theo từng frame (có hiệu chỉnh tỉ lệ khung hình), tín hiệu ngã, REBA rút gọn |
 | `pose/fall.py` | `FallAnalyzer`: chiều cao lúc đứng của từng track → tín hiệu "sụp người" |
-| `pose/ppe.py` | Chuẩn hoá tên lớp PPE, gán mũ/áo cho người theo vùng đầu/thân |
 | `zones.py` | Vùng nguy hiểm (polygon), `CameraOptions`, `OptionsStore` (`camera_config.json`) |
 | `alerts/engine.py` | Xác nhận FALL / STANDING / SQUAT / STOOP theo thời gian, cooldown (PARTIAL không emit) |
 | `alerts/hub.py` | Lưu → thông báo → phát realtime (thread-safe), gắn clip |
@@ -84,8 +83,7 @@ Server → client (rút gọn):
                           "technique": "STANDING|SQUAT|STOOP|PARTIAL|FALL", "color": [r,g,b],
                           "spine_deg": 0, "knee_deg": 0, "bbox_ratio": 0, "reba": 1,
                           "signals": {"lying": false, "head_low": false, "collapsed": false}},
-               "zones": [{"name": "Máy ép", "dwell_s": 1}],
-               "ppe": {"helmet": true, "vest": false}}],
+               "zones": [{"name": "Máy ép", "dwell_s": 1}]}],
   "hands": [], "quality": {"piqe": 0, "blur": 0, "contrast": 0, "noise": 0, "exposure": 0, "overall": 0, "time_fast_ms": 0, "time_total_ms": 0},
   "env_hazards": {"hazards": [], "overall_level": "SAFE", "overall_color": [0,1,0]},
   "alerts": [],
@@ -96,7 +94,7 @@ Server → client (rút gọn):
 ```
 - `keypoints` là toạ độ **chuẩn hoá 0–1** theo chuẩn COCO-17; `id` là track ID ổn định giữa các frame.
 - `alerts` chỉ chứa cảnh báo **vừa được xác nhận** ở frame này (đã lưu DB nếu có).
-- `zones` chỉ có khi camera có vùng nguy hiểm; `ppe` chỉ có khi có model PPE (giá trị `null` = vùng đầu/thân không nhìn thấy).
+- `zones` chỉ có khi camera có vùng nguy hiểm.
 - Sự kiện có thêm `has_clip`, `false_alarm`, `escalated`. `/ws/events` cũng gửi `{"update": "clip"|"escalated", ...}` để web tải lại danh sách (không phải sự kiện mới).
 - Frame bị bỏ qua do giới hạn FPS nhận `{"skip": true}`; lỗi nhận `{"error": "..."}`. Tin nhắn lớn hơn `ECHO_MAX_MESSAGE_BYTES` (4 MB) bị từ chối.
 

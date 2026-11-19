@@ -86,15 +86,6 @@ class Settings:
     )
     ergo_window_s: float = 600.0
 
-    # Optional PPE detector (YOLO detection model with helmet / vest classes)
-    ppe_model: str = field(default_factory=lambda: _env("PPE_MODEL", ""))
-    ppe_required: tuple[str, ...] = field(
-        default_factory=lambda: tuple(
-            s.strip() for s in _env("PPE_REQUIRED", "helmet,vest").split(",") if s.strip()
-        )
-    )
-    ppe_confirm_s: float = field(default_factory=lambda: float(_env("PPE_CONFIRM_S", "5")))
-
     # Image quality assessment. Live PIQE is the MSCN proxy; block PIQE is offline only
     # (`make bench`, `calibrate-iqa --full-piqe`). Order: PIQE, Blur, Contrast, Noise, Exposure.
     # Weights fixed after ``make calibrate-iqa`` (F1 @ Overall<40, keep_clean≥0.95).
