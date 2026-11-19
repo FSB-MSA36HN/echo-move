@@ -7,9 +7,8 @@ from fastapi.testclient import TestClient
 from echo_move.app import create_app
 from echo_move.config import Settings
 from echo_move.matlab_bridge import MatlabBridge
-from echo_move.pipeline import StreamPipeline
-from echo_move.pose.detector import PoseDetector
-from echo_move.scenarios import DemoGenerator
+from echo_move.pipeline import quality_warnings
+from echo_move.scenarios import load_scenarios
 
 JPEG = b"\xff\xd8\xff\xe0fake-jpeg\xff\xd9"
 
@@ -49,11 +48,10 @@ def test_matlab_iqa_present(client, tmp_path):
     assert body["available"] and body["overall"] == 77
 
 
-def test_ws_demo_frame(client):
+def test_ws_pose_rejects_when_ai_unavailable(client):
     with client.websocket_connect("/ws/pose") as ws:
-        ws.send_text("{}")
         msg = json.loads(ws.receive_text())
-    assert msg["mode"] == "DEMO" and "persons" in msg and msg["alerts"] == []
+    assert msg == {"error": "AI unavailable"}
 
 
 def test_bridge_tolerates_partial_write(tmp_path):
@@ -154,12 +152,27 @@ def test_web_ui_served_at_root(client):
     assert client.get("/js/human3d.js").status_code == 200
 
 
-def test_demo_observe_raises_confirmed_alerts():
-    cfg = Settings(demo_mode=True, fall_confirm_s=1.0, posture_confirm_s=1.0)
-    pipe = StreamPipeline("demo", PoseDetector(cfg), cfg)
-    gen = DemoGenerator(20)
-    seen = set()
-    for i in range(20 * 30):  # 30 s of demo at 20 fps covers every scenario
-        payload = gen.next_frame(None)
-        seen |= {a["type"] for a in pipe.observe(payload, i / 20)["alerts"]}
-    assert {"FALL", "POSTURE"} <= seen
+def test_quality_warnings_are_per_metric_not_invented_hazards():
+    cfg = Settings()
+    clean = quality_warnings(
+        {"piqe": 80, "blur": 80, "contrast": 70, "noise": 85, "exposure": 80, "overall": 80}, cfg)
+    assert clean["overall_level"] == "SAFE" and clean["warnings"] == []
+    blurry = quality_warnings(
+        {"piqe": 50, "blur": 20, "contrast": 60, "noise": 80, "exposure": 70, "overall": 55}, cfg)
+    labels = {w["label"] for w in blurry["warnings"]}
+    assert "Ảnh mờ" in labels and blurry["overall_level"] == "WARNING"
+    noisy = quality_warnings(
+        {"piqe": 50, "blur": 70, "contrast": 60, "noise": 15, "exposure": 70, "overall": 50}, cfg)
+    assert any(w["code"] == "NOISE" for w in noisy["warnings"])
+    dark = quality_warnings(
+        {"piqe": 40, "blur": 50, "contrast": 40, "noise": 60, "exposure": 10, "overall": 35}, cfg)
+    codes = {w["code"] for w in dark["warnings"]}
+    assert "DARK" in codes and "LOW_Q" in codes and dark["overall_level"] == "RISK"
+    glare = quality_warnings(
+        {"piqe": 60, "blur": 70, "contrast": 80, "noise": 80, "exposure": 95, "overall": 70}, cfg)
+    assert any(w["label"] == "Ảnh chói sáng" for w in glare["warnings"])
+    # Never invent environmental hazards from IQA.
+    for w in blurry["warnings"] + noisy["warnings"] + dark["warnings"] + glare["warnings"]:
+        assert w["code"] not in {"FIRE", "DUST", "SMOKE"}
+    # Fixture scenarios still load for pose unit tests.
+    assert "nga" in load_scenarios()

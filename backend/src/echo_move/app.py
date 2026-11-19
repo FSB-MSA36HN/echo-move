@@ -33,7 +33,6 @@ from .matlab_bridge import MatlabBridge
 from .notify import Notifier
 from .pipeline import StreamPipeline, decode_frame
 from .pose.detector import PoseDetector
-from .scenarios import DemoGenerator
 from .schemas import FrameMessage
 from .storage import EventStore
 from .storage.db import read_clip_frames
@@ -322,8 +321,11 @@ def create_app(cfg: Settings | None = None) -> FastAPI:
         st = ws.app.state
         det: PoseDetector = st.detector
         hub = st.hub if cfg.record_browser_events else None
-        pipe = StreamPipeline("browser" if det.available else "demo", det, cfg, hub)
-        demo = DemoGenerator(cfg.server_fps)
+        if not det.available:
+            await ws.send_text(json.dumps({"error": "AI unavailable"}))
+            await ws.close()
+            return
+        pipe = StreamPipeline("browser", det, cfg, hub)
         loop = asyncio.get_running_loop()
         last_ts = 0.0
         try:
@@ -334,10 +336,6 @@ def create_app(cfg: Settings | None = None) -> FastAPI:
                     await ws.send_text(json.dumps({"skip": True}))
                     continue
                 last_ts = now
-                if not det.available:
-                    payload = pipe.observe(demo.next_frame(bridge.read()), now)
-                    await ws.send_text(json.dumps(payload))
-                    continue
                 if len(text) > cfg.max_message_bytes:
                     await ws.send_text(json.dumps({"error": "frame too large"}))
                     continue

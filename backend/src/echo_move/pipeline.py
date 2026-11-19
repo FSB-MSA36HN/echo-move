@@ -25,14 +25,54 @@ from .pose.tracker import PoseTracker
 from .render import annotate, blur_faces, encode_jpeg
 from .zones import CameraOptions, foot_point
 
-SAFE_ENV: dict[str, Any] = {"hazards": [], "overall_level": "SAFE", "overall_color": [0, 1, 0]}
+# Per-metric IQA warning thresholds (direct labels — never invent dust/smoke/fire).
+BLUR_WARN = 40.0
+NOISE_WARN = 40.0
+CONTRAST_WARN = 30.0
+EXPOSURE_DARK = 25.0
+EXPOSURE_GLARE = 90.0
 
 
-def env_from_quality(iqa: dict[str, float], cfg: Settings) -> dict[str, Any]:
-    if iqa["overall"] < cfg.low_quality_threshold:
-        return {"hazards": [{"name": "LOW_Q", "label": "ẢNH KÉM", "advice": "Kiểm tra camera"}],
-                "overall_level": "RISK", "overall_color": [1, 0.65, 0]}
-    return SAFE_ENV
+def quality_warnings(iqa: dict[str, float], cfg: Settings) -> dict[str, Any]:
+    """Map each IQA metric to an on-screen warning when it crosses its threshold.
+
+    Returns both ``warnings`` (preferred) and ``hazards`` (same list, legacy key for
+    older web clients). Levels: SAFE / WARNING / RISK (overall below threshold).
+    """
+    warnings: list[dict[str, Any]] = []
+
+    def add(code: str, label: str, metric: str, value: float) -> None:
+        warnings.append({"code": code, "name": code, "label": label, "metric": metric,
+                         "value": round(float(value), 1), "advice": "Kiểm tra camera"})
+
+    blur, noise = iqa.get("blur", 100.0), iqa.get("noise", 100.0)
+    contrast, exposure = iqa.get("contrast", 100.0), iqa.get("exposure", 100.0)
+    overall = iqa.get("overall", 100.0)
+    if blur < BLUR_WARN:
+        add("BLUR", "Ảnh mờ", "blur", blur)
+    if noise < NOISE_WARN:
+        add("NOISE", "Ảnh nhiễu", "noise", noise)
+    if contrast < CONTRAST_WARN:
+        add("CONTRAST", "Tương phản thấp", "contrast", contrast)
+    if exposure < EXPOSURE_DARK:
+        add("DARK", "Ảnh tối", "exposure", exposure)
+    elif exposure > EXPOSURE_GLARE:
+        add("GLARE", "Ảnh chói sáng", "exposure", exposure)
+    if overall < cfg.low_quality_threshold:
+        add("LOW_Q", "Ảnh kém (tổng)", "overall", overall)
+
+    if overall < cfg.low_quality_threshold:
+        level, color = "RISK", [1.0, 0.65, 0.0]
+    elif warnings:
+        level, color = "WARNING", [1.0, 0.65, 0.0]
+    else:
+        level, color = "SAFE", [0.0, 1.0, 0.0]
+    return {"warnings": warnings, "hazards": warnings, "overall_level": level,
+            "overall_color": color}
+
+
+# Back-compat alias used by older imports/tests.
+env_from_quality = quality_warnings
 
 
 def decode_frame(data_url: str, max_width: int) -> np.ndarray | None:
@@ -123,7 +163,7 @@ class StreamPipeline:
         self.frames += 1
         return {
             "detected": bool(persons), "persons": persons, "hands": hands,
-            "quality": iqa, "env_hazards": env_from_quality(iqa, self.cfg),
+            "quality": iqa, "env_hazards": quality_warnings(iqa, self.cfg),
             "alerts": events, "source": self.source, "frame": {"w": w, "h": h},
             "benchmark": {"frame_ms": round(frame_ms, 2), "avg_frame_ms": round(avg, 2),
                           "fps_actual": round(1000.0 / max(avg, 1), 1),

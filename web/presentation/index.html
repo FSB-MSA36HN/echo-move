@@ -187,7 +187,7 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
       <div class="check ok"><div class="box">✓</div><div class="txt">Nhiều người, nhiều camera <span>— tracking ID ổn định, mỗi camera một pipeline</span></div></div>
       <div class="check ok"><div class="box">✓</div><div class="txt">Biết khi chính camera kém <span>— 5 chỉ số IQA, cảnh báo camera kém và mất tín hiệu</span></div></div>
       <div class="check ok"><div class="box">✓</div><div class="txt">Có bằng chứng và truy vết <span>— ảnh, clip 10 s, nhật ký SQLite, xuất CSV</span></div></div>
-      <div class="check ok"><div class="box">✓</div><div class="txt">Luôn demo được <span>— web chạy offline 8 kịch bản, không cần backend</span></div></div>
+      <div class="check ok"><div class="box">✓</div><div class="txt">IQA trung thực <span>— 5 chỉ số + Overall, cảnh báo theo từng metric (mờ/nhiễu/tối/chói)</span></div></div>
     </div>
     <div class="stripe-b"></div>
     <div class="footer"><span>goals · requirements</span><span>ECHO MOVE</span></div>
@@ -210,13 +210,13 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
       </div>
       <div class="col" style="border-color:var(--blue)">
         <h4>Web · Three.js</h4><div class="role blu">Giao diện</div>
-        <ul><li>3 tab: Giám sát · Camera · Sự kiện</li><li>Công nhân 3D mặc đồ bảo hộ</li><li>Còi, toast, thông báo desktop</li><li>Chạy offline khi mất backend</li></ul>
+        <ul><li>3 tab: Giám sát · Camera · Sự kiện</li><li>Công nhân 3D mặc đồ bảo hộ</li><li>Còi, toast, thông báo desktop</li><li>Nguồn thật: Webcam · Video · Server</li></ul>
       </div>
     </div>
     <div class="links"><span>MATLAB → <b>*_iqa.json</b> → Python</span><span>Python ⇄ <b>/ws/pose · /ws/events · MJPEG</b> ⇄ Web</span></div>
     <div class="stripe-b"></div>
     <div class="footer"><span>architecture · 3 tiers</span><span>ECHO MOVE</span></div>
-    <aside class="notes">Câu hỏi hay gặp: tại sao 3 ngôn ngữ? MATLAB cho phân tích và biểu đồ, Python cho AI realtime, HTML/JS cho UI và demo offline.</aside>
+    <aside class="notes">Câu hỏi hay gặp: tại sao 3 ngôn ngữ? MATLAB cho phân tích offline video và biểu đồ, Python cho AI realtime, HTML/JS cho UI giám sát nguồn thật.</aside>
   </section>
 
   <!-- 5. PIPELINE -->
@@ -496,13 +496,12 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
     <div class="kicker">Mọi tính năng mới chỉ là biến môi trường tuỳ chọn</div>
     <h2 class="h2">Bốn cách chạy, <span class="grn">không đổi lệnh</span></h2>
     <div class="grid2 mt">
-      <pre class="code" style="font-size:24px"><span class="cm"># 1. Chỉ giao diện: mở web/index.html, phím 1–8</span>
-<span class="cm"># 2. Backend + giao diện tại :8000</span>
+      <pre class="code" style="font-size:24px"><span class="cm"># 1. Backend + giao diện tại :8000</span>
 <span class="kw">make</span> install &amp;&amp; <span class="kw">make</span> demo
 <span class="kw">make</span> install-ai &amp;&amp; <span class="kw">make</span> run
-<span class="cm"># 3. Docker</span>
+<span class="cm"># 2. Docker</span>
 <span class="kw">cd</span> docker &amp;&amp; <span class="kw">docker</span> compose up --build
-<span class="cm"># 4. Colab GPU + GitHub Pages</span>
+<span class="cm"># 3. Colab GPU + GitHub Pages</span>
 
 <span class="cm"># camera thật + thông báo</span>
 <span class="kw">export</span> ECHO_CAMERAS=<span class="st">"kho=rtsp://…,cong=0"</span>
@@ -510,7 +509,7 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
       <div>
         <div class="grid2">
           <div class="card t-green" style="text-align:center"><div class="big-num grn">67</div><p>test tự động (pytest)</p></div>
-          <div class="card t-blue" style="text-align:center"><div class="big-num blu">8</div><p>kịch bản offline</p></div>
+          <div class="card t-blue" style="text-align:center"><div class="big-num blu">5</div><p>chỉ số IQA + Overall</p></div>
         </div>
         <div class="alert green mt">
           <h3>CI mỗi lần push</h3>
@@ -562,20 +561,20 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
     <div class="grid2 mt">
       <div class="checks">
         <div class="check ok"><div class="box">1</div><div class="txt">MATLAB chạy IQA <span>— 9 biểu đồ, JSON tự nạp sang web</span></div></div>
-        <div class="check ok"><div class="box">2</div><div class="txt">Phím 4: ngã <span>— người 3D nằm xuống, sau 1.5 s còi hú</span></div></div>
-        <div class="check ok"><div class="box">3</div><div class="txt">Tab Camera <span>— MJPEG có skeleton, người 3D theo camera</span></div></div>
+        <div class="check ok"><div class="box">2</div><div class="txt">Tab Camera <span>— MJPEG có skeleton, người 3D theo camera</span></div></div>
+        <div class="check ok"><div class="box">3</div><div class="txt">IQA Live đủ chỉ số <span>— Blur/Noise/… + badge cảnh báo theo metric</span></div></div>
         <div class="check ok"><div class="box">4</div><div class="txt">Cúi sai trước webcam <span>— cảnh báo sau 3 s, Telegram nhận ảnh</span></div></div>
       </div>
       <div class="checks">
         <div class="check ok"><div class="box">5</div><div class="txt">Nằm yên 10 s rồi đứng dậy <span>— MANDOWN → RECOVERED</span></div></div>
         <div class="check ok"><div class="box">6</div><div class="txt">Tab Sự kiện <span>— ▶ Clip, Xác nhận, Báo nhầm, CSV</span></div></div>
         <div class="check ok"><div class="box">7</div><div class="txt">Vẽ vùng cấm, bước vào <span>— cảnh báo ZONE</span></div></div>
-        <div class="check ok"><div class="box">8</div><div class="txt">Rút mạng camera, tắt backend <span>— OFFLINE, web vẫn chạy</span></div></div>
+        <div class="check ok"><div class="box">8</div><div class="txt">Che ống kính / tắt đèn <span>— cảnh báo Ảnh mờ / Ảnh tối (không lửa giả)</span></div></div>
       </div>
     </div>
     <div class="stripe-b"></div>
     <div class="footer"><span>demo · live</span><span>ECHO MOVE</span></div>
-    <aside class="notes">Nếu demo hỏng: F5 → phím T (self-test) → phím 1 (offline) → video quay sẵn.</aside>
+    <aside class="notes">Nếu demo hỏng: F5 → phím T (self-test) → Video file quay sẵn → Server nếu backend còn sống.</aside>
   </section>
 
   <!-- 17. LIMITS -->

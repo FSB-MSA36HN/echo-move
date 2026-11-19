@@ -1,7 +1,7 @@
-"""Synthetic demo scenarios (single source of truth, shared with the web UI).
+"""Pose/IQA fixtures for unit tests (scenarios.json).
 
-The JSON lives in ``data/scenarios.json``; ``scripts/export_scenarios.py`` copies it
-to ``web/data/scenarios.json`` so both tiers stay in sync.
+Web no longer plays offline demo scenarios; this module remains so pytest can
+load known keypoints (stand/bend/fall) without a YOLO model.
 """
 
 from __future__ import annotations

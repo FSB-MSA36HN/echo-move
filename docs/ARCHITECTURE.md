@@ -107,7 +107,7 @@ Server → client (rút gọn):
 | `backend.js` | Dò backend: `?server` → cùng origin → `localhost:8000`; kiểm tra sức khoẻ 15 s; giữ `/ws/events` |
 | `alerts.js` | Bộ xác nhận theo thời gian (cùng luật backend), còi WebAudio, Notification API, toast, gửi sự kiện từ AI trình duyệt lên backend |
 | `human3d.js` | Cảnh nhà xưởng, công nhân GLTF có xương + đồ bảo hộ, retarget COCO-17 → xương, fallback người dựng bằng code |
-| `app.js` | Tab Giám sát: nguồn (kịch bản / webcam / video / server), MediaPipe, IQA, báo cáo |
+| `app.js` | Tab Giám sát: nguồn thật (webcam / video / server), MediaPipe, IQA 5 metric + cảnh báo theo chỉ số, báo cáo |
 | `cameras.js`, `events.js` | Tab Camera, tab Sự kiện |
 
 Web luôn chạy được không cần backend (mở file trực tiếp hoặc GitHub Pages); các tab Camera/Sự kiện khi đó hiện hướng dẫn kết nối.

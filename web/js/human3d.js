@@ -751,19 +751,14 @@ vec3 echoRegion(vec3 p, out float stripe) {
       bm.beam.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize());
       bm.beam.material.opacity = 0.15 + 0.3 * pulse;
     });
-    const has = n => st.env.indexOf(n) >= 0;
-    const dusty = has('DUST') || has('SMOKE');
-    fx.dust.visible = dusty;
-    if (dusty) fx.dust.rotation.y += dt * 0.05;
-    st.scene.fog.near = dusty ? 1.5 : 7;
-    st.scene.fog.far = dusty ? 8 : 18;
-    const dark = has('DARK');
-    fx.lights.key.intensity = dark ? 0.25 : 1.6;
-    fx.lights.hemi.intensity = dark ? 0.12 : 0.75;
-    const fire = has('FIRE');
-    fx.flame.visible = fire;
-    fx.fire.intensity = fire ? 2.2 + Math.random() * 1.2 : 0;
-    if (fire) fx.flame.scale.set(1, 0.85 + Math.random() * 0.3, 1);
+    // Fake FIRE/DUST/SMOKE environment FX disabled — IQA warnings are UI-only.
+    fx.dust.visible = false;
+    st.scene.fog.near = 7;
+    st.scene.fog.far = 18;
+    fx.lights.key.intensity = 1.6;
+    fx.lights.hemi.intensity = 0.75;
+    fx.flame.visible = false;
+    fx.fire.intensity = 0;
     if (st.ctl) st.ctl.update();
     st.rnd.render(st.scene, st.cam);
   }

@@ -17,7 +17,7 @@ Bản 22 hướng tới dùng thật tại xưởng: luật ngã **đa tín hi�
 |---|---|---|
 | MATLAB | Phân tích IQA offline trên video, 9 biểu đồ, xuất JSON/CSV/PNG | [matlab/](matlab/) |
 | Python | Camera server, YOLOv8-Pose + tracking, 5 metric IQA, xác nhận cảnh báo, nhật ký SQLite, thông báo, phục vụ giao diện web | [backend/](backend/) |
-| Web | Giao diện 3 tab (Giám sát / Camera / Sự kiện), công nhân 3D (GLTF có xương), còi + thông báo, 8 kịch bản offline | [web/](web/) |
+| Web | Giao diện 3 tab (Giám sát / Camera / Sự kiện), công nhân 3D (GLTF có xương), còi + thông báo, IQA 5 metric + cảnh báo theo chỉ số | [web/](web/) |
 
 ## Chạy nhanh
 

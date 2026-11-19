@@ -11,7 +11,7 @@ window.onerror = (msg, url, line, col, err) => {
 };
 
 const S = {
-  che_do:'offline', kich_ban:'an_toan', tu_dong:false,
+  che_do:'idle',
   khung:0, lan_ve:0, fps_dem:0, fps:0, moc_fps:0,
   safety:'SAFE', ws:null, dang_gui:false, lan_gui:0,
   nhat_ky:[], stream:null, url:null,
@@ -27,32 +27,12 @@ const S = {
   ext:null  // server camera id currently driving the 3D view (Camera tab)
 };
 
-// Anatomical poses (COCO-17, normalised to a 4:3 frame; subject's left side appears on image right).
-const POSE = {
-  stand:[[.5,.12],[.511,.105],[.489,.105],[.524,.115],[.476,.115],[.56,.22],[.44,.22],[.572,.356],[.428,.356],[.578,.49],[.422,.49],[.53,.45],[.47,.45],[.533,.66],[.467,.66],[.535,.87],[.465,.87]],
-  lift:[[.5,.3],[.511,.285],[.489,.285],[.524,.295],[.476,.295],[.56,.4],[.44,.4],[.58,.53],[.42,.53],[.55,.66],[.45,.66],[.53,.63],[.47,.63],[.6,.72],[.4,.72],[.57,.87],[.43,.87]],
-  bend:[[.73,.45],[.725,.435],[.72,.44],[.7,.42],[.695,.425],[.65,.405],[.658,.427],[.65,.55],[.665,.56],[.655,.67],[.67,.68],[.495,.51],[.505,.53],[.505,.725],[.515,.725],[.5,.935],[.51,.935]],
-  fall:[[.77,.85],[.765,.865],[.765,.835],[.745,.88],[.745,.82],[.67,.895],[.67,.805],[.57,.91],[.57,.79],[.47,.92],[.47,.78],[.5,.875],[.5,.825],[.34,.88],[.34,.83],[.18,.885],[.18,.835]]
-};
-const CORE = [0,5,6,11,12,13,14,15,16];
-const withConf = (pose, c) => pose.map(([x,y],i) => [x, y, Math.round((CORE.includes(i) ? c : c-.05)*100)/100]);
-const SAFE_ENV = {hazards:[],overall_level:'SAFE',overall_color:[0,1,0]};
-
-const KB = {
-  an_toan:{ten:'An toàn',kps:withConf(POSE.stand,.95),safety:{level:'SAFE',color:[0,1,0],label:'AN TOÀN',detail:'Bình thường',technique:'NONE'},env:SAFE_ENV,iqa:{piqe:85,blur:82,contrast:80,noise:88,exposure:90,overall:85}},
-  nang_dung:{ten:'Nâng đúng',kps:withConf(POSE.lift,.95),safety:{level:'SAFE',color:[0,1,0],label:'NÂNG ĐÚNG',detail:'Gối 119°',technique:'PROPER_LIFT'},env:SAFE_ENV,iqa:{piqe:82,blur:80,contrast:78,noise:86,exposure:88,overall:82}},
-  cui_sai:{ten:'Cúi sai',kps:withConf(POSE.bend,.95),safety:{level:'RISK',color:[1,0,0],label:'SAI TƯ THẾ',detail:'Cúi 63°',technique:'IMPROPER'},env:SAFE_ENV,iqa:{piqe:80,blur:78,contrast:76,noise:84,exposure:86,overall:80}},
-  nga:{ten:'Ngã',kps:withConf(POSE.fall,.95),safety:{level:'RISK',color:[1,0,0],label:'PHÁT HIỆN NGÃ',detail:'Nguy hiểm',technique:'FALL'},env:SAFE_ENV,iqa:{piqe:75,blur:72,contrast:70,noise:80,exposure:82,overall:75}},
-  chay:{ten:'Cháy',kps:withConf(POSE.stand,.95),safety:{level:'SAFE',color:[0,1,0],label:'AN TOÀN',detail:'Bình thường',technique:'NONE'},env:{hazards:[{name:'FIRE',label:'LỬA (12.5%)',advice:'GỌI 114'}],overall_level:'CRITICAL',overall_color:[1,0,0]},iqa:{piqe:55,blur:60,contrast:65,noise:55,exposure:60,overall:59}},
-  bui:{ten:'Bụi',kps:withConf(POSE.stand,.6),safety:{level:'SAFE',color:[0,1,0],label:'AN TOÀN',detail:'Bình thường',technique:'NONE'},env:{hazards:[{name:'DUST',label:'BỤI',advice:'Khẩu trang'},{name:'SMOKE',label:'KHÓI',advice:'Sơ tán'}],overall_level:'CRITICAL',overall_color:[1,0,0]},iqa:{piqe:35,blur:30,contrast:25,noise:20,exposure:60,overall:36}},
-  toi:{ten:'Tối',kps:withConf(POSE.stand,.5),safety:{level:'SAFE',color:[0,1,0],label:'KHÓ THẤY',detail:'Ảnh tối',technique:'NONE'},env:{hazards:[{name:'DARK',label:'THIẾU SÁNG',advice:'Bật đèn'}],overall_level:'CRITICAL',overall_color:[1,0,0]},iqa:{piqe:30,blur:25,contrast:20,noise:60,exposure:15,overall:28}},
-  che_cam:{ten:'Che cam',kps:Array(17).fill([.5,.5,0]),safety:{level:'SAFE',color:[0,1,0],label:'KHÔNG PHÁT HIỆN',detail:'Camera lỗi',technique:'NONE'},env:{hazards:[{name:'DARK',label:'THIẾU SÁNG',advice:'Kiểm tra'},{name:'SMOKE',label:'KHÓI/CHE',advice:'Vệ sinh'}],overall_level:'CRITICAL',overall_color:[1,0,0]},iqa:{piqe:15,blur:10,contrast:8,noise:40,exposure:5,overall:14}}
-};
-
 const KN = [[0,1],[1,3],[0,2],[2,4],[5,6],[5,7],[7,9],[6,8],[8,10],
             [5,11],[6,12],[11,12],[11,13],[13,15],[12,14],[14,16]];
 const CL = ['#00ffcc','#ff6b35','#9d4edd','#ffd60a','#06d6a0'];
-const FPS_OFF = 15, FPS_VID = 20, FPS_SRV = 12;
+const FPS_VID = 20, FPS_SRV = 12;
+const IQA_LOW_OVERALL = 40;
+const IQA_THRESH = {blur:40, noise:40, contrast:30, exposureDark:25, exposureGlare:90};
 const DET_INT = 50, VIS = 0.3, MAXP = 3;
 
 const MPMAP = {nose:0,left_eye:2,right_eye:5,left_ear:7,right_ear:8,
@@ -75,7 +55,7 @@ const STEPS = [
   ['Scene 3D', () => init3D()],
   ['Người 3D', () => !S.three || Human3D.info().ok],
   ['Events', () => { bind(); return true; }],
-  ['Scenario', () => { pickKB('an_toan'); return true; }],
+  ['Idle', () => { showIdle(); return true; }],
   ['Loop', () => { requestAnimationFrame(loop); return true; }]
 ];
 let step = 0;
@@ -281,7 +261,7 @@ function detect() {
       persons.sort((a,b) => b.keypoints.reduce((s,k)=>s+k[2],0) - a.keypoints.reduce((s,k)=>s+k[2],0));
       const q = calcIQA();
       process({detected:true, persons, hands:[], quality:q,
-               env_hazards: q ? envAnalysis(q) : {hazards:[],overall_level:'SAFE',overall_color:[0,1,0]},
+               env_hazards: iqaWarnings(q),
                _real:true});
     } else {
       process({detected:false, persons:[], hands:[], quality:calcIQA(),
@@ -390,15 +370,54 @@ function calcIQA() {
   };
 }
 
-function envAnalysis(q) {
-  const hz = []; let m = 0;
-  if (q.exposure < 25 && q.contrast < 30) { hz.push({name:'DARK',label:'THIẾU SÁNG',advice:'Bật đèn'}); m = Math.max(m,3); }
-  if (q.contrast < 30 && q.blur < 40) { hz.push({name:'SMOKE',label:'KHÓI/CHE',advice:'Kiểm tra'}); m = Math.max(m,3); }
-  if (q.noise < 40 && q.blur < 30) { hz.push({name:'DUST',label:'BỤI',advice:'Khẩu trang'}); m = Math.max(m,1); }
-  if (q.exposure > 90 && q.contrast > 70) { hz.push({name:'GLARE',label:'CHÓI',advice:'Kính'}); m = Math.max(m,2); }
-  const l = m >= 3 ? 'CRITICAL' : m === 2 ? 'RISK' : m === 1 ? 'WARNING' : 'SAFE';
-  const c = m >= 3 ? [1,0,0] : m === 2 ? [1,.2,.2] : m === 1 ? [1,.65,0] : [0,1,0];
-  return {hazards:hz,overall_level:l,overall_color:c};
+function iqaWarnings(q) {
+  if (!q) return {warnings:[], hazards:[], overall_level:'SAFE', overall_color:[0,1,0]};
+  const warnings = [];
+  const add = (code, label, metric, value) =>
+    warnings.push({code, name:code, label, metric, value, advice:'Kiểm tra camera'});
+  if (q.blur < IQA_THRESH.blur) add('BLUR', 'Ảnh mờ', 'blur', q.blur);
+  if (q.noise < IQA_THRESH.noise) add('NOISE', 'Ảnh nhiễu', 'noise', q.noise);
+  if (q.contrast < IQA_THRESH.contrast) add('CONTRAST', 'Tương phản thấp', 'contrast', q.contrast);
+  if (q.exposure < IQA_THRESH.exposureDark) add('DARK', 'Ảnh tối', 'exposure', q.exposure);
+  else if (q.exposure > IQA_THRESH.exposureGlare) add('GLARE', 'Ảnh chói sáng', 'exposure', q.exposure);
+  if (q.overall < IQA_LOW_OVERALL) add('LOW_Q', 'Ảnh kém (tổng)', 'overall', q.overall);
+  let level = 'SAFE', color = [0,1,0];
+  if (q.overall < IQA_LOW_OVERALL) { level = 'RISK'; color = [1,.65,0]; }
+  else if (warnings.length) { level = 'WARNING'; color = [1,.65,0]; }
+  return {warnings, hazards:warnings, overall_level:level, overall_color:color};
+}
+
+function metricRow(label, value, bad) {
+  const col = bad ? '#ef4444' : '#94a3b8';
+  return `<div class="row"><span style="color:${col}">${label}</span><span style="color:${col}">${value}</span></div>`;
+}
+
+function renderIqaPanel(q) {
+  if (!q) { $('iqa').innerHTML = '--'; return; }
+  const oBad = q.overall < IQA_LOW_OVERALL;
+  $('iqa').innerHTML =
+    metricRow('PIQE', q.piqe, false) +
+    metricRow('Blur', q.blur, q.blur < IQA_THRESH.blur) +
+    metricRow('Contrast', q.contrast, q.contrast < IQA_THRESH.contrast) +
+    metricRow('Noise', q.noise, q.noise < IQA_THRESH.noise) +
+    metricRow('Exposure', q.exposure, q.exposure < IQA_THRESH.exposureDark || q.exposure > IQA_THRESH.exposureGlare) +
+    `<div class="row"><b style="color:${oBad?'#ef4444':'var(--c)'}">Tổng</b><b style="color:${oBad?'#ef4444':'var(--c)'}">${q.overall}</b></div>`;
+}
+
+function warningList(env) {
+  return (env && (env.warnings || env.hazards)) || [];
+}
+
+function showIdle() {
+  S.che_do = 'idle';
+  $('stt').textContent = 'Chọn Camera / Video / Server';
+  const el = $('mode');
+  if (el) { el.textContent = 'CHỜ NGUỒN'; el.style.background = '#64748b'; }
+  $('iqa').innerHTML = '--';
+  $('mt').innerHTML = '<div class="row"><span>Mức</span><b style="color:#00ff88">SAFE</b></div>';
+  $('tt').textContent = '--';
+  $('cb').style.display = 'none';
+  return true;
 }
 
 function draw2D(ds) {
@@ -553,30 +572,31 @@ function process(data) {
 
   if (data.quality) {
     const q = data.quality;
-    $('iqa').innerHTML = `
-      <div class="row"><span>PIQE</span><span>${q.piqe}</span></div>
-      <div class="row"><span>Blur</span><span>${q.blur}</span></div>
-      <div class="row"><b>Tổng</b><b style="color:var(--c)">${q.overall}</b></div>`;
-
+    renderIqaPanel(q);
+    const warns = warningList(data.env_hazards || iqaWarnings(q));
     S.sess.hist.push({
       t: Date.now(), piqe: q.piqe,
       blur: q.blur, contrast: q.contrast, noise: q.noise,
       exposure: q.exposure, overall: q.overall,
       time_fast_ms: q.time_fast_ms || 0,
       frame_ms: data.benchmark?.frame_ms || 0,
-      alert: data.env_hazards?.hazards?.[0]?.label || null
+      alert: warns[0]?.label || null
     });
     if (S.sess.hist.length > 500) S.sess.hist.shift();
   }
 
-  if (data.env_hazards) {
-    const e = data.env_hazards;
-    const m = `rgb(${e.overall_color.map(c => Math.round(c*255)).join(',')})`;
-    let h = `<div class="row"><span>Mức</span><b style="color:${m}">${e.overall_level}</b></div>`;
-    e.hazards.forEach(x => { h += `<div class="row"><span style="color:#ef4444">${x.label}</span><span>${x.advice}</span></div>`; });
+  if (data.env_hazards || data.quality) {
+    const e = data.env_hazards || iqaWarnings(data.quality);
+    const warns = warningList(e);
+    const m = `rgb(${(e.overall_color||[0,1,0]).map(c => Math.round(c*255)).join(',')})`;
+    let h = `<div class="row"><span>Mức</span><b style="color:${m}">${e.overall_level||'SAFE'}</b></div>`;
+    if (!warns.length) h += `<div class="row"><span style="color:#94a3b8">Không cảnh báo</span><span></span></div>`;
+    warns.forEach(x => { h += `<div class="row"><span style="color:#ef4444">${x.label}</span><span>${x.advice||''}</span></div>`; });
     $('mt').innerHTML = h;
-    if (e.hazards.length > 0) { $('cb').style.display = 'block'; $('cb').textContent = e.hazards[0].label; }
-    else $('cb').style.display = 'none';
+    if (warns.length) {
+      $('cb').style.display = 'block';
+      $('cb').textContent = warns.slice(0, 2).map(w => w.label.replace(/^Ảnh /,'').toUpperCase()).join(' · ');
+    } else $('cb').style.display = 'none';
   }
 
   const ds = data.persons || [];
@@ -595,7 +615,7 @@ function process(data) {
 
   if (S.three) {
     Human3D.update(ds[0] || null, srcAspect());
-    Human3D.setEnv(data.env_hazards ? data.env_hazards.hazards.map(h => h.name) : []);
+    Human3D.setEnv([]);  // IQA warnings are UI-only; no fake FIRE/DUST/SMOKE FX
   } else if (S.ctx2d) render2D(ds.length > 0 ? ds[0].keypoints : null);
 
   draw2D(ds);
@@ -611,11 +631,11 @@ function process(data) {
 function alertsFor(data) {
   if (!window.EchoAlerts) return;
   if (S.che_do === 'server') { (data.alerts || []).forEach(a => EchoAlerts.raise(a, true)); return; }
-  const real = !!data._real;
-  EchoAlerts.observe(real ? 'browser' : 'scenario', data.persons || [], data.quality, {
-    source: real ? 'browser' : 'kịch bản',
-    report: real,
-    snapshot: real ? snapshot : null,
+  if (!data._real) return;
+  EchoAlerts.observe('browser', data.persons || [], data.quality, {
+    source: 'browser',
+    report: true,
+    snapshot,
   });
 }
 
@@ -639,7 +659,7 @@ window.EchoApp = {
     S.safety = p && p.safety ? p.safety.level : 'SAFE';
     if (S.three) {
       Human3D.update(p, d.frame && d.frame.h ? d.frame.w / d.frame.h : 4/3);
-      Human3D.setEnv(d.env_hazards ? d.env_hazards.hazards.map(h => h.name) : []);
+      Human3D.setEnv([]);
     } else if (S.ctx2d) render2D(p ? p.keypoints : null);
     $('c3dLabel').textContent = `Mô phỏng 3D — camera "${camId}"` + (p ? ` · ${p.safety.label}` : ' · không có người');
   },
@@ -663,7 +683,6 @@ window.EchoTabs = {
 };
 
 function srcAspect() {
-  if (S.che_do === 'offline') return 4/3;
   const v = $('v');
   return v.videoWidth && v.videoHeight ? v.videoWidth / v.videoHeight : 4/3;
 }
@@ -684,70 +703,28 @@ function loop(now) {
     if (S.three) render3D();
     if (S.ext) { updDebug(); return; }
     if (S.che_do === 'video' && S.ai_on && S.pose_ready) detect();
-    const fps = S.che_do === 'offline' ? FPS_OFF : S.che_do === 'video' ? FPS_VID : FPS_SRV;
+    const fps = S.che_do === 'video' ? FPS_VID : FPS_SRV;
     if (now - S.lan_ve < 1000/fps) return;
     S.lan_ve = now;
     S.fps_dem++;
     if (now - S.moc_fps > 1000) { S.fps = S.fps_dem; S.fps_dem = 0; S.moc_fps = now; }
-    if (S.che_do === 'offline') procOffline();
-    else if (S.che_do === 'video') procVideo();
+    if (S.che_do === 'video') procVideo();
     else if (S.che_do === 'server') procServer(now);
     updDebug();
   } catch (e) { S.dbg.err = e.message; }
-}
-
-function procOffline() {
-  S.khung++;
-  if (S.tu_dong && S.khung % (FPS_OFF*4) === 0) {
-    const ds = Object.keys(KB);
-    const i = ds.indexOf(S.kich_ban);
-    pickKB(ds[(i+1) % ds.length]);
-    return;
-  }
-  const kb = KB[S.kich_ban];
-  if (!kb) return;
-  const t = S.khung / FPS_OFF;
-  const br = Math.sin(t*2)*.008;
-  const kps = kb.kps.map((kp, i) => {
-    if (kp[2] < VIS) return [kp[0], kp[1], kp[2]];
-    if (i >= 5 && i <= 12) return [kp[0], kp[1]-br, kp[2]];
-    return [kp[0], kp[1], kp[2]];
-  });
-  const co = kps.some(k => k[2] > VIS);
-  const ov = $('ov');
-  if (ov.width !== 640) ov.width = 640;
-  if (ov.height !== 480) ov.height = 480;
-  const ctx = ov.getContext('2d');
-  ctx.fillStyle = '#0a0f1a'; ctx.fillRect(0, 0, 640, 480);
-  ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 1;
-  for (let i = 0; i <= 8; i++) {
-    ctx.beginPath(); ctx.moveTo(0, i*60); ctx.lineTo(640, i*60); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(i*80, 0); ctx.lineTo(i*80, 480); ctx.stroke();
-  }
-  process({
-    detected: co, persons: co ? [{id:0, keypoints:kps, safety:kb.safety}] : [],
-    hands: [], quality:kb.iqa, env_hazards:kb.env
-  });
 }
 
 function procVideo() {
   const v = $('v');
   if (v.paused || v.readyState < 2) { S.dbg.video = 'loading'; return; }
   S.dbg.video = `${v.videoWidth}x${v.videoHeight}`;
-  if (S.ai_on && S.pose_ready) return;
+  if (S.ai_on && S.pose_ready) return;  // detect() already called process()
   const q = calcIQA();
   if (!q) return;
   S.khung++;
-  if (S.khung % (FPS_VID*4) === 0) {
-    const ds = Object.keys(KB);
-    const i = ds.indexOf(S.kich_ban);
-    S.kich_ban = ds[(i+1) % ds.length];
-    document.querySelectorAll('.kbb').forEach(b => b.classList.toggle('on', b.dataset.kb === S.kich_ban));
-  }
-  const kb = KB[S.kich_ban];
   process({
-    detected: true, persons: [{id:0, keypoints:kb.kps, safety:kb.safety}],
-    hands: [], quality:q, env_hazards:envAnalysis(q)
+    detected: false, persons: [],
+    hands: [], quality:q, env_hazards:iqaWarnings(q), _real:true
   });
 }
 
@@ -775,21 +752,12 @@ function updDebug() {
   d.classList.remove('err');
   const t = S.three ? '3D' : '2D';
   const ai = S.ai_on && S.pose_ready ? `AI:${S.det_fps}fps` : 'AI:OFF';
-  const src = S.mIQA ? 'MATLAB' : (S.ai_on ? 'Live' : 'Preset');
-  d.textContent = `[${S.che_do.toUpperCase()}] ${t} | FPS:${S.fps} | ${ai} | IQA:${src} | Video:${S.dbg.video} | ${S.kich_ban} | ${S.ext ? 'Cam:' + S.ext + ' | ' : ''}An toàn:${S.safety} | Log:${S.nhat_ky.length}` + (S.dbg.err ? ` | LỖI:${S.dbg.err}` : '');
+  const src = S.mIQA ? 'MATLAB' : 'Live';
+  d.textContent = `[${S.che_do.toUpperCase()}] ${t} | FPS:${S.fps} | ${ai} | IQA:${src} | Video:${S.dbg.video} | ${S.ext ? 'Cam:' + S.ext + ' | ' : ''}An toàn:${S.safety} | Log:${S.nhat_ky.length}` + (S.dbg.err ? ` | LỖI:${S.dbg.err}` : '');
   const b = $('badge');
   if (S.pose_loading) { b.textContent = '⏳ AI...'; b.style.background = '#0ea5e9'; b.style.display = 'block'; }
   else if (S.pose_ready && S.ai_on) { b.textContent = `🔬 AI:${S.det_fps}FPS`; b.style.background = '#059669'; b.style.display = 'block'; }
-  else if (S.che_do === 'video') { b.textContent = '🎭 Preset'; b.style.background = '#f59e0b'; b.style.display = 'block'; }
   else b.style.display = 'none';
-}
-
-function pickKB(t) {
-  if (!KB[t]) return;
-  S.kich_ban = t; S.khung = 0;
-  document.querySelectorAll('.kbb').forEach(b => b.classList.toggle('on', b.dataset.kb === t));
-  const el = $('mode');
-  if (el) { el.textContent = 'OFFLINE — ' + KB[t].ten; el.style.background = 'var(--w)'; }
 }
 
 function cleanup() {
@@ -1051,7 +1019,7 @@ function bind() {
     cleanup();
     S.che_do = 'server';
     try { S.ws = new WebSocket($('wsurl').value); }
-    catch (e) { $('stt').textContent = 'URL sai'; S.che_do = 'offline'; return; }
+    catch (e) { $('stt').textContent = 'URL sai'; showIdle(); return; }
     S.ws.onopen = () => {
       $('bSrv').textContent = 'Ngắt';
       $('bSrv').style.background = '#ef4444';
@@ -1063,15 +1031,19 @@ function bind() {
       $('bSrv').textContent = 'Server';
       $('bSrv').style.background = '#334155';
       if (S.che_do === 'server') {
-        S.che_do = 'offline';
+        showIdle();
         $('stt').textContent = 'Mất kết nối';
-        pickKB(S.kich_ban);
       }
     };
     S.ws.onerror = () => { $('stt').textContent = 'Lỗi Python'; };
     S.ws.onmessage = e => {
       S.dang_gui = false;
-      try { const d = JSON.parse(e.data); if (d.skip) return; process(d); } catch (err) {}
+      try {
+        const d = JSON.parse(e.data);
+        if (d.skip) return;
+        if (d.error) { $('stt').textContent = d.error; return; }
+        process(d);
+      } catch (err) {}
     };
   };
 
@@ -1087,22 +1059,6 @@ function bind() {
   $('bRep').onclick = taoReport;
   $('bCmp').onclick = toggleCmp;
   $('bBen').onclick = toggleBench;
-
-  $('bAuto').onclick = () => {
-    S.tu_dong = !S.tu_dong;
-    $('bAuto').classList.toggle('on', S.tu_dong);
-    $('bAuto').textContent = S.tu_dong ? 'Đang tự động' : 'Tự động chạy';
-    if (S.che_do !== 'offline') { cleanup(); S.che_do = 'offline'; pickKB(S.kich_ban); }
-  };
-
-  document.querySelectorAll('.kbb').forEach(b => {
-    b.onclick = () => {
-      cleanup(); S.che_do = 'offline'; S.tu_dong = false;
-      $('bAuto').classList.remove('on');
-      $('bAuto').textContent = 'Tự động chạy';
-      pickKB(b.dataset.kb);
-    };
-  });
 
   $('bMAuto').onclick = () => setMatlabAuto(!S.mAuto);
   setMatlabAuto(true);
@@ -1131,16 +1087,11 @@ function bind() {
 
   document.addEventListener('keydown', e => {
     if (e.target.tagName === 'INPUT') return;
-    const ds = Object.keys(KB);
-    if (e.key >= '1' && e.key <= '8') {
-      const i = parseInt(e.key) - 1;
-      if (ds[i]) document.querySelector(`.kbb[data-kb="${ds[i]}"]`).click();
-    } else if (e.key === ' ') { e.preventDefault(); $('bAuto').click(); }
-    else if (e.key === 'a' || e.key === 'A') $('bAI').click();
+    if (e.key === 'a' || e.key === 'A') $('bAI').click();
     else if (e.key === 'b' || e.key === 'B') toggleBench();
     else if (e.key === 'c' || e.key === 'C') toggleCmp();
     else if (e.key === 'p' || e.key === 'P') taoReport();
-    else if (e.key === 'r' || e.key === 'R') { cleanup(); S.che_do = 'offline'; pickKB('an_toan'); }
+    else if (e.key === 'r' || e.key === 'R') { cleanup(); showIdle(); }
     else if (e.key === 't' || e.key === 'T') $('bTst').click();
   });
 
@@ -1159,13 +1110,18 @@ async function selfTest() {
     const i = ok === true ? '✓' : ok === false ? '✗' : '⚠';
     kq.innerHTML += `<div style="padding:1px 0;color:${c}">${i} ${n}</div>`;
   };
-  const ds = Object.keys(KB);
+  const warnOk = (() => {
+    const w = iqaWarnings({piqe:50, blur:20, contrast:20, noise:15, exposure:10, overall:25});
+    const codes = new Set(w.warnings.map(x => x.code));
+    return codes.has('BLUR') && codes.has('NOISE') && codes.has('DARK') && codes.has('LOW_Q')
+      && !codes.has('FIRE') && !codes.has('DUST') && !codes.has('SMOKE');
+  })();
   const tests = [
     ['Three.js', () => S.lib],
     ['Scene 3D', () => S.three],
     ['Người 3D', () => S.three && Human3D.info().ok],
     ['Model GLTF', () => S.three && Human3D.info().mode === 'gltf'],
-    ['8 KB', () => ds.length === 8],
+    ['IQA warnings', () => warnOk],
     ['Canvas', () => $('ov').getContext('2d') !== null],
     ['AI button', () => typeof $('bAI').onclick === 'function'],
     ['Cam button', () => typeof $('bCam').onclick === 'function'],
@@ -1183,26 +1139,17 @@ async function selfTest() {
   ];
   let pass = 0;
   await new Promise(r => setTimeout(r, 200));
-  tests.forEach(([n, fn], i) => {
-    setTimeout(() => {
-      try {
-        const ok = fn();
-        add(n, ok);
-        if (ok === true) pass++;
-      } catch (e) { add(n, false); }
-    }, i*50);
-  });
-  await new Promise(r => setTimeout(r, tests.length*50 + 100));
-  for (const kb of ds) {
-    pickKB(kb);
+  for (let i = 0; i < tests.length; i++) {
+    const [n, fn] = tests[i];
+    try {
+      const ok = fn();
+      add(n, ok);
+      if (ok === true) pass++;
+    } catch (e) { add(n, false); }
     await new Promise(r => setTimeout(r, 30));
-    const ok = S.kich_ban === kb;
-    add(`KB "${KB[kb].ten}"`, ok);
-    if (ok) pass++;
   }
-  pickKB('an_toan');
-  add(`TỔNG: ${pass}/${tests.length + ds.length}`, pass === tests.length + ds.length);
-  $('stt').textContent = `Self-test: ${pass}/${tests.length + ds.length}`;
+  add(`TỔNG: ${pass}/${tests.length}`, pass === tests.length);
+  $('stt').textContent = `Self-test: ${pass}/${tests.length}`;
 }
 
 // Bootstrap
@@ -1210,4 +1157,4 @@ if (document.readyState === 'loading') document.addEventListener('DOMContentLoad
 else loadStep();
 
 console.log('%c ECHO MOVE v22.0 — FINAL', 'color:#00ffcc;font-weight:bold;font-size:14px');
-console.log('  Shortcuts: 1-8 | Space | A(AI) | B(Bench) | C(Compare) | P(Report) | R(Reset) | T(Test)');
+console.log('  Shortcuts: A(AI) | B(Bench) | C(Compare) | P(Report) | R(Reset) | T(Test)');

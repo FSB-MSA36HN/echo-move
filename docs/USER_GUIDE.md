@@ -28,13 +28,13 @@ make install-ai     # thêm YOLO + MediaPipe (tuỳ chọn)
 ```
 - Model `yolov8n-pose.pt` (~6 MB) tự tải lần chạy đầu. Tải tay: <https://github.com/ultralytics/assets/releases/download/v0.0.0/yolov8n-pose.pt>, đặt cạnh nơi chạy lệnh (thư mục `backend/`).
 - Video mẫu: đặt `data/demo.mp4`. Chuyển định dạng: `ffmpeg -i input.mov -c:v libx264 -preset fast -crf 23 demo.mp4`.
-- Kiểm tra nhanh: mở `web/index.html` → đợi ~2 giây → bấm `1` (công nhân 3D đứng, vòng sàn xanh) → bấm `T` (self-test; `MediaPipe` và `Backend` hiện ⚠/✗ là bình thường khi chưa bật AI/backend).
+- Kiểm tra nhanh: mở `http://localhost:8000` → đợi ~2 giây → bấm **Camera** hoặc **Video** → bấm `T` (self-test; `MediaPipe` và `Backend` hiện ⚠/✗ là bình thường khi chưa bật AI/backend).
 
 ## 3. Giao diện web
-Có 2 cách mở: **http://localhost:8000** (backend phục vụ giao diện — khuyến nghị) hoặc mở thẳng `web/index.html` / GitHub Pages (web tự dò backend ở `localhost:8000`; không có backend thì vẫn chạy kịch bản offline). Góc trên: chấm xanh **Backend v22 · AI/DEMO · n cam** khi đã kết nối; nút 🔔/🔕 bật/tắt còi (bấm lần đầu để trình duyệt cho phép âm thanh và hỏi quyền thông báo desktop).
+Có 2 cách mở: **http://localhost:8000** (backend phục vụ giao diện — khuyến nghị) hoặc mở thẳng `web/index.html` / GitHub Pages (web tự dò backend ở `localhost:8000`). Góc trên: chấm xanh **Backend v22 · AI/DEMO · n cam** khi đã kết nối; nút 🔔/🔕 bật/tắt còi (bấm lần đầu để trình duyệt cho phép âm thanh và hỏi quyền thông báo desktop).
 
 Ba tab:
-- **🎥 Giám sát** — nguồn cục bộ (kịch bản, webcam, video, chế độ Server) + IQA + báo cáo. Cột phải: công nhân 3D mặc đồ bảo hộ trong nhà xưởng, dải phản quang và vòng sàn đổi màu theo mức an toàn (xanh / cam / đỏ), đèn cảnh báo xoay khi nguy hiểm.
+- **🎥 Giám sát** — nguồn thật (webcam, video file, chế độ Server) + IQA đủ 5 chỉ số + cảnh báo theo metric. Cột phải: công nhân 3D mặc đồ bảo hộ trong nhà xưởng, dải phản quang và vòng sàn đổi màu theo mức an toàn (xanh / cam / đỏ), đèn cảnh báo xoay khi nguy hiểm.
 - **📡 Camera** — lưới camera server (MJPEG có vẽ skeleton), trạng thái (Đang chạy / Mất tín hiệu — thử lại / Khựng hình), FPS, số người, IQA. Bấm một camera để người 3D mô phỏng người đầu tiên của camera đó; bấm lại để thôi. Nút ⚙ mở trình vẽ vùng nguy hiểm và bật/tắt luật (mục 4.4).
 - **📋 Sự kiện** — lịch sử cảnh báo đã xác nhận: lọc theo loại / thời gian / chưa xử lý, thống kê và biểu đồ theo giờ, ảnh chụp (bấm để phóng to), **▶ Clip**, nút **Xác nhận** (đã xử lý), **Báo nhầm**, **⬇ CSV**. Số đỏ trên tab = số sự kiện chưa xử lý trong 24 giờ.
 
@@ -47,40 +47,39 @@ Khi một cảnh báo được xác nhận (ngã ≥ 1.5 s, cúi sai ≥ 3 s, ca
 - **Mất tín hiệu camera (OFFLINE)**.
 
 ### 3.1 Nguồn ở tab Giám sát
-1. **OFFLINE (mặc định)** — kịch bản giả lập, không cần Python/MATLAB. Cảnh báo kịch bản chỉ hiện trên trình duyệt, không ghi vào nhật ký.
+Mặc định UI ở trạng thái **chờ nguồn** — chọn một trong các nguồn thật:
 
-| Phím | Kịch bản | Kết quả |
+1. **VIDEO/CAMERA + AI (MediaPipe trong trình duyệt)** — bấm **AI Detect** (`A`, chờ 3–8 giây tải lần đầu) → bấm **Camera** hoặc **Video**. Skeleton bám người thật, người 3D làm theo tư thế. Nếu đã kết nối backend, cảnh báo xác nhận được gửi lên nhật ký kèm ảnh (nguồn `browser`).
+
+2. **SERVER (Python)** — bấm **Camera**/**Video** rồi **Server** (địa chỉ WebSocket được điền tự động khi đã kết nối backend). Dùng YOLOv8-Pose + tracking + xác nhận cảnh báo trên server. Không có YOLO → WebSocket trả `{"error":"AI unavailable"}`.
+
+### 3.2 IQA Live & cảnh báo theo chỉ số
+Panel **IQA Live** hiện đủ: PIQE, Blur, Contrast, Noise, Exposure, Tổng. Panel **Cảnh báo IQA** liệt kê từng cảnh báo trực tiếp từ ngưỡng metric (không suy luận bụi/khói/lửa):
+
+| Metric | Điều kiện | Label |
 |---|---|---|
-| 1 | An toàn | Công nhân đứng, vòng xanh |
-| 2 | Nâng đúng | Ngồi xổm nâng thùng, badge xanh |
-| 3 | Cúi sai | Cúi gập lưng, đỏ; sau 3 s có cảnh báo |
-| 4 | Ngã | Nằm trên sàn, đèn xoay; sau 1.5 s còi hú |
-| 5 | Cháy | Lửa cạnh công nhân, alert "LỬA" |
-| 6 | Bụi | Bụi/khói, alert "BỤI + KHÓI" |
-| 7 | Tối | IQA tụt ~28, "THIẾU SÁNG" |
-| 8 | Che cam | IQA ~14 |
+| Blur | `< 40` | Ảnh mờ |
+| Noise | `< 40` | Ảnh nhiễu |
+| Contrast | `< 30` | Tương phản thấp |
+| Exposure | `< 25` | Ảnh tối |
+| Exposure | `> 90` | Ảnh chói sáng |
+| Overall | `< 40` | Ảnh kém (tổng) |
 
-   `Space` hoặc nút **Tự động chạy**: đổi kịch bản mỗi 4 giây.
+Alert **CAMERA** trên backend vẫn chỉ dựa `overall < 40` kéo dài `quality_confirm_s`.
 
-2. **VIDEO/CAMERA + AI (MediaPipe trong trình duyệt)** — bấm **AI Detect** (`A`, chờ 3–8 giây tải lần đầu) → bấm **Camera** hoặc **Video**. Skeleton bám người thật, người 3D làm theo tư thế. Nếu đã kết nối backend, cảnh báo xác nhận được gửi lên nhật ký kèm ảnh (nguồn `browser`).
-
-3. **SERVER (Python)** — bấm **Camera**/**Video** rồi **Server** (địa chỉ WebSocket được điền tự động khi đã kết nối backend). Dùng YOLOv8-Pose + tracking + xác nhận cảnh báo trên server.
-
-### 3.2 Phím & nút
+### 3.3 Phím & nút
 | Phím | Chức năng |
 |---|---|
-| `1`–`8` | Chọn kịch bản |
-| `Space` | Tự động chạy |
 | `A` | Bật/tắt AI Detect (MediaPipe) |
 | `B` | Panel benchmark (FPS, thời gian PIQE, tương quan) |
 | `C` | Thanh so sánh trước/sau |
 | `P` | Xuất báo cáo HTML |
-| `R` | Reset |
-| `T` | Self-test 18 bước |
+| `R` | Reset về chờ nguồn |
+| `T` | Self-test |
 
 Các nút khác: **Log** (xuất nhật ký JSON), **📂 Nạp** (nạp JSON từ MATLAB), **🎭 Demo** (JSON demo), **✕** (xoá JSON).
 
-### 3.3 Kết nối MATLAB → web
+### 3.4 Kết nối MATLAB → web
 1. **Tự động (mặc định, nút 🔄 Tự động: BẬT)**: khi backend đang chạy, web hỏi `/matlab_iqa` mỗi 2 giây; backend đọc file `output/*_iqa.json` mới nhất nên MATLAB chạy xong là web tự hiện, không cần chọn file. Chưa có backend thì dòng trạng thái báo "chờ backend".
 2. Thủ công (khi không chạy backend): **📂 Nạp** → chọn JSON; trên Chrome/Edge trang theo dõi file và cập nhật mỗi giây. Nạp tay, **🎭 Demo** hoặc **✕** sẽ tắt chế độ tự động; bấm 🔄 để bật lại.
 
@@ -218,7 +217,7 @@ Chạy test: `runtests('matlab/tests')`.
 | Web: trang trắng | F12 → Console xem lỗi |
 | Web: loading mãi | CDN Three.js không tải được → kiểm tra mạng |
 | Panel 3D đen | WebGL không khả dụng → đổi Chrome/Edge, bật hardware acceleration |
-| "MediaPipe không tải được" | Cần internet lần đầu; dùng kịch bản 1–8 thay thế |
+| "MediaPipe không tải được" | Cần internet lần đầu; dùng chế độ Server (YOLO) hoặc tải lại trang |
 | Camera `NotAllowedError` | Cấp quyền ở `chrome://settings/content/camera`; đóng Zoom/Meet |
 | Video không phát | Chuyển codec H.264 bằng ffmpeg |
 | `ModuleNotFoundError` | Chưa `make install` |
@@ -245,7 +244,7 @@ Khi báo lỗi, kèm: dòng đỏ trong Console, phiên bản Chrome (`chrome://
 - **Có cần GPU?** Không; YOLO trên CPU ~5–10 FPS.
 - **Có cần MATLAB?** Không bắt buộc; MATLAB dùng cho phân tích offline và bridge JSON.
 - **Chạy máy khác?** Copy thư mục, cài Python + Chrome.
-- **Tại sao 3 ngôn ngữ?** Mỗi tầng làm đúng việc: MATLAB (phân tích offline, biểu đồ), Python (AI realtime), HTML/JS (UI, 3D, demo offline).
+- **Tại sao 3 ngôn ngữ?** Mỗi tầng làm đúng việc: MATLAB (phân tích offline video, biểu đồ), Python (AI realtime), HTML/JS (UI giám sát nguồn thật + 3D).
 
 ## 8. Deploy: web trên GitHub Pages + backend trên Colab
 1. **Bật Pages một lần:** repo → Settings → Pages → Source = *GitHub Actions*. Mỗi lần push sửa `web/` workflow `pages.yml` tự deploy tới `https://fsb-msa36hn.github.io/echo-move/`.

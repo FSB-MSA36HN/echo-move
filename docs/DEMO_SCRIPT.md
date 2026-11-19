@@ -1,8 +1,7 @@
 # Kịch bản demo & Q&A bảo vệ
 
 ## Chuẩn bị (5 phút trước)
-- [ ] Tắt wifi để thử chế độ offline
-- [ ] Chrome mở `web/index.html` (đã test)
+- [ ] Chrome mở <http://localhost:8000> (đã test)
 - [ ] `ECHO_CAMERAS="demo=data/demo.mp4" make run` đang chạy (hoặc camera IP/USB thật); `/health` có `"cameras": 1`
 - [ ] (Tuỳ chọn) Telegram đã cấu hình, điện thoại mở nhóm nhận cảnh báo
 - [ ] MATLAB mở `run_iqa_engine.m` (chưa Run)
@@ -13,20 +12,20 @@
 |---|---|---|---|
 | 0:00 | NV1 | MATLAB chọn `data/demo.mp4`, Run | 9 biểu đồ + `output/demo_iqa.json` |
 | 0:30 | NV1 | Chỉ biểu đồ 9 | PIQE fast vs full + hệ số tương quan **đo được** |
-| 0:45 | NV2 | Mở <http://localhost:8000> | Chấm xanh "Backend v22 · AI · 1 cam", công nhân 3D đứng trong xưởng |
-| 1:00 | NV3 | Phím `4` (Ngã) | Người 3D nằm xuống, đèn xoay; sau 1.5 s còi hú + toast |
-| 1:20 | NV3 | Tab **Camera** | Lưới camera MJPEG có skeleton, FPS, IQA |
-| 1:35 | NV3 | Bấm vào camera | Người 3D làm theo người trong camera |
+| 0:45 | NV2 | Mở <http://localhost:8000> | Chấm xanh "Backend v22 · AI · 1 cam", chờ chọn nguồn |
+| 1:00 | NV3 | Tab **Camera** | Lưới camera MJPEG có skeleton, FPS, IQA đủ 5 chỉ số |
+| 1:20 | NV3 | Bấm vào camera | Người 3D làm theo người trong camera |
+| 1:40 | NV3 | Panel IQA Live + Cảnh báo IQA | Hiện PIQE/Blur/Contrast/Noise/Exposure/Tổng; badge khi vượt ngưỡng |
 | 2:00 | NV2 | Trước webcam: **Camera** → **Server**, cúi sai > 3 s | Badge đỏ, sau 3 s còi + toast; Telegram nhận ảnh (nếu bật) |
-| 2:30 | NV2 | Nằm xuống (hoặc phím `4`) | Cảnh báo NGÃ (CRITICAL) |
+| 2:30 | NV2 | Nằm xuống | Cảnh báo NGÃ (CRITICAL) |
 | 2:40 | NV2 | Nằm yên thêm 10 s rồi đứng dậy | **Bất động sau ngã** (CRITICAL) → toast xanh **Đã đứng dậy** |
-| 2:50 | NV3 | Tab **Sự kiện** | Sự kiện vừa rồi kèm ảnh, thống kê theo giờ; bấm **▶ Clip** (5 s trước + 5 s sau), **Xác nhận**, **Báo nhầm**, **⬇ CSV** |
+| 2:50 | NV3 | Tab **Sự kiện** | Sự kiện vừa rồi kèm ảnh, thống kê theo giờ; bấm **▶ Clip**, **Xác nhận**, **Báo nhầm**, **⬇ CSV** |
 | 3:10 | NV3 | Tab **Camera** → ⚙ → vẽ vùng quanh một góc sàn → Lưu | NV2 bước vào vùng → cảnh báo **Vùng cấm** |
-| 3:30 | NV3 | Phím 1–8 | 8 kịch bản không cần diễn |
+| 3:40 | NV2 | Che một phần ống kính / tắt đèn | IQA tụt; badge "ẢNH MỜ · TỐI" (không còn BỤI/KHÓI/LỬA giả) |
 | 3:50 | NV3 | `B`, `C`, `P` | Benchmark, so sánh trước/sau, báo cáo HTML |
 | 4:20 | NV2 | Rút dây mạng camera IP (hoặc đổi URL sai) | Trạng thái "Mất tín hiệu — thử lại"; sau 30 s có sự kiện **Mất tín hiệu camera**; cắm lại tự chạy tiếp |
-| 4:50 | NV2 | Ctrl+C backend | Chấm xám "Chưa kết nối backend", web vẫn chạy offline |
-| 5:10 | NV3 | `T` | Self-test |
+| 4:50 | NV2 | Ctrl+C backend | Chấm xám "Chưa kết nối backend"; UI về chờ nguồn (không còn kịch bản giả) |
+| 5:10 | NV3 | `T` | Self-test (gồm kiểm tra IQA warnings) |
 | 5:30 | NV1 | Mở JSON MATLAB | Chứng minh bridge |
 
 ## Câu hỏi thường gặp
@@ -50,13 +49,15 @@
 
 **Người 3D lấy chiều sâu ở đâu khi chỉ có 1 camera?** Ước lượng từ độ co ngắn của chi so với chiều dài chuẩn (đoạn ít co nhất cho tỉ lệ ảnh/mét); MediaPipe có world landmarks thì dùng trực tiếp. Đây là ước lượng để trực quan hoá, luật cảnh báo vẫn dựa trên keypoint 2D.
 
-**Pech-Pacheco dùng cho kính hiển vi, sao dùng cho nhà xưởng?** Variance of Laplacian là thước đo độ sắc nét độc lập miền ảnh; em dùng như chỉ báo tương đối (ảnh mờ/bụi → giá trị giảm), cần hiệu chỉnh ngưỡng theo camera thực.
+**Pech-Pacheco dùng cho kính hiển vi, sao dùng cho nhà xưởng?** Variance of Laplacian là thước đo độ sắc nét độc lập miền ảnh; em dùng như chỉ báo tương đối (ảnh mờ → giá trị giảm), cần hiệu chỉnh ngưỡng theo camera thực.
 
-**Mất mạng?** Bốn tầng dự phòng: camera server tự kết nối lại → MediaPipe trong trình duyệt (đã tải) → kịch bản preset → khi Python tắt, web tự về OFFLINE.
+**Mất mạng?** Camera server tự kết nối lại → MediaPipe trong trình duyệt (đã tải) trên webcam/video cục bộ → khi Python tắt, UI về chờ nguồn (không còn demo kịch bản giả).
 
-**Camera bị che?** Bấm `8` hoặc che thật: IQA tụt <30, sau 5 s thành sự kiện "Chất lượng camera kém". IQA không chỉ hiển thị mà kích hoạt cảnh báo an toàn.
+**Camera bị che / tối / mờ?** IQA từng chỉ số vượt ngưỡng → badge "ẢNH MỜ", "ẢNH TỐI", …; `overall < 40` kéo dài ≥ 5 s thành sự kiện "Chất lượng camera kém". Hệ thống **không** suy luận thành bụi/khói/lửa từ IQA.
+
+**Có phát hiện cháy thật không?** Chưa — không có model detect lửa trong scope hiện tại. Cảnh báo IQA chỉ phản ánh chất lượng ảnh.
 
 **Câu hỏi khó chưa biết?** Trả lời trung thực: "Phần này em chưa nghiên cứu sâu; hướng tiếp cận của em là X, em sẽ tìm hiểu thêm."
 
 ## Nếu demo hỏng giữa chừng
-F5 tải lại → `T` để chứng minh hệ thống ổn → phím `1` (offline) → mở video quay sẵn trong USB.
+F5 tải lại → `T` để chứng minh hệ thống ổn → bấm **Video** mở file quay sẵn trong USB → **Server** nếu backend còn sống.
