@@ -681,14 +681,14 @@ window.EchoApp = {
 };
 
 window.EchoTabs = {
-  // Compatibility shim: toast clicks scroll to the Events panel (no tabs).
+  // Compatibility shim: toast clicks scroll to Events / Cameras deck panels.
   current: 'ops',
   show(name) {
-    const map = {mon: null, cam: 'panel-cam', evt: 'panel-events'};
+    const map = {mon: null, cam: 'panel-cam', evt: 'panel-ev-stats'};
     const id = map[name];
     if (id) {
       const el = document.getElementById(id);
-      if (el) el.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+      if (el) el.scrollIntoView({behavior: 'smooth', block: 'start'});
     }
     this.current = name;
   }
@@ -1251,7 +1251,7 @@ async function selfTest() {
     ['Compare button', () => typeof $('bCmp').onclick === 'function'],
     ['Bench button', () => typeof $('bBen').onclick === 'function'],
     ['Cảnh báo (còi/toast)', () => !!window.EchoAlerts],
-    ['Dashboard panels', () => !!$('panel-cam') && !!$('panel-events') && !!$('panel-sys')],
+    ['Dashboard panels', () => !!$('panel-cam') && !!$('panel-ev-stats') && !!$('panel-ev-chart') && !!$('panel-ev-list') && !!$('panel-sys')],
     ['Backend', () => window.EchoBackend && EchoBackend.online ? true : null],
     ['MediaPipe', () => S.pose_ready],
     ['Loop', () => S.fps >= 0],

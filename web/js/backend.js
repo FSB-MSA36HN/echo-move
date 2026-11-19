@@ -4,7 +4,7 @@
 (function () {
   "use strict";
   const C = window.ECHO_CONFIG;
-  const DEMO_VPS = 'http://51.222.86.7:18080';
+  const DEMO_VPS = 'https://test.antokr.com';
   const handlers = {};
   const B = window.EchoBackend = {
     online: false, base: null, health: null, ws: null,
@@ -50,7 +50,7 @@
     } else {
       el.className = 'pill off';
       el.textContent = 'Backend offline';
-      el.title = 'Mở UI qua backend (vd http://51.222.86.7:18080) hoặc ?server=… rồi tải lại';
+      el.title = 'Mở UI qua https://test.antokr.com hoặc ?server=… rồi tải lại';
     }
   }
 

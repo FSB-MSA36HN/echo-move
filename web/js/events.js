@@ -1,4 +1,4 @@
-// Events panel: history from backend SQLite — filters, stats, snapshots, ack, CSV.
+// Events deck: stats panel + hourly chart panel + image gallery panel.
 (function () {
   "use strict";
   const $ = id => document.getElementById(id);
@@ -18,16 +18,29 @@
     return p;
   }
 
+  function featureOffline(targetId) {
+    const el = $(targetId);
+    if (!el) return;
+    el.innerHTML = `<div class="hint feature-guide">
+      <b>Sự kiện — nhật ký tư thế đã xác nhận</b>
+      <ul>
+        <li><b>Thống kê</b>: tổng số, chưa xử lý, theo loại FALL / STANDING / SQUAT / STOOP / PARTIAL.</li>
+        <li><b>Biểu đồ giờ</b>: phân bố sự kiện theo khung giờ 0–23 trong khoảng lọc.</li>
+        <li><b>Danh sách &amp; ảnh</b>: snapshot, xác nhận / báo nhầm, xem clip.</li>
+      </ul>
+      <div class="guide-actions"><button class="b" data-ev-retry>↻ Thử kết nối lại</button></div>
+    </div>`;
+  }
+
   function offline() {
-    $('evStats').innerHTML = '';
-    $('evChart').style.display = 'none';
+    featureOffline('evStats');
+    const chart = $('evChart');
+    if (chart) chart.style.display = 'none';
     $('evMore').innerHTML = '';
-    $('evList').innerHTML = `<div class="hint"><b>Chưa kết nối backend.</b><br>
-      Mở <code>http://51.222.86.7:18080</code> hoặc dùng
-      <code>?server=http://51.222.86.7:18080</code>. Local: <code>make run</code> →
-      <code>http://localhost:8000</code>.<br>
-      <button class="b" id="evRetry">↻ Thử kết nối lại</button></div>`;
-    $('evRetry').onclick = () => EchoBackend.connect().then(load);
+    featureOffline('evList');
+    document.querySelectorAll('[data-ev-retry]').forEach(btn => {
+      btn.onclick = () => EchoBackend.connect().then(load);
+    });
   }
 
   async function load(append) {
@@ -55,7 +68,8 @@
   function renderStats(s) {
     badge(s.unacknowledged);
     const by = s.by_type || {};
-    const cell = (label, v, col) => `<div class="card stat"><h4 style="color:${col}">${label}</h4><div class="big">${v}</div></div>`;
+    const cell = (label, v, col) =>
+      `<div class="card stat"><h4 style="color:${col}">${label}</h4><div class="big">${v}</div></div>`;
     const fa = Object.values(s.false_alarms || {}).reduce((a, b) => a + b, 0);
     $('evStats').innerHTML =
       cell('Tổng sự kiện', s.total, 'var(--c)') +
@@ -71,36 +85,50 @@
 
   function chart(hours) {
     const c = $('evChart');
+    if (!c) return;
+    c._hours = hours;
     c.style.display = 'block';
-    const W = c.width = c.clientWidth || 600, H = c.height = 90;
+    const wrap = c.parentElement;
+    const W = c.width = Math.max(320, (wrap && wrap.clientWidth) || c.clientWidth || 600);
+    const H = c.height = 180;
     const ctx = c.getContext('2d');
     ctx.clearRect(0, 0, W, H);
     const max = Math.max(1, ...hours), bw = W / 24;
-    ctx.font = '9px Courier New';
+    const padBot = 22;
+    ctx.font = '12px IBM Plex Sans, system-ui, sans-serif';
+    ctx.fillStyle = '#8b9bb4';
+    ctx.fillText('Số sự kiện theo từng giờ (0–23h)', 8, 18);
     for (let h = 0; h < 24; h++) {
-      const v = hours[h] || 0, bh = (H - 36) * v / max;
-      ctx.fillStyle = v ? '#00ffcc' : '#1e293b';
-      ctx.fillRect(h * bw + 2, H - 12 - bh, bw - 4, Math.max(bh, 1));
-      if (h % 3 === 0) { ctx.fillStyle = '#64748b'; ctx.fillText(h + 'h', h * bw + 2, H - 1); }
-      if (v) { ctx.fillStyle = '#e2e8f0'; ctx.fillText(v, h * bw + 3, H - 15 - bh); }
+      const v = hours[h] || 0;
+      const bh = (H - 28 - padBot) * v / max;
+      ctx.fillStyle = v ? '#2dd4bf' : '#1e293b';
+      ctx.fillRect(h * bw + 3, H - padBot - bh, bw - 6, Math.max(bh, 2));
+      if (h % 2 === 0) {
+        ctx.fillStyle = '#8b9bb4';
+        ctx.fillText(String(h), h * bw + 4, H - 6);
+      }
+      if (v) {
+        ctx.fillStyle = '#e8eef7';
+        ctx.font = '11px IBM Plex Mono, monospace';
+        ctx.fillText(String(v), h * bw + 4, H - padBot - bh - 4);
+        ctx.font = '12px IBM Plex Sans, system-ui, sans-serif';
+      }
     }
-    ctx.fillStyle = '#94a3b8';
-    ctx.fillText('Sự kiện theo giờ trong ngày', 4, 10);
   }
 
   function row(ev) {
     const when = new Date(ev.ts * 1000);
     const who = ev.track_id != null ? '#' + ev.track_id : '-';
     const img = ev.has_image
-      ? `<img class="thumb" loading="lazy" src="${esc(EchoBackend.url('/api/events/' + ev.id + '/image'))}" data-full="1">`
-      : '<div class="thumb none">—</div>';
+      ? `<img class="thumb" loading="lazy" src="${esc(EchoBackend.url('/api/events/' + ev.id + '/image'))}" data-full="1" alt="">`
+      : '<div class="thumb none">Không có ảnh</div>';
     const ack = ev.false_alarm ? '<span class="ok" style="color:#94a3b8">✗ Báo nhầm</span>'
       : ev.acknowledged ? '<span class="ok">✓ Đã xử lý</span>'
       : `<button class="b sm" data-ack="${ev.id}">Xác nhận</button>
          <button class="b sm" data-fa="${ev.id}" title="Đánh dấu cảnh báo sai để tinh chỉnh ngưỡng">Báo nhầm</button>`;
     const clip = ev.has_clip ? `<button class="b sm" data-clip="${ev.id}">▶ Clip</button>` : '';
     const esc8 = ev.escalated ? ' <span class="tag" style="background:#7c3aed">LEO THANG</span>' : '';
-    return `<div class="ev${ev.acknowledged ? ' done' : ''}" data-id="${ev.id}">
+    return `<article class="ev${ev.acknowledged ? ' done' : ''}" data-id="${ev.id}">
       ${img}
       <div class="evb">
         <div><span class="tag" style="background:${TYPE_COLOR[ev.type] || '#64748b'}">${esc(EchoAlerts.LABEL[ev.type] || ev.type)}</span>
@@ -109,7 +137,7 @@
         ${ev.detail ? `<div class="evm">${esc(ev.detail)}</div>` : ''}
       </div>
       <div class="eva">${clip}${ack}</div>
-    </div>`;
+    </article>`;
   }
 
   function renderList(items, append) {
@@ -125,8 +153,11 @@
       await EchoBackend.json(`/api/events/${id}/${falseAlarm ? 'false-alarm' : 'ack'}`, {method: 'POST'});
       btn.closest('.ev').classList.add('done');
       eva.querySelectorAll('[data-fa]').forEach(b => b.remove());
-      eva.querySelector('[data-ack]').outerHTML = falseAlarm
-        ? '<span class="ok" style="color:#94a3b8">✗ Báo nhầm</span>' : '<span class="ok">✓ Đã xử lý</span>';
+      const ackBtn = eva.querySelector('[data-ack]');
+      if (ackBtn) {
+        ackBtn.outerHTML = falseAlarm
+          ? '<span class="ok" style="color:#94a3b8">✗ Báo nhầm</span>' : '<span class="ok">✓ Đã xử lý</span>';
+      }
       const stats = await EchoBackend.json('/api/stats?hours=' + ($('evHours').value || 24 * 365));
       renderStats(stats);
     } catch (e) { eva.querySelectorAll('button').forEach(b => { b.disabled = false; }); }
@@ -142,7 +173,7 @@
   function closeViewer() {
     const v = $('imgv');
     v.hidden = true;
-    v.querySelector('img').removeAttribute('src');  // stops a playing MJPEG clip
+    v.querySelector('img').removeAttribute('src');
   }
 
   function scheduleReload() {
@@ -167,6 +198,11 @@
   function activate() {
     E.active = true;
     load();
+    window.addEventListener('resize', () => {
+      if (!E.active) return;
+      const c = $('evChart');
+      if (c && c.style.display !== 'none' && c._hours) chart(c._hours);
+    });
   }
 
   function bind() {

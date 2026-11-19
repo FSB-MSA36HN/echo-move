@@ -13,23 +13,29 @@
   function box() { return $('camBox'); }
 
   function offline() {
-    box().innerHTML = `<div class="hint">
-      <b>Chưa kết nối backend.</b><br>
-      Mở UI trực tiếp từ server (khuyến nghị):
-      <code>http://51.222.86.7:18080</code>
-      hoặc thêm <code>?server=http://51.222.86.7:18080</code> nếu đang xem GitHub Pages / file local.
-      Local: <code>make run</code> rồi <code>http://localhost:8000</code>.
-      <br><button class="b" id="camRetry">↻ Thử kết nối lại</button></div>`;
+    box().innerHTML = `<div class="hint feature-guide">
+      <b>Cameras — giám sát stream phía server</b>
+      <ul>
+        <li>Hiện lưới MJPEG từng camera do backend quản lý (RTSP / USB / file video).</li>
+        <li>Bấm một camera để đẩy tư thế sang <b>Worker 3D</b>.</li>
+        <li>Nút <b>⚙</b> mở cấu hình vùng nguy hiểm và luật cảnh báo.</li>
+        <li>Cần backend online. Khi mất kết nối, bấm thử lại bên dưới.</li>
+      </ul>
+      <div class="guide-actions"><button class="b" id="camRetry">↻ Thử kết nối lại</button></div>
+    </div>`;
     $('camRetry').onclick = () => EchoBackend.connect().then(render);
   }
 
   function empty() {
-    box().innerHTML = `<div class="hint">
-      <b>Server chưa cấu hình camera.</b><br>
-      Đặt biến môi trường <code>ECHO_CAMERAS</code> rồi khởi động lại backend, ví dụ:<br>
-      <code>ECHO_CAMERAS="kho=rtsp://user:pass@192.168.1.10:554/stream1,cong=0"</code><br>
-      Nguồn có thể là URL RTSP/HTTP, số thứ tự webcam USB (0, 1…) hoặc đường dẫn file video.
-      Xem <i>docs/USER_GUIDE.md</i>.</div>`;
+    box().innerHTML = `<div class="hint feature-guide">
+      <b>Chưa có camera trên server</b>
+      <ul>
+        <li>Panel này liệt kê camera đã cấu hình trên backend để theo dõi song song Live feed.</li>
+        <li>Đặt biến môi trường <code>ECHO_CAMERAS</code> rồi khởi động lại backend.</li>
+        <li>Ví dụ: <code>ECHO_CAMERAS="kho=rtsp://user:pass@192.168.1.10:554/stream1,cong=0"</code></li>
+        <li>Nguồn: URL RTSP/HTTP, chỉ số webcam USB (0, 1…), hoặc đường dẫn file video.</li>
+      </ul>
+    </div>`;
   }
 
   function card(cam) {

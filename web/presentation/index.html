@@ -210,7 +210,7 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
       </div>
       <div class="col" style="border-color:var(--blue)">
         <h4>Web · Three.js</h4><div class="role blu">Giao diện</div>
-        <ul><li>SOC dashboard: live · 3D/IQA · Cameras/Events/System</li><li>Zoom fullscreen từng section (⛶)</li><li>Công nhân 3D · còi · toast</li><li>Nguồn: Webcam (HTTPS/localhost) · Video · Server/Cameras</li></ul>
+        <ul><li>SOC scrollable: live · 3D/Detect · Events · System · IQA Live · Cảnh báo IQA · Cameras</li><li>Events tách: thống kê · chart giờ · danh sách ảnh</li><li>Zoom fullscreen từng section (⛶)</li><li>Nguồn: Webcam (HTTPS/localhost) · Video · Server/Cameras</li></ul>
       </div>
     </div>
     <div class="links"><span>MATLAB → <b>*_iqa.json</b> → Python</span><span>Python ⇄ <b>/ws/pose · /ws/events · MJPEG</b> ⇄ Web</span></div>
@@ -477,10 +477,10 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
     <div class="grid2 mt">
       <pre class="code" style="font-size:22px"><span class="cm"># Local</span>
 <span class="kw">make</span> install-ai &amp;&amp; <span class="kw">make</span> run   <span class="cm"># :8000</span>
-<span class="cm"># Docker demo trên VPS (cô lập, port 18080)</span>
+<span class="cm"># Docker demo trên VPS + domain HTTPS</span>
 <span class="kw">docker</span> compose -p echo-move -f docker/docker-compose.vps.yml up -d
-<span class="cm"># UI: http://51.222.86.7:18080</span>
-<span class="cm"># CI: Actions → Deploy VPS (secrets VPS_*)</span>
+<span class="cm"># UI: https://test.antokr.com</span>
+<span class="cm"># Deploy trực tiếp VPS (không dùng Actions deploy)</span>
 
 <span class="kw">export</span> ECHO_CAMERAS=<span class="st">"kho=rtsp://…"</span>
 <span class="kw">export</span> ECHO_TELEGRAM_TOKEN=<span class="st">…</span></pre>
@@ -490,8 +490,8 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
           <div class="card t-blue" style="text-align:center"><div class="big-num blu">5</div><p>chỉ số IQA + Overall</p></div>
         </div>
         <div class="alert green mt">
-          <h3>CI + Deploy VPS</h3>
-          <p>ruff · mypy · pytest · Pages; workflow <code>deploy-vps.yml</code> chỉ cập nhật stack <code>echo-move</code>.</p>
+          <h3>CI kiểm thử · deploy tay</h3>
+          <p>ruff · mypy · pytest · Pages. VPS cập nhật trực tiếp; UI public: <code>https://test.antokr.com</code>.</p>
         </div>
       </div>
     </div>
@@ -539,7 +539,7 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
     <div class="grid2 mt">
       <div class="checks">
         <div class="check ok"><div class="box">1</div><div class="txt">MATLAB chạy IQA <span>— 9 biểu đồ, JSON tự nạp sang web</span></div></div>
-        <div class="check ok"><div class="box">2</div><div class="txt">SOC · rail Cameras <span>— MJPEG skeleton, chọn cam → người 3D</span></div></div>
+        <div class="check ok"><div class="box">2</div><div class="txt">SOC · deck Cameras <span>— hướng dẫn tính năng, MJPEG, chọn cam → 3D</span></div></div>
         <div class="check ok"><div class="box">3</div><div class="txt">Panel IQA Live <span>— Blur/Noise/… + badge theo metric (không event)</span></div></div>
         <div class="check ok"><div class="box">4</div><div class="txt">Cúi khom trước webcam <span>— STOOP sau 3 s, Telegram nhận ảnh</span></div></div>
       </div>
@@ -547,7 +547,7 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
         <div class="check ok"><div class="box">5</div><div class="txt">Nằm xuống ≥ 1.5 s <span>— FALL CRITICAL + clip</span></div></div>
         <div class="check ok"><div class="box">6</div><div class="txt">Đứng / ngồi xổm <span>— STANDING · SQUAT (INFO)</span></div></div>
         <div class="check ok"><div class="box">7</div><div class="txt">Đứng sát mép khung / che thân <span>— PARTIAL sau 5 s</span></div></div>
-        <div class="check ok"><div class="box">8</div><div class="txt">Events + IQA panel <span>— Clip, Báo nhầm; badge mờ/tối (không event CAMERA)</span></div></div>
+        <div class="check ok"><div class="box">8</div><div class="txt">Events 3 panel + IQA <span>— thống kê · chart giờ · ảnh; Clip / Báo nhầm</span></div></div>
       </div>
     </div>
     <div class="stripe-b"></div>

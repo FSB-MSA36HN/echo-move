@@ -111,8 +111,8 @@
       el.remove();
       if (window.EchoTabs) window.EchoTabs.show('evt');
       else {
-        const p = document.getElementById('panel-events');
-        if (p) p.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+        const p = document.getElementById('panel-ev-stats') || document.getElementById('panel-ev-list');
+        if (p) p.scrollIntoView({behavior: 'smooth', block: 'start'});
       }
     };
     box.appendChild(el);

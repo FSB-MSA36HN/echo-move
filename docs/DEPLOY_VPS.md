@@ -1,21 +1,43 @@
 # Deploy VPS (demo tạm)
 
-Stack **chỉ bổ sung**, không đụng nginx / aaPanel / MySQL / site khác.
+Stack **chỉ bổ sung** Docker `echo-move` trên port `18080`. Domain public dùng **nginx aaPanel** reverse proxy + Let's Encrypt (không đụng site khác).
 
 | Mục | Giá trị |
 |---|---|
-| Host | `http://51.222.86.7:18080` |
+| Domain (HTTPS) | `https://test.antokr.com` |
+| Direct (nội bộ) | `http://127.0.0.1:18080` / `http://51.222.86.7:18080` |
 | Thư mục | `/home/ubuntu/apps/echo-move` |
 | Compose project | `echo-move` |
 | Container | `echo-move-backend` |
 | Port host | `18080` → container `8000` |
+| Nginx vhost | `/www/server/panel/vhost/nginx/test.antokr.com.conf` |
+| TLS cert | `/www/server/panel/vhost/cert/test.antokr.com/` (copy từ Let's Encrypt) |
 
 ## Mở UI
 
 ```text
-http://51.222.86.7:18080/
-http://51.222.86.7:18080/health
-http://51.222.86.7:18080/presentation/
+https://test.antokr.com/
+https://test.antokr.com/health
+https://test.antokr.com/presentation/
+```
+
+HTTP tự redirect → HTTPS. Webcam trình duyệt hoạt động vì có secure context.
+
+## Domain / TLS (đã setup)
+
+DNS: `test.antokr.com` → `A 51.222.86.7`.
+
+File mẫu trong repo: `deploy/nginx/test.antokr.com.conf` + `deploy/nginx/install-ssl-vhost.sh`.
+
+- Certbot webroot: `/www/wwwroot/test.antokr.com`
+- Renew hook copy cert vào đường dẫn aaPanel rồi reload nginx:
+  `/etc/letsencrypt/renewal-hooks/deploy/echo-move-test-antokr.sh`
+
+Kiểm tra:
+
+```bash
+curl -fsS https://test.antokr.com/health
+curl -sI http://test.antokr.com/ | head -5   # Expect 301 → https
 ```
 
 ## Set env trên VPS
@@ -41,37 +63,11 @@ cd /home/ubuntu/apps/echo-move
 sudo docker compose -p echo-move -f docker/docker-compose.vps.yml --env-file .env up -d
 ```
 
-Hoặc one-liner từ máy local (điền token thật):
-
-```bash
-export SSHPASS='…'   # chỉ dùng local, không commit
-sshpass -e ssh ubuntu@51.222.86.7 'cd /home/ubuntu/apps/echo-move && \
-  printf "\nECHO_TELEGRAM_TOKEN=%s\nECHO_TELEGRAM_CHAT_ID=%s\n" "TOKEN" "CHAT" >> .env && \
-  sudo docker compose -p echo-move -f docker/docker-compose.vps.yml --env-file .env up -d'
-```
-
 Biến quan trọng: `ECHO_WITH_AI`, `ECHO_DEMO_MODE`, `ECHO_CAMERAS`, `ECHO_TELEGRAM_*`, `ECHO_ZALO_*`, `ECHO_CORS_ORIGINS`.
 
-## CI/CD (GitHub Actions)
+## Deploy
 
-1. Tạo deploy key (một lần trên máy bạn):
-
-```bash
-ssh-keygen -t ed25519 -f echo-move-vps -N "" -C "echo-move-deploy"
-# Public → VPS
-ssh-copy-id -i echo-move-vps.pub ubuntu@51.222.86.7
-# hoặc: cat echo-move-vps.pub | ssh ubuntu@51.222.86.7 'mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys'
-```
-
-2. Repo GitHub → **Settings → Secrets and variables → Actions**:
-
-| Secret | Nội dung |
-|---|---|
-| `VPS_HOST` | `51.222.86.7` |
-| `VPS_USER` | `ubuntu` |
-| `VPS_SSH_KEY` | toàn bộ file private `echo-move-vps` (kể cả dòng BEGIN/END) |
-
-3. Push workflow `.github/workflows/deploy-vps.yml` lên `main` (bạn tự push — agent không push), hoặc chạy **Actions → Deploy VPS → Run workflow**.
+Không dùng GitHub Actions deploy VPS nữa — cập nhật trực tiếp lên `/home/ubuntu/apps/echo-move` (rsync/scp + `docker cp` / `docker compose up -d` khi đổi image). Domain HTTPS giữ nguyên qua nginx.
 
 ## Xoá sau demo (chỉ stack này)
 
@@ -82,5 +78,7 @@ ssh ubuntu@51.222.86.7 'cd /home/ubuntu/apps/echo-move && \
   rm -rf /home/ubuntu/apps/echo-move; \
   sudo ufw delete allow 18080/tcp 2>/dev/null; true'
 ```
+
+Gỡ domain (tuỳ chọn): xoá `/www/server/panel/vhost/nginx/test.antokr.com.conf`, cert, renew hook, rồi `nginx -s reload`.
 
 Không chạy lệnh `docker system prune` toàn cục nếu còn container khác.

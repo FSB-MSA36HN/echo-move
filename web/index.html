@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=27">
+<link rel="stylesheet" href="css/styles.css?v=31">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
@@ -75,6 +75,7 @@
   </div>
   </div>
 
+  <div class="workspace">
   <main class="ops">
     <section class="wall panel" aria-label="Video wall">
       <div class="panel-hd">
@@ -118,16 +119,8 @@
 
       <section class="panel metrics-stack">
         <div class="panel-hd">
-          <h3>Metrics</h3>
+          <h3>Detect</h3>
           <div class="panel-hd-actions"></div>
-        </div>
-        <div class="metric-card">
-          <h4>IQA Live</h4>
-          <div id="iqa" class="metric-body">--</div>
-        </div>
-        <div class="metric-card warn-card">
-          <h4>Cảnh báo IQA</h4>
-          <div id="mt" class="metric-body">--</div>
         </div>
         <div class="metric-card">
           <h4>Phát hiện</h4>
@@ -145,20 +138,10 @@
     </aside>
   </main>
 
-  <footer class="bottom">
-    <section class="panel" id="panel-cam" aria-label="Camera server">
+  <div class="deck">
+    <section class="panel" id="panel-ev-stats" aria-label="Thống kê sự kiện">
       <div class="panel-hd">
-        <h3>Cameras</h3>
-        <div class="panel-hd-actions">
-          <span class="chip muted">Server streams</span>
-        </div>
-      </div>
-      <div id="camBox" class="panel-scroll"></div>
-    </section>
-
-    <section class="panel" id="panel-events" aria-label="Sự kiện">
-      <div class="panel-hd">
-        <h3>Events</h3>
+        <h3>Thống kê sự kiện</h3>
         <div class="panel-hd-actions">
           <div class="evbar">
             <select id="evType" aria-label="Loại">
@@ -182,9 +165,30 @@
           </div>
         </div>
       </div>
-      <div id="evStats" class="stats"></div>
-      <canvas id="evChart" height="64"></canvas>
-      <div id="evList" class="panel-scroll"></div>
+      <div id="evStats" class="stats panel-pad"></div>
+      <p class="panel-help">Bộ lọc áp dụng cho thống kê, biểu đồ giờ và danh sách ảnh bên dưới.</p>
+    </section>
+
+    <section class="panel" id="panel-ev-chart" aria-label="Biểu đồ sự kiện theo giờ">
+      <div class="panel-hd">
+        <h3>Sự kiện theo giờ trong ngày</h3>
+        <div class="panel-hd-actions">
+          <span class="chip muted">0–23h</span>
+        </div>
+      </div>
+      <div class="chart-wrap panel-pad">
+        <canvas id="evChart" height="160"></canvas>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-ev-list" aria-label="Danh sách ảnh sự kiện">
+      <div class="panel-hd">
+        <h3>Danh sách &amp; ảnh</h3>
+        <div class="panel-hd-actions">
+          <span class="chip muted">Snapshot · xác nhận</span>
+        </div>
+      </div>
+      <div id="evList" class="panel-scroll ev-gallery"></div>
       <div id="evMore"></div>
     </section>
 
@@ -209,19 +213,50 @@
       </div>
       <div id="dbc" class="sys-dbg">Đang khởi động…</div>
     </section>
-  </footer>
+
+    <section class="panel" id="panel-iqa" aria-label="IQA Live">
+      <div class="panel-hd">
+        <h3>IQA Live</h3>
+        <div class="panel-hd-actions">
+          <span class="chip muted">5 metric · Overall</span>
+        </div>
+      </div>
+      <div id="iqa" class="metric-body iqa-panel-body panel-pad">--</div>
+    </section>
+
+    <section class="panel" id="panel-iqa-warn" aria-label="Cảnh báo IQA">
+      <div class="panel-hd">
+        <h3>Cảnh báo IQA</h3>
+        <div class="panel-hd-actions">
+          <span class="chip muted">Badge theo metric</span>
+        </div>
+      </div>
+      <div id="mt" class="metric-body iqa-panel-body panel-pad">--</div>
+    </section>
+
+    <section class="panel" id="panel-cam" aria-label="Camera server">
+      <div class="panel-hd">
+        <h3>Cameras</h3>
+        <div class="panel-hd-actions">
+          <span class="chip muted">Server streams</span>
+        </div>
+      </div>
+      <div id="camBox" class="panel-scroll"></div>
+    </section>
+  </div>
+  </div>
 </div>
 
 <div id="toasts" aria-live="assertive"></div>
 <div id="imgv" hidden><img alt="Ảnh sự kiện"><div class="cap"></div></div>
 
-<script src="js/config.js?v=27"></script>
-<script src="js/backend.js?v=27"></script>
-<script src="js/alerts.js?v=27"></script>
-<script src="js/zoom.js?v=27"></script>
-<script src="js/human3d.js?v=27"></script>
-<script src="js/app.js?v=27"></script>
-<script src="js/cameras.js?v=27"></script>
-<script src="js/events.js?v=27"></script>
+<script src="js/config.js?v=31"></script>
+<script src="js/backend.js?v=31"></script>
+<script src="js/alerts.js?v=31"></script>
+<script src="js/zoom.js?v=31"></script>
+<script src="js/human3d.js?v=31"></script>
+<script src="js/app.js?v=31"></script>
+<script src="js/cameras.js?v=31"></script>
+<script src="js/events.js?v=31"></script>
 </body>
 </html>
