@@ -2,9 +2,12 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>ECHO MOVE v22.0 — Real Safety Monitor</title>
+<title>ECHO MOVE — Safety Operations</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="css/styles.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css?v=24">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
@@ -12,152 +15,202 @@
 <body>
 
 <div id="ld">
-  <h1>ECHO MOVE v22.0</h1>
+  <div class="ld-mark">ECHO MOVE</div>
+  <div class="ld-sub">Safety Operations Console</div>
   <div id="lds"></div>
   <div class="bar"><div id="ldb"></div></div>
   <div id="ap"><div id="apb"></div></div>
 </div>
 
-<div id="L">
-  <div class="top">
-    <h2>ECHO MOVE v22.0 — Real Safety</h2>
-    <span id="beSt" class="pill off">○ Chưa kết nối backend</span>
-    <button class="b sm" id="bMute" title="Bật/tắt còi">🔔</button>
+<div id="app">
+  <div class="topbar">
+  <header class="hdr">
+    <div class="brand">
+      <span class="brand-mark">ECHO</span>
+      <span class="brand-name">MOVE</span>
+      <span class="brand-tag">OPS</span>
+    </div>
+    <div class="hdr-status">
+      <span id="beSt" class="pill off">Backend offline</span>
+      <span id="liveDot" class="live off">STANDBY</span>
+      <span id="evBadge" class="cnt" title="Sự kiện chưa xử lý"></span>
+    </div>
+    <div class="hdr-src" role="toolbar" aria-label="Nguồn giám sát">
+      <button class="b" id="bAI" title="MediaPipe AI">AI Detect</button>
+      <button class="b" id="bCam">Camera</button>
+      <button class="b" id="bVid">Video</button>
+      <button class="b" id="bSrv">Server</button>
+      <input id="file" type="file" accept="video/*" hidden>
+    </div>
+    <div class="hdr-actions">
+      <button class="b sm ghost" id="bTools" aria-expanded="false">Công cụ</button>
+      <button class="b sm" id="bMute" title="Bật/tắt còi">🔊</button>
+    </div>
+  </header>
+
+  <div id="tools" class="tools" hidden>
+    <div class="tools-row">
+      <span class="tools-label">Phân tích</span>
+      <button class="b sm" id="bRep">Report</button>
+      <button class="b sm" id="bCmp">Compare</button>
+      <button class="b sm" id="bBen">Bench</button>
+      <button class="b sm" id="bTst">Self-test</button>
+      <button class="b sm" id="bLog">Log</button>
+    </div>
+    <div class="tools-row">
+      <span class="tools-label">MATLAB</span>
+      <button class="b sm on" id="bMAuto">Auto ON</button>
+      <button class="b sm" id="bJson">Load JSON</button>
+      <button class="b sm" id="bDemo">Demo</button>
+      <button class="b sm" id="bClr">Clear</button>
+      <input id="jfile" type="file" accept=".json" hidden>
+      <span id="jst" class="tools-meta">Đang tìm backend…</span>
+    </div>
+    <div class="tools-row">
+      <span class="tools-label">WebSocket</span>
+      <input id="wsurl" type="text" value="ws://localhost:8000/ws/pose" data-config="wsUrl" spellcheck="false">
+      <span id="stt" class="tools-meta">Chọn Camera / Video / Server</span>
+    </div>
+    <div id="st"></div>
   </div>
-  <div class="tabs" role="tablist">
-    <button class="tab on" data-tab="mon" role="tab">🎥 Giám sát</button>
-    <button class="tab" data-tab="cam" role="tab">📡 Camera</button>
-    <button class="tab" data-tab="evt" role="tab">📋 Sự kiện <span id="evBadge" class="cnt"></span></button>
   </div>
 
-  <div id="tab-mon" class="pane">
-  <div class="kv">
-    <video id="v" playsinline muted loop></video>
-    <canvas id="ov"></canvas>
-    <div id="kt"></div>
-    <div id="cb">CANH BAO!</div>
-    <div id="mode">OFFLINE</div>
-    <div id="badge">AI: OFF</div>
-    <div id="bp">
-      <div style="color:var(--ai);font-weight:bold;margin-bottom:2px;">⚡ BENCHMARK</div>
-      <div class="br"><span>FPS:</span><span class="bv" id="bf">--</span></div>
-      <div class="br"><span>Frame:</span><span class="bv" id="bm">--</span></div>
-      <div class="br"><span>PIQE:</span><span class="bv" id="bpf">--</span></div>
-    </div>
-    <div id="cc">
-      <div id="cl">GỐC</div>
-      <div id="cr">SAU IQA</div>
-      <div id="cs"></div>
-    </div>
-  </div>
-
-  <div class="hop">
-    <button class="b" id="bAI" style="background:#0ea5e9;">🔬 AI Detect</button>
-    <button class="b" id="bCam" style="background:#8b5cf6;">Camera</button>
-    <button class="b" id="bVid" style="background:#059669;">Video</button>
-    <button class="b" id="bSrv">Server</button>
-    <button class="b" id="bLog" style="background:#f59e0b;">Log</button>
-    <button class="b" id="bTst" style="background:#6366f1;">Test</button>
-    <button class="b gold" id="bRep">📊 Report</button>
-    <button class="b" id="bCmp" style="background:#8b5cf6;">🔀 Compare</button>
-    <button class="b" id="bBen" style="background:#0ea5e9;">⚡ Bench</button>
-    <input id="wsurl" type="text" value="ws://localhost:8000/ws/pose" data-config="wsUrl"
-           style="width:150px;padding:3px;background:#0f172a;color:#fff;
-                  border:1px solid #334155;font-size:9px;margin-top:4px;">
-    <input id="file" type="file" accept="video/*" style="display:none">
-    <div id="stt" style="font-size:10px;color:#cbd5e1;margin-top:4px;">
-      Sẵn sàng — bấm AI Detect để phát hiện
-    </div>
-  </div>
-
-  <div class="hop" style="border-color:#f59e0b;">
-    <div style="font-size:10px;color:#f59e0b;margin-bottom:4px;">🔗 MATLAB JSON</div>
-    <button class="b on" id="bMAuto">🔄 Tự động: BẬT</button>
-    <button class="b" id="bJson" style="background:#f59e0b;">📂 Nạp</button>
-    <button class="b" id="bDemo" style="background:#8b5cf6;">🎭 Demo</button>
-    <button class="b" id="bClr" style="background:#64748b;">✕</button>
-    <input id="jfile" type="file" accept=".json" style="display:none">
-    <div id="jst" style="font-size:9px;color:#94a3b8;margin-top:4px;">Tự động: đang tìm backend…</div>
-  </div>
-
-  <div class="grid">
-    <div class="card"><h4>IQA Live</h4><div id="iqa">--</div></div>
-    <div class="card" style="border-color:#f59e0b;">
-      <h4 style="color:#f59e0b;">MATLAB 🎬</h4>
-      <div id="iqaM">Chưa có</div>
-    </div>
-    <div class="card"><h4>Cảnh báo IQA</h4><div id="mt">--</div></div>
-    <div class="card"><h4>Phát hiện</h4><div id="tt">--</div></div>
-    <div class="card" id="sc" style="grid-column:span 2;">
-      <h4>📈 Session — IQA tổng theo thời gian</h4>
-      <canvas id="scc" width="600" height="80"></canvas>
-    </div>
-    <div class="card" style="grid-column:span 2;border-color:var(--ai);font-size:9px;">
-      <h4 style="color:var(--ai);">📚 Citations</h4>
-      <div style="line-height:1.4;color:#94a3b8;">
-        • <b>Blur:</b> Laplacian <i>(Pech-Pacheco 2000)</i><br>
-        • <b>Noise:</b> Gaussian <i>(Immerkær 1996)</i><br>
-        • <b>Contrast:</b> RMS <i>(Peli 1990)</i><br>
-        • <b>PIQE:</b> MSCN <i>(Venkatanath 2015)</i><br>
-        • <b>Exposure:</b> ISO 18434-1
+  <main class="ops">
+    <section class="wall panel" aria-label="Video wall">
+      <div class="panel-hd">
+        <h3>Live feed</h3>
+        <span id="mode" class="chip">CHỜ NGUỒN</span>
       </div>
-    </div>
-  </div>
-  <div id="st"></div>
-  </div>
+      <div class="kv">
+        <video id="v" playsinline muted loop></video>
+        <canvas id="ov"></canvas>
+        <div id="kt"></div>
+        <div id="cb">CẢNH BÁO</div>
+        <div id="badge">AI: OFF</div>
+        <div id="bp">
+          <div class="bp-title">BENCHMARK</div>
+          <div class="br"><span>FPS</span><span class="bv" id="bf">--</span></div>
+          <div class="br"><span>Frame</span><span class="bv" id="bm">--</span></div>
+          <div class="br"><span>PIQE</span><span class="bv" id="bpf">--</span></div>
+        </div>
+        <div id="cc">
+          <div id="cl">GỐC</div>
+          <div id="cr">SAU IQA</div>
+          <div id="cs"></div>
+        </div>
+      </div>
+    </section>
 
-  <div id="tab-cam" class="pane" hidden>
-    <div id="camBox"></div>
-  </div>
+    <aside class="rail">
+      <section class="panel view3d" aria-label="Mô phỏng 3D">
+        <div class="panel-hd">
+          <h3>Worker 3D</h3>
+          <span id="c3dLabel" class="chip muted">Đứng yên</span>
+        </div>
+        <div id="R">
+          <div id="c3d"></div>
+        </div>
+      </section>
 
-  <div id="tab-evt" class="pane" hidden>
-    <div class="hop evbar">
-      <select id="evType" aria-label="Loại">
-        <option value="">Tất cả loại</option>
-        <option value="FALL">Ngã</option>
-        <option value="MANDOWN">Không đứng dậy</option>
-        <option value="RECOVERED">Đã đứng dậy</option>
-        <option value="POSTURE">Cúi sai</option>
-        <option value="ERGO">REBA tích lũy</option>
-        <option value="ZONE">Vùng nguy hiểm</option>
-        <option value="PPE">Thiếu bảo hộ</option>
-        <option value="CAMERA">Camera kém</option>
-        <option value="OFFLINE">Mất tín hiệu</option>
-      </select>
-      <select id="evHours" aria-label="Thời gian">
-        <option value="1">1 giờ qua</option>
-        <option value="24" selected>24 giờ qua</option>
-        <option value="168">7 ngày</option>
-        <option value="720">30 ngày</option>
-        <option value="">Tất cả</option>
-      </select>
-      <label class="chk"><input type="checkbox" id="evUnack"> Chưa xử lý</label>
-      <button class="b" id="evRef">↻ Làm mới</button>
-      <a class="b" id="evCsv" href="#" download>⬇ CSV</a>
-    </div>
-    <div id="evStats" class="stats"></div>
-    <canvas id="evChart" height="90"></canvas>
-    <div id="evList"></div>
-    <div id="evMore"></div>
-  </div>
+      <section class="panel metrics-stack">
+        <div class="metric-card">
+          <h4>IQA Live</h4>
+          <div id="iqa" class="metric-body">--</div>
+        </div>
+        <div class="metric-card warn-card">
+          <h4>Cảnh báo IQA</h4>
+          <div id="mt" class="metric-body">--</div>
+        </div>
+        <div class="metric-card">
+          <h4>Phát hiện</h4>
+          <div id="tt" class="metric-body det">--</div>
+        </div>
+        <div class="metric-card matlab-card">
+          <h4>MATLAB IQA</h4>
+          <div id="iqaM" class="metric-body">Chưa có</div>
+        </div>
+        <div class="metric-card span2">
+          <h4>Session · Overall</h4>
+          <canvas id="scc" width="600" height="72"></canvas>
+        </div>
+      </section>
+    </aside>
+  </main>
+
+  <footer class="bottom">
+    <section class="panel" id="panel-cam" aria-label="Camera server">
+      <div class="panel-hd">
+        <h3>Cameras</h3>
+        <span class="chip muted">Server streams</span>
+      </div>
+      <div id="camBox" class="panel-scroll"></div>
+    </section>
+
+    <section class="panel" id="panel-events" aria-label="Sự kiện">
+      <div class="panel-hd">
+        <h3>Events</h3>
+        <div class="evbar">
+          <select id="evType" aria-label="Loại">
+            <option value="">Tất cả</option>
+            <option value="FALL">Ngã</option>
+            <option value="MANDOWN">Không đứng dậy</option>
+            <option value="RECOVERED">Đã đứng dậy</option>
+            <option value="POSTURE">Cúi sai</option>
+            <option value="ERGO">REBA</option>
+            <option value="ZONE">Vùng nguy hiểm</option>
+            <option value="PPE">Thiếu bảo hộ</option>
+            <option value="CAMERA">Camera kém</option>
+            <option value="OFFLINE">Mất tín hiệu</option>
+          </select>
+          <select id="evHours" aria-label="Thời gian">
+            <option value="1">1 giờ</option>
+            <option value="24" selected>24 giờ</option>
+            <option value="168">7 ngày</option>
+            <option value="720">30 ngày</option>
+            <option value="">Tất cả</option>
+          </select>
+          <label class="chk"><input type="checkbox" id="evUnack"> Chưa xử lý</label>
+          <button class="b sm" id="evRef">↻</button>
+          <a class="b sm" id="evCsv" href="#" download>CSV</a>
+        </div>
+      </div>
+      <div id="evStats" class="stats"></div>
+      <canvas id="evChart" height="64"></canvas>
+      <div id="evList" class="panel-scroll"></div>
+      <div id="evMore"></div>
+    </section>
+
+    <section class="panel" id="panel-sys" aria-label="Hệ thống">
+      <div class="panel-hd">
+        <h3>System</h3>
+        <span id="sysClock" class="chip muted">--:--:--</span>
+      </div>
+      <div id="sys" class="sys-grid">
+        <div class="sys-item"><span class="k">Backend</span><span class="v" id="sysBe">--</span></div>
+        <div class="sys-item"><span class="k">YOLO</span><span class="v" id="sysYolo">--</span></div>
+        <div class="sys-item"><span class="k">Cameras</span><span class="v" id="sysCams">--</span></div>
+        <div class="sys-item"><span class="k">Source</span><span class="v" id="sysSrc">idle</span></div>
+        <div class="sys-item"><span class="k">UI FPS</span><span class="v" id="sysFps">--</span></div>
+        <div class="sys-item"><span class="k">AI FPS</span><span class="v" id="sysAi">--</span></div>
+        <div class="sys-item"><span class="k">IQA Overall</span><span class="v" id="sysIqa">--</span></div>
+        <div class="sys-item"><span class="k">IQA level</span><span class="v" id="sysLvl">SAFE</span></div>
+        <div class="sys-item"><span class="k">Unack 24h</span><span class="v" id="sysUnack">--</span></div>
+        <div class="sys-item"><span class="k">Notify</span><span class="v" id="sysNotify">--</span></div>
+      </div>
+      <div id="dbc" class="sys-dbg">Đang khởi động…</div>
+    </section>
+  </footer>
 </div>
 
 <div id="toasts" aria-live="assertive"></div>
 <div id="imgv" hidden><img alt="Ảnh sự kiện"><div class="cap"></div></div>
 
-<div id="R">
-  <div id="c3d" style="width:100%;height:100%;"></div>
-  <div id="c3dLabel" style="position:absolute;top:8px;left:8px;font-weight:bold;
-              color:var(--c);font-size:11px;">Mô phỏng công nhân 3D</div>
-</div>
-<div id="dbc">Đang khởi động...</div>
-
-<script src="js/config.js"></script>
-<script src="js/backend.js"></script>
-<script src="js/alerts.js"></script>
-<script src="js/human3d.js"></script>
-<script src="js/app.js"></script>
-<script src="js/cameras.js"></script>
-<script src="js/events.js"></script>
+<script src="js/config.js?v=23"></script>
+<script src="js/backend.js?v=23"></script>
+<script src="js/alerts.js?v=23"></script>
+<script src="js/human3d.js?v=23"></script>
+<script src="js/app.js?v=23"></script>
+<script src="js/cameras.js?v=23"></script>
+<script src="js/events.js?v=23"></script>
 </body>
 </html>

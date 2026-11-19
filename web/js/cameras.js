@@ -1,5 +1,4 @@
-// "Camera" tab: server-side cameras (RTSP / USB / video file) analysed by the backend.
-// Grid of MJPEG streams; selecting one drives the 3D worker from that camera.
+// Server-side cameras panel (RTSP / USB / video file). Selecting one drives the 3D worker.
 (function () {
   "use strict";
   const $ = id => document.getElementById(id);
@@ -152,7 +151,7 @@
     if (ids !== C.list.map(c => c.id).join('|') || !box().querySelector('.camgrid, .hint')) {
       C.list = cams;
       if (!cams.length) { empty(); return; }
-      box().innerHTML = `<div class="camtip">Bấm vào một camera để mô phỏng 3D người đầu tiên trong khung hình. Nút ⚙ để vẽ vùng nguy hiểm và bật/tắt luật cảnh báo.</div>
+      box().innerHTML = `<div class="camtip">Chọn camera để drive Worker 3D · ⚙ vùng cấm / luật</div>
         <div class="camgrid">${cams.map(card).join('')}</div>`;
       box().querySelectorAll('.cam').forEach(el => {
         el.onclick = ev => {
@@ -179,12 +178,18 @@
     }
   }
 
-  // MJPEG <img> keeps an HTTP connection open: attach only while the tab is visible.
   function streams(on) {
     box().querySelectorAll('.camimg img').forEach(img => {
       if (on) { if (!img.getAttribute('src')) img.src = img.dataset.src; }
       else img.removeAttribute('src');
     });
+  }
+
+  function activate() {
+    if (C.active) { refresh(); return; }
+    C.active = true;
+    render();
+    C.timer = setInterval(refresh, 3000);
   }
 
   function select(id) {
@@ -215,18 +220,13 @@
     refresh();
   }
 
-  document.addEventListener('echo:tab', e => {
-    const on = e.detail === 'cam';
-    if (on === C.active) return;
-    C.active = on;
-    if (on) {
-      render();
-      C.timer = setInterval(refresh, 3000);
-    } else {
-      clearInterval(C.timer); C.timer = null;
-      streams(false);
-      release();
-    }
+  document.addEventListener('echo:dashboard', activate);
+  document.addEventListener('visibilitychange', () => {
+    if (!C.active) return;
+    if (document.hidden) streams(false);
+    else streams(true);
   });
   if (window.EchoBackend) EchoBackend.on('status', () => { if (C.active) render(); });
+  // Dashboard markup is already present (no tabs).
+  if (document.getElementById('camBox')) activate();
 })();

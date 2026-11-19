@@ -1,5 +1,4 @@
-// "Sự kiện" tab: event history from the backend SQLite log — filters, stats, snapshots,
-// acknowledge, CSV export; refreshes live from /ws/events.
+// Events panel: history from backend SQLite — filters, stats, snapshots, ack, CSV.
 (function () {
   "use strict";
   const $ = id => document.getElementById(id);
@@ -119,12 +118,6 @@
     list.insertAdjacentHTML('beforeend', items.map(row).join(''));
   }
 
-  function badge(n) {
-    E.unack = n;
-    const b = $('evBadge');
-    if (b) { b.textContent = n > 99 ? '99+' : n || ''; b.style.display = n ? 'inline-block' : 'none'; }
-  }
-
   async function ack(id, btn, falseAlarm) {
     const eva = btn.closest('.eva');
     eva.querySelectorAll('[data-ack],[data-fa]').forEach(b => { b.disabled = true; });
@@ -157,6 +150,25 @@
     E.reloadTimer = setTimeout(() => { if (E.active) load(); }, 600);
   }
 
+  function setUnackSys(n) {
+    const el = $('sysUnack');
+    if (!el) return;
+    el.textContent = String(n);
+    el.className = 'v' + (n ? ' bad' : ' ok');
+  }
+
+  function badge(n) {
+    E.unack = n;
+    const b = $('evBadge');
+    if (b) { b.textContent = n > 99 ? '99+' : n || ''; b.style.display = n ? 'inline-block' : 'none'; }
+    setUnackSys(n);
+  }
+
+  function activate() {
+    E.active = true;
+    load();
+  }
+
   function bind() {
     ['evType', 'evHours', 'evUnack'].forEach(id => { $(id).onchange = () => load(); });
     $('evRef').onclick = () => load();
@@ -177,11 +189,8 @@
     $('imgv').onclick = closeViewer;
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeViewer(); });
 
-    document.addEventListener('echo:tab', e => {
-      E.active = e.detail === 'evt';
-      if (E.active) load();
-    });
-    EchoBackend.on('event', () => { if (E.active) scheduleReload(); else badge(E.unack + 1); });
+    document.addEventListener('echo:dashboard', activate);
+    EchoBackend.on('event', () => { if (E.active) scheduleReload(); else { badge(E.unack + 1); } });
     EchoBackend.on('update', () => { if (E.active) scheduleReload(); });
     EchoBackend.on('status', online => {
       if (E.active) load();
@@ -191,4 +200,5 @@
   }
 
   bind();
+  if (document.getElementById('evList')) activate();
 })();

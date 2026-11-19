@@ -1,6 +1,6 @@
 // Finds a running ECHO MOVE backend and keeps a live /ws/events connection.
 // Order: ?server=… (remembered) → same origin (backend serving the UI) → localhost:8000.
-// Everything degrades gracefully: with no backend the UI stays fully usable offline.
+// Degrades gracefully when backend is offline (source controls still work locally).
 (function () {
   "use strict";
   const C = window.ECHO_CONFIG;
@@ -43,11 +43,11 @@
     if (B.online) {
       const h = B.health;
       el.className = 'pill on';
-      el.textContent = `● Backend v${h.version} · ${h.yolo ? 'AI' : 'DEMO'} · ${h.cameras} cam`;
-      el.title = B.base + (h.notify && h.notify.length ? ` · thông báo: ${h.notify.join(', ')}` : '');
+      el.textContent = `Backend v${h.version} · ${h.yolo ? 'YOLO' : 'no AI'} · ${h.cameras} cam`;
+      el.title = B.base + (h.notify && h.notify.length ? ` · notify: ${h.notify.join(', ')}` : '');
     } else {
       el.className = 'pill off';
-      el.textContent = '○ Chưa kết nối backend';
+      el.textContent = 'Backend offline';
       el.title = 'Chạy `make run` hoặc `docker compose up` rồi tải lại trang';
     }
   }

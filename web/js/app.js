@@ -410,13 +410,15 @@ function warningList(env) {
 
 function showIdle() {
   S.che_do = 'idle';
-  $('stt').textContent = 'Chọn Camera / Video / Server';
+  if ($('stt')) $('stt').textContent = 'Chọn Camera / Video / Server';
   const el = $('mode');
-  if (el) { el.textContent = 'CHỜ NGUỒN'; el.style.background = '#64748b'; }
-  $('iqa').innerHTML = '--';
-  $('mt').innerHTML = '<div class="row"><span>Mức</span><b style="color:#00ff88">SAFE</b></div>';
-  $('tt').textContent = '--';
-  $('cb').style.display = 'none';
+  if (el) { el.textContent = 'CHỜ NGUỒN'; el.className = 'chip muted'; }
+  if ($('iqa')) $('iqa').innerHTML = '--';
+  if ($('mt')) $('mt').innerHTML = '<div class="row"><span>Mức</span><b style="color:var(--ok)">SAFE</b></div>';
+  if ($('tt')) $('tt').textContent = '--';
+  if ($('cb')) $('cb').style.display = 'none';
+  setSysIqa(null, null);
+  updateSystemPanel();
   return true;
 }
 
@@ -484,7 +486,7 @@ function setMatlabStatus(text, color) {
 function setMatlabAuto(on) {
   S.mAuto = on;
   $('bMAuto').classList.toggle('on', on);
-  $('bMAuto').textContent = on ? '🔄 Tự động: BẬT' : '🔄 Tự động: TẮT';
+  $('bMAuto').textContent = on ? 'Auto ON' : 'Auto OFF';
   if (on) {
     S.mFile = null;
     if (S.mTimer) { clearInterval(S.mTimer); S.mTimer = null; }
@@ -620,6 +622,7 @@ function process(data) {
 
   draw2D(ds);
   updateBench(data.benchmark, data.quality);
+  setSysIqa(data.quality, data.env_hazards);
   alertsFor(data);
 
   S.nhat_ky.push({t:Date.now(), mode:S.che_do, ...data});
@@ -661,26 +664,71 @@ window.EchoApp = {
       Human3D.update(p, d.frame && d.frame.h ? d.frame.w / d.frame.h : 4/3);
       Human3D.setEnv([]);
     } else if (S.ctx2d) render2D(p ? p.keypoints : null);
-    $('c3dLabel').textContent = `Mô phỏng 3D — camera "${camId}"` + (p ? ` · ${p.safety.label}` : ' · không có người');
+    $('c3dLabel').textContent = `cam:${camId}` + (p ? ` · ${p.safety.label}` : '');
   },
   release() {
     if (!S.ext) return;
     S.ext = null;
-    $('c3dLabel').textContent = 'Mô phỏng công nhân 3D';
+    $('c3dLabel').textContent = 'Đứng yên';
   }
 };
 
 window.EchoTabs = {
-  current: 'mon',
+  // Compatibility shim: toast clicks scroll to the Events panel (no tabs).
+  current: 'ops',
   show(name) {
-    document.querySelectorAll('.tabs .tab').forEach(b => b.classList.toggle('on', b.dataset.tab === name));
-    document.querySelectorAll('#L .pane').forEach(p => { p.hidden = p.id !== 'tab-' + name; });
-    document.body.classList.toggle('sub-tab', name !== 'mon');
-    if (this.current === name) return;
+    const map = {mon: null, cam: 'panel-cam', evt: 'panel-events'};
+    const id = map[name];
+    if (id) {
+      const el = document.getElementById(id);
+      if (el) el.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+    }
     this.current = name;
-    document.dispatchEvent(new CustomEvent('echo:tab', {detail: name}));
   }
 };
+
+function updateSystemPanel() {
+  const set = (id, text, cls) => {
+    const el = $(id); if (!el) return;
+    el.textContent = text;
+    el.className = 'v' + (cls ? ' ' + cls : '');
+  };
+  const be = window.EchoBackend;
+  if (be && be.online && be.health) {
+    const h = be.health;
+    set('sysBe', `v${h.version} online`, 'ok');
+    set('sysYolo', h.yolo ? 'available' : 'unavailable', h.yolo ? 'ok' : 'warn');
+    set('sysCams', String(h.cameras ?? 0), h.cameras ? 'ok' : 'warn');
+    set('sysNotify', (h.notify && h.notify.length) ? h.notify.join(', ') : 'none');
+  } else {
+    set('sysBe', 'offline', 'bad');
+    set('sysYolo', '--');
+    set('sysCams', '--');
+    set('sysNotify', '--');
+  }
+  set('sysSrc', S.che_do || 'idle');
+  set('sysFps', S.fps ? String(S.fps) : '--');
+  set('sysAi', S.ai_on && S.pose_ready ? String(S.det_fps) : (S.ai_on ? '…' : 'off'));
+  const live = $('liveDot');
+  if (live) {
+    const on = S.che_do === 'video' || S.che_do === 'server' || !!S.ext;
+    live.textContent = on ? 'LIVE' : 'STANDBY';
+    live.className = 'live ' + (on ? 'on' : 'off');
+  }
+  const clock = $('sysClock');
+  if (clock) clock.textContent = new Date().toLocaleTimeString('vi-VN');
+}
+
+function setSysIqa(q, env) {
+  const ov = $('sysIqa'), lv = $('sysLvl');
+  if (!ov || !lv) return;
+  if (!q) { ov.textContent = '--'; lv.textContent = 'SAFE'; lv.className = 'v ok'; return; }
+  ov.textContent = String(q.overall);
+  const level = (env && env.overall_level) || (q.overall < IQA_LOW_OVERALL ? 'RISK' : 'SAFE');
+  lv.textContent = level;
+  lv.className = 'v ' + (level === 'SAFE' ? 'ok' : level === 'WARNING' ? 'warn' : 'bad');
+  ov.className = 'v ' + (q.overall < IQA_LOW_OVERALL ? 'bad' : 'ok');
+}
 
 function srcAspect() {
   const v = $('v');
@@ -754,6 +802,7 @@ function updDebug() {
   const ai = S.ai_on && S.pose_ready ? `AI:${S.det_fps}fps` : 'AI:OFF';
   const src = S.mIQA ? 'MATLAB' : 'Live';
   d.textContent = `[${S.che_do.toUpperCase()}] ${t} | FPS:${S.fps} | ${ai} | IQA:${src} | Video:${S.dbg.video} | ${S.ext ? 'Cam:' + S.ext + ' | ' : ''}An toàn:${S.safety} | Log:${S.nhat_ky.length}` + (S.dbg.err ? ` | LỖI:${S.dbg.err}` : '');
+  updateSystemPanel();
   const b = $('badge');
   if (S.pose_loading) { b.textContent = '⏳ AI...'; b.style.background = '#0ea5e9'; b.style.display = 'block'; }
   else if (S.pose_ready && S.ai_on) { b.textContent = `🔬 AI:${S.det_fps}FPS`; b.style.background = '#059669'; b.style.display = 'block'; }
@@ -992,7 +1041,7 @@ function bind() {
       S.ready = true; S.che_do = 'video'; S.khung = 0;
       S.dbg.video = 'camera live';
       $('stt').textContent = S.ai_on ? 'Camera + AI' : 'Camera (AI off)';
-      $('mode').textContent = 'CAMERA'; $('mode').style.background = '#6366f1';
+      $('mode').textContent = 'CAMERA'; $('mode').className = 'chip';
     } catch (e) { $('stt').textContent = 'Lỗi: ' + e.message; }
   };
 
@@ -1008,7 +1057,7 @@ function bind() {
         S.ready = true; S.che_do = 'video'; S.khung = 0;
         S.dbg.video = `${v.videoWidth}x${v.videoHeight}`;
         $('stt').textContent = S.ai_on ? 'Video + AI' : 'Video (AI off)';
-        $('mode').textContent = 'VIDEO'; $('mode').style.background = 'var(--ok)';
+        $('mode').textContent = 'VIDEO'; $('mode').className = 'chip';
       }).catch(err => { $('stt').textContent = 'Lỗi play: ' + err.message; });
     };
     v.onerror = () => { $('stt').textContent = 'Codec sai — chuyển .mp4 H.264'; };
@@ -1024,7 +1073,7 @@ function bind() {
       $('bSrv').textContent = 'Ngắt';
       $('bSrv').style.background = '#ef4444';
       $('stt').textContent = 'Đã kết nối';
-      $('mode').textContent = 'SERVER'; $('mode').style.background = 'var(--ok)';
+      $('mode').textContent = 'SERVER'; $('mode').className = 'chip';
     };
     S.ws.onclose = () => {
       S.ws = null;
@@ -1095,9 +1144,22 @@ function bind() {
     else if (e.key === 't' || e.key === 'T') $('bTst').click();
   });
 
-  document.querySelectorAll('.tabs .tab').forEach(b => { b.onclick = () => EchoTabs.show(b.dataset.tab); });
+  const toolsBtn = $('bTools');
+  if (toolsBtn) {
+    toolsBtn.onclick = () => {
+      const panel = $('tools');
+      const open = panel.hasAttribute('hidden');
+      if (open) panel.removeAttribute('hidden'); else panel.setAttribute('hidden', '');
+      toolsBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      toolsBtn.classList.toggle('on', open);
+    };
+  }
+
+  if (window.EchoBackend) EchoBackend.on('status', () => updateSystemPanel());
+  setInterval(updateSystemPanel, 1000);
 
   window.addEventListener('resize', () => { if (S.three) Human3D.resize(); });
+  document.dispatchEvent(new CustomEvent('echo:dashboard', {detail: 'ready'}));
 }
 
 // ========== SELF-TEST ==========
@@ -1131,7 +1193,7 @@ async function selfTest() {
     ['Compare button', () => typeof $('bCmp').onclick === 'function'],
     ['Bench button', () => typeof $('bBen').onclick === 'function'],
     ['Cảnh báo (còi/toast)', () => !!window.EchoAlerts],
-    ['Tab Camera/Sự kiện', () => !!$('tab-cam') && !!$('tab-evt')],
+    ['Dashboard panels', () => !!$('panel-cam') && !!$('panel-events') && !!$('panel-sys')],
     ['Backend', () => window.EchoBackend && EchoBackend.online ? true : null],
     ['MediaPipe', () => S.pose_ready],
     ['Loop', () => S.fps >= 0],

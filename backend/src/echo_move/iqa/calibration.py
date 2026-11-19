@@ -16,7 +16,7 @@ import logging
 from collections.abc import Iterable, Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import cv2
 import numpy as np
@@ -224,7 +224,10 @@ def load_manifest(path: Path) -> list[Sample]:
 
 
 # ------------------------------------------------------------------ scoring
-def _spearman(xs: Sequence[float], ys: Sequence[float]) -> float:
+ArrayLike = np.ndarray | Sequence[float]
+
+
+def _spearman(xs: ArrayLike, ys: ArrayLike) -> float:
     """Spearman rank correlation without SciPy (average ranks for ties)."""
     x, y = np.asarray(xs, float), np.asarray(ys, float)
     if len(x) < 2 or np.std(x) == 0 or np.std(y) == 0:
@@ -245,7 +248,7 @@ def _spearman(xs: Sequence[float], ys: Sequence[float]) -> float:
     return float(np.corrcoef(rx, ry)[0, 1])
 
 
-def _pairwise_accuracy(scores: Sequence[float], qualities: Sequence[float]) -> float:
+def _pairwise_accuracy(scores: ArrayLike, qualities: ArrayLike) -> float:
     """Fraction of pairs with different GT quality that Overall ranks correctly."""
     s, q = np.asarray(scores, float), np.asarray(qualities, float)
     n, ok, total = len(s), 0, 0
@@ -306,7 +309,8 @@ def score_weights(metrics: np.ndarray, qualities: np.ndarray, kinds: Sequence[st
     f1 = 2 * prec * rec / (prec + rec) if prec + rec else 0.0
     detect = float(np.mean(predict_bad[severe])) if severe.any() else 0.0
     keep = float(np.mean(~predict_bad[clean])) if clean.any() else 0.0
-    w = tuple(float(x) for x in np.asarray(weights) / np.sum(weights))
+    w = cast(tuple[float, float, float, float, float],
+             tuple(float(x) for x in np.asarray(weights, float) / float(np.sum(weights))))
     return WeightScore(w, _spearman(scores, qualities), _pairwise_accuracy(scores, qualities),
                        per, mean_kind, detect, keep, f1, label)
 
@@ -358,7 +362,8 @@ def refine_around(metrics: np.ndarray, qualities: np.ndarray, kinds: Sequence[st
     for i in range(n):
         trial = np.clip(c + rng.normal(0, scale, size=5), 0.01, None)
         trial = trial / trial.sum()
-        sc = score_weights(metrics, qualities, kinds, trial, label=f"local_{i}")
+        sc = score_weights(metrics, qualities, kinds,
+                           tuple(float(x) for x in trial), label=f"local_{i}")
         if sc.key() > best.key():
             best = sc
             best.label = "refined"
