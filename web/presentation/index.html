@@ -202,7 +202,7 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
     <div class="arch mt">
       <div class="col" style="border-color:var(--amber)">
         <h4>MATLAB</h4><div class="role amb">Phân tích offline</div>
-        <ul><li>IQA trên toàn video</li><li>9 biểu đồ: Canny, Laplacian, histogram, Otsu…</li><li>So sánh PIQE fast và full</li><li>Xuất JSON / CSV / PNG</li></ul>
+        <ul><li>IQA trên toàn video</li><li>9 biểu đồ: Canny, Laplacian, histogram, Otsu…</li><li><b>So sánh PIQE fast ↔ full</b> (+ hệ số tương quan)</li><li>Xuất JSON / CSV / PNG</li></ul>
       </div>
       <div class="col" style="border-color:var(--red);background:var(--red-soft)">
         <h4>Python · FastAPI</h4><div class="role red">Bộ não realtime</div>
@@ -213,7 +213,7 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
         <ul><li>SOC: live · Worker 3D lớn + Detect · Events · IQA · Cameras</li><li>Worker 3D ẩn trên mobile; không còn MATLAB IQA trên UI</li><li>Zoom fullscreen từng section (⛶)</li><li>Webcam: chọn cam / ↻ trước·sau</li></ul>
       </div>
     </div>
-    <div class="links"><span>MATLAB → <b>*_iqa.json</b> → Python</span><span>Python ⇄ <b>/ws/pose · /ws/events · MJPEG</b> ⇄ Web</span></div>
+    <div class="links"><span>MATLAB · PIQE <b>fast ↔ full</b> → <b>*_iqa.json</b></span><span>Python ⇄ <b>/ws/pose · /ws/events · MJPEG</b> ⇄ Web</span></div>
     <div class="stripe-b"></div>
     <div class="footer"><span>architecture · 3 tiers</span><span>ECHO MOVE</span></div>
     <aside class="notes">Câu hỏi hay gặp: tại sao 3 ngôn ngữ? MATLAB cho phân tích offline video và biểu đồ, Python cho AI realtime, HTML/JS cho UI giám sát nguồn thật.</aside>
@@ -257,15 +257,25 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
       <tr><td>Blur</td><td>Phương sai Laplacian</td><td>Pech-Pacheco et al., 2000</td></tr>
       <tr><td>Noise</td><td>σ̂ kiểu Immerkær (mặt nạ Laplacian 3×3)</td><td>Immerkær, 1996</td></tr>
       <tr><td>Contrast</td><td>RMS contrast (độ lệch chuẩn mức xám)</td><td>Peli, 1990</td></tr>
-      <tr><td>PIQE</td><td>Khối 16×16 trên MSCN; bản "fast" dùng toàn ảnh</td><td>Venkatanath et al., 2015 (xấp xỉ)</td></tr>
       <tr><td>Exposure</td><td>Tỉ lệ điểm ảnh cháy sáng (&gt; 0.95) và tối (&lt; 0.05)</td><td>Tinh thần ISO 18434-1</td></tr>
     </table>
-    <pre class="code mt"><span class="kw">Overall</span> = <span class="st">0.05</span>·PIQE + <span class="st">0.50</span>·Blur + <span class="st">0.20</span>·Contrast + <span class="st">0.15</span>·Noise + <span class="st">0.10</span>·Exposure
-<span class="cm"># Overall &lt; 40 → badge trên panel IQA (không tạo event)</span>
-<span class="cm"># Trọng số sau make calibrate-iqa (slide kế)</span></pre>
+    <div class="grid2 mt">
+      <div class="card t-amber">
+        <div class="lbl">PIQE fast · realtime</div>
+        <h4 style="font-size:32px">Proxy toàn ảnh</h4>
+        <p><code>100 − 100·std(MSCN)</code> — không chia khối. Camera / SOC chỉ dùng bản này trong Overall.</p>
+      </div>
+      <div class="card t-blue">
+        <div class="lbl">PIQE full · offline</div>
+        <h4 style="font-size:32px">Khối 16×16 MSCN</h4>
+        <p>Bỏ khối phẳng (var&lt;0.1); var&gt;0.5 trọng số 2. MATLAB so sánh fast↔full + corr; <code>make bench</code> / <code>calibrate-iqa --full-piqe</code>.</p>
+      </div>
+    </div>
+    <pre class="code mt"><span class="kw">Overall</span> = <span class="st">0.05</span>·PIQE<sub>fast</sub> + <span class="st">0.50</span>·Blur + <span class="st">0.20</span>·Contrast + <span class="st">0.15</span>·Noise + <span class="st">0.10</span>·Exposure
+<span class="cm"># Overall &lt; 40 → badge panel IQA (không event) · trọng số: slide kế</span></pre>
     <div class="stripe-b"></div>
-    <div class="footer"><span>iqa · 5 metrics</span><span>ECHO MOVE</span></div>
-    <aside class="notes">Trọng số đã được tìm bằng thực nghiệm trên 275 ảnh suy giảm có kiểm soát — xem slide tiếp theo.</aside>
+    <div class="footer"><span>iqa · 5 metrics · PIQE fast↔full</span><span>ECHO MOVE</span></div>
+    <aside class="notes">Realtime chỉ PIQE fast. Full (block-wise) để MATLAB so sánh / calibrate — trung thực: fast có thể tăng khi ảnh mờ.</aside>
   </section>
 
   <!-- 7. IQA WEIGHT CALIBRATION -->
@@ -410,7 +420,7 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
     <div class="grid2 mt">
       <div class="checks">
         <div class="check ok"><div class="box">1</div><div class="txt">Thiếu mặt <span>— nose / eyes / ears conf thấp</span></div></div>
-        <div class="check ok"><div class="box">2</div><div class="txt">Thiếu tay hoặc chân <span>— đủ 2 chuỗi gối→mắt cá; chân ≥ 0.75× thân (chống YOLO bịa)</span></div></div>
+        <div class="check ok"><div class="box">2</div><div class="txt">Thiếu tay hoặc chân <span>— gối→mắt cá; chân ≥ 0.75× thân và ≥ 2.2× mặt (chống bịa cận cảnh)</span></div></div>
         <div class="check ok"><div class="box">3</div><div class="txt">Thiếu thân / cắt mép <span>— vai–hông hoặc bbox sát biên</span></div></div>
         <div class="check ok"><div class="box">4</div><div class="txt">Overlay giống giao thông <span>— chỉ rectangle + nhãn; không skeleton, không alert</span></div></div>
       </div>
@@ -539,21 +549,21 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
     <h2 class="h2">Kịch bản <span class="red">demo</span></h2>
     <div class="grid2 mt">
       <div class="checks">
-        <div class="check ok"><div class="box">1</div><div class="txt">MATLAB chạy IQA <span>— 9 biểu đồ, JSON tự nạp sang web</span></div></div>
-        <div class="check ok"><div class="box">2</div><div class="txt">SOC · deck Cameras <span>— hướng dẫn tính năng, MJPEG, chọn cam → 3D</span></div></div>
-        <div class="check ok"><div class="box">3</div><div class="txt">IQA Live | Cảnh báo IQA <span>— một hàng trên Thống kê sự kiện</span></div></div>
+        <div class="check ok"><div class="box">1</div><div class="txt">SOC · deck Cameras <span>— MJPEG, chọn cam → Worker 3D</span></div></div>
+        <div class="check ok"><div class="box">2</div><div class="txt">IQA Live | Cảnh báo IQA <span>— badge trên panel, không event CAMERA</span></div></div>
+        <div class="check ok"><div class="box">3</div><div class="txt">Video / Ảnh curated <span>— <code>data/test_videos/curated/</code> · <code>data/test_images/</code> (nhiều CN / ngã)</span></div></div>
         <div class="check ok"><div class="box">4</div><div class="txt">Cúi khom trước webcam <span>— STOOP sau 3 s, Telegram nhận ảnh</span></div></div>
       </div>
       <div class="checks">
         <div class="check ok"><div class="box">5</div><div class="txt">Nằm xuống ≥ 1.5 s <span>— FALL CRITICAL + clip</span></div></div>
         <div class="check ok"><div class="box">6</div><div class="txt">Đứng / ngồi xổm <span>— STANDING · SQUAT (INFO)</span></div></div>
         <div class="check ok"><div class="box">7</div><div class="txt">Đứng sát mép khung / che thân <span>— bbox vàng «P1 - Chỉ hiển thị một phần người»</span></div></div>
-        <div class="check ok"><div class="box">8</div><div class="txt">Events 3 panel + IQA <span>— list tối đa 8 ảnh, Load more; STANDING chỉ thống kê</span></div></div>
+        <div class="check ok"><div class="box">8</div><div class="txt">Events gallery <span>— tối đa 8 ảnh + Load more; STANDING chỉ thống kê</span></div></div>
       </div>
     </div>
     <div class="stripe-b"></div>
     <div class="footer"><span>demo · live</span><span>ECHO MOVE</span></div>
-    <aside class="notes">Nếu demo hỏng: F5 → phím T (self-test) → Video file quay sẵn → Server nếu backend còn sống.</aside>
+    <aside class="notes">Nếu demo hỏng: F5 → phím T → Video/Ảnh (curated hoặc test_images) → Server nếu backend còn sống.</aside>
   </section>
 
   <!-- 17. LIMITS -->

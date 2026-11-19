@@ -51,6 +51,23 @@ def test_hallucinated_short_legs_is_partial():
     assert "chân" in out["detail"].lower() or "cắt" in out["detail"].lower()
 
 
+def test_bust_closeup_with_invented_legs_is_partial():
+    # MediaPipe invents a miniature full skeleton inside a head+shoulders crop.
+    k = [[0.5, 0.5, 0.9] for _ in range(17)]
+    k[0] = [0.50, 0.32, 0.95]
+    k[1], k[2] = [0.47, 0.30, 0.95], [0.53, 0.30, 0.95]
+    k[3], k[4] = [0.44, 0.32, 0.9], [0.56, 0.32, 0.9]
+    k[5], k[6] = [0.40, 0.55, 0.95], [0.60, 0.55, 0.95]
+    k[7], k[8] = [0.35, 0.70, 0.8], [0.65, 0.70, 0.8]
+    k[9], k[10] = [0.32, 0.82, 0.7], [0.68, 0.82, 0.7]
+    k[11], k[12] = [0.43, 0.78, 0.85], [0.57, 0.78, 0.85]
+    k[13], k[14] = [0.44, 0.88, 0.7], [0.56, 0.88, 0.7]
+    k[15], k[16] = [0.45, 0.97, 0.65], [0.55, 0.97, 0.65]
+    out = classify_posture(k, CFG, ASPECT)
+    assert out["technique"] == "PARTIAL"
+    assert "chân" in out["detail"].lower() or "cắt" in out["detail"].lower()
+
+
 def test_fall_needs_wide_body_not_just_tilted_spine():
     # Same fallen pose squeezed horizontally (tall, narrow box) is not a fall.
     fall = load_scenarios()["fall"]["kps"]

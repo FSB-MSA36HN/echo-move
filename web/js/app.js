@@ -152,8 +152,20 @@ function _segLen(kps, a, b) {
   return Math.hypot(dx, dy);
 }
 
+// Full standing: hip→ankle ≈ 7–9× ear span. Bust close-up with invented legs ≈ 1–2×.
+const MIN_LEG_TO_FACE = 2.2;
+
+function faceSize(kps0) {
+  const cands = [];
+  const ear = _segLen(kps0, 3, 4);
+  if (ear != null && ear > 1e-4) cands.push(ear);
+  const eye = _segLen(kps0, 1, 2);
+  if (eye != null && eye > 1e-4) cands.push(eye * 1.8);
+  return cands.length ? Math.max(...cands) : null;
+}
+
 function legsLookComplete(kps0) {
-  // Full L+R knee→ankle; reject short hallucinated legs on a truncated crop.
+  // Full L+R knee→ankle; reject short / face-relative hallucinated legs (bust crop).
   const left = kps0[13][2] > VIS && kps0[15][2] > VIS;
   const right = kps0[14][2] > VIS && kps0[16][2] > VIS;
   if (!(left && right)) return {ok: false, detail: 'Thiếu chân'};
@@ -165,10 +177,18 @@ function legsLookComplete(kps0) {
   const leg = legs.reduce((a,b)=>a+b,0) / legs.length;
   if (torso > 1e-4 && leg < 0.75 * torso)
     return {ok: false, detail: 'Thiếu chân (cắt dưới)'};
+  const fs = faceSize(kps0);
+  if (fs != null && leg < MIN_LEG_TO_FACE * fs)
+    return {ok: false, detail: 'Thiếu chân (cận cảnh / cắt dưới)'};
   const vis = kps0.filter(k => k[2] > VIS);
   const y1 = Math.max(...vis.map(k => k[1]));
   if (y1 > 0.97 && leg < 0.95 * torso)
     return {ok: false, detail: 'Cắt mép khung hình'};
+  if (y1 > 0.97 && kps0[5][2] > VIS && kps0[6][2] > VIS) {
+    const shy = (kps0[5][1] + kps0[6][1]) / 2;
+    if (shy > 0.55 && (fs == null || leg < 3.5 * fs))
+      return {ok: false, detail: 'Cắt nửa dưới cơ thể'};
+  }
   return {ok: true, detail: ''};
 }
 
@@ -1303,11 +1323,33 @@ function bind() {
   }
 
   $('bVid').onclick = () => $('file').click();
-  $('file').onchange = e => {
+  $('file').onchange = async e => {
     const f = e.target.files[0]; if (!f) return;
     cleanup();
-    S.url = URL.createObjectURL(f);
     const v = $('v');
+    const isImg = (f.type || '').startsWith('image/')
+      || /\.(jpe?g|png|webp|gif|bmp)$/i.test(f.name || '');
+    if (isImg) {
+      // Still photo → canvas.captureStream so the AI loop can read frames like a camera.
+      try {
+        const bmp = await createImageBitmap(f);
+        const c = document.createElement('canvas');
+        c.width = bmp.width; c.height = bmp.height;
+        c.getContext('2d').drawImage(bmp, 0, 0);
+        bmp.close?.();
+        S.stream = c.captureStream(5);
+        v.srcObject = S.stream; v.muted = true;
+        await v.play();
+        S.ready = true; S.mode = 'video'; S.frame = 0;
+        S.dbg.video = `${c.width}x${c.height}`;
+        $('stt').textContent = S.ai_on ? 'Ảnh + AI' : 'Ảnh (AI off)';
+        $('mode').textContent = 'ẢNH'; $('mode').className = 'chip';
+      } catch (err) {
+        $('stt').textContent = 'Lỗi ảnh: ' + (err.message || err);
+      }
+      return;
+    }
+    S.url = URL.createObjectURL(f);
     v.src = S.url; v.muted = true; v.loop = true;
     v.onloadedmetadata = () => {
       v.play().then(() => {

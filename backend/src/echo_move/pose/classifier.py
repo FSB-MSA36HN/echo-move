@@ -124,12 +124,28 @@ def _seg_len(kps: list[list[float]], a: int, b: int, vis: float) -> float | None
     return math.hypot(kps[a][0] - kps[b][0], kps[a][1] - kps[b][1])
 
 
+# Full standing: hip→ankle ≈ 7–9× ear span. Bust close-up with invented legs ≈ 1–2×.
+MIN_LEG_TO_FACE = 2.2
+
+
+def face_size(kps: list[list[float]], vis: float) -> float | None:
+    """Stable face scale (ear span, else ≈1.8× eye span) for proportion checks."""
+    cands: list[float] = []
+    ear = _seg_len(kps, L_EAR, R_EAR, vis)
+    if ear is not None and ear > 1e-4:
+        cands.append(ear)
+    eye = _seg_len(kps, L_EYE, R_EYE, vis)
+    if eye is not None and eye > 1e-4:
+        cands.append(eye * 1.8)
+    return max(cands) if cands else None
+
+
 def legs_look_complete(kps: list[list[float]], vis: float) -> tuple[bool, str]:
     """Reject YOLO/MediaPipe hallucinated legs on a truncated (no-legs) crop.
 
-    Requires full left + right knee→ankle chains and hip→ankle length comparable
-    to torso (shoulder→hip). Short stub legs near a bottom crop are PARTIAL;
-    lying / foreshortened FALL poses keep normal Euclidean leg length so they pass.
+    Requires full left + right knee→ankle chains, hip→ankle length comparable to
+    torso, and leg length comparable to face size (bust close-ups invent a
+    miniature full skeleton that still passes torso ratio alone).
     """
     left = kps[L_KNEE][2] > vis and kps[L_ANKLE][2] > vis
     right = kps[R_KNEE][2] > vis and kps[R_ANKLE][2] > vis
@@ -156,9 +172,22 @@ def legs_look_complete(kps: list[list[float]], vis: float) -> tuple[bool, str]:
     # Full body: leg ≈ 1.0–1.6× torso. Truncated+hallucinated: often < 0.7×.
     if torso > 1e-4 and leg < 0.75 * torso:
         return False, "Thiếu chân (cắt dưới)"
+    fs = face_size(kps, vis)
+    if fs is not None and leg < MIN_LEG_TO_FACE * fs:
+        return False, "Thiếu chân (cận cảnh / cắt dưới)"
     box = body_bbox(kps, vis)
     if box is not None and box[3] > 1.0 - EDGE_MARGIN and leg < 0.95 * torso:
         return False, "Cắt mép khung hình"
+    # Shoulders deep in frame + bbox on bottom edge → lower body out of view.
+    if (
+        box is not None
+        and box[3] > 1.0 - EDGE_MARGIN
+        and kps[L_SHOULDER][2] > vis
+        and kps[R_SHOULDER][2] > vis
+    ):
+        shy = (kps[L_SHOULDER][1] + kps[R_SHOULDER][1]) / 2
+        if shy > 0.55 and (fs is None or leg < 3.5 * fs):
+            return False, "Cắt nửa dưới cơ thể"
     return True, ""
 
 

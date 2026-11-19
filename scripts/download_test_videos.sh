@@ -111,3 +111,8 @@ rm -f "$OUT"/*-cam0.mp4 "$OUT"/*_DEPTH_RGB_SPLIT.mp4 2>/dev/null || true
 
 echo "OK → $CUR"
 ls -lh "$CUR"
+
+# Still frames for UI «Video / Ảnh»
+if [[ -x "$ROOT/scripts/export_test_images.sh" ]]; then
+  bash "$ROOT/scripts/export_test_images.sh" || true
+fi
