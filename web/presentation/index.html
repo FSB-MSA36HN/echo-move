@@ -113,6 +113,10 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
 .tbl.compact td,.tbl.compact th{padding:10px 18px;font-size:22px}
 .tbl.compact td:first-child{font-size:20px}
 
+/* full-bleed image cover (before slide 1) */
+.slide.cover-img{padding:0;background:#0a0b10}
+.slide.cover-img .cover-full{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+
 /* architecture */
 .arch{display:grid;grid-template-columns:1fr 1.25fr 1fr;gap:28px;align-items:stretch}
 .arch .col{border-radius:24px;padding:30px 32px;background:#fff;border:2px solid var(--line)}
@@ -152,6 +156,11 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
 </head>
 <body>
 <main class="deck" id="deck">
+
+  <!-- 0. POSTER COVER (ảnh full) -->
+  <section class="slide cover-img" data-title="Poster">
+    <img class="cover-full" src="cover.jpg" alt="Xử lý ảnh với hệ thống giám sát an toàn lao động Edge AI">
+  </section>
 
   <!-- 1. COVER -->
   <section class="slide center-v" data-title="ECHO MOVE">
