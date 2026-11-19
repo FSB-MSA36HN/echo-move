@@ -39,7 +39,9 @@ make run
 ```
 Không đặt biến nào thì các tính năng này tự tắt — cách deploy cũ (`make run/demo`, `docker compose up`, Colab, GitHub Pages) giữ nguyên.
 
-**Docker:** `cd docker && docker compose up --build` (demo mode, có giao diện tại cổng 8000; nhật ký lưu ở `output/`).
+**Docker:** `cd docker && docker compose up --build` (demo mode, cổng 8000; nhật ký ở `output/`).
+
+**VPS demo (cô lập, port 18080):** đang chạy tại <http://51.222.86.7:18080> — chi tiết / CI / xoá stack: [docs/DEPLOY_VPS.md](docs/DEPLOY_VPS.md).
 
 MATLAB: mở `matlab/run_iqa_engine.m`, bấm Run. Kết quả ghi vào `output/`, backend tự đọc.
 

@@ -472,17 +472,16 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
     <div class="stripe"></div>
     <div class="chrome"><span class="tag blue">Triển khai</span><span class="page"></span></div>
     <div class="kicker">Mọi tính năng mới chỉ là biến môi trường tuỳ chọn</div>
-    <h2 class="h2">Bốn cách chạy, <span class="grn">không đổi lệnh</span></h2>
+    <h2 class="h2">Local · Docker · Pages · <span class="grn">VPS demo</span></h2>
     <div class="grid2 mt">
-      <pre class="code" style="font-size:24px"><span class="cm"># 1. Backend + giao diện tại :8000</span>
-<span class="kw">make</span> install &amp;&amp; <span class="kw">make</span> demo
-<span class="kw">make</span> install-ai &amp;&amp; <span class="kw">make</span> run
-<span class="cm"># 2. Docker</span>
-<span class="kw">cd</span> docker &amp;&amp; <span class="kw">docker</span> compose up --build
-<span class="cm"># 3. Colab GPU + GitHub Pages</span>
+      <pre class="code" style="font-size:22px"><span class="cm"># Local</span>
+<span class="kw">make</span> install-ai &amp;&amp; <span class="kw">make</span> run   <span class="cm"># :8000</span>
+<span class="cm"># Docker demo trên VPS (cô lập, port 18080)</span>
+<span class="kw">docker</span> compose -p echo-move -f docker/docker-compose.vps.yml up -d
+<span class="cm"># UI: http://51.222.86.7:18080</span>
+<span class="cm"># CI: Actions → Deploy VPS (secrets VPS_*)</span>
 
-<span class="cm"># camera thật + thông báo</span>
-<span class="kw">export</span> ECHO_CAMERAS=<span class="st">"kho=rtsp://…,cong=0"</span>
+<span class="kw">export</span> ECHO_CAMERAS=<span class="st">"kho=rtsp://…"</span>
 <span class="kw">export</span> ECHO_TELEGRAM_TOKEN=<span class="st">…</span></pre>
       <div>
         <div class="grid2">
@@ -490,8 +489,8 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
           <div class="card t-blue" style="text-align:center"><div class="big-num blu">5</div><p>chỉ số IQA + Overall</p></div>
         </div>
         <div class="alert green mt">
-          <h3>CI mỗi lần push</h3>
-          <p>ruff + mypy + pytest; web tự deploy lên GitHub Pages.</p>
+          <h3>CI + Deploy VPS</h3>
+          <p>ruff · mypy · pytest · Pages; workflow <code>deploy-vps.yml</code> chỉ cập nhật stack <code>echo-move</code>.</p>
         </div>
       </div>
     </div>
