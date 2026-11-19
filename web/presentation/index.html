@@ -131,11 +131,28 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
 .mt{margin-top:30px} .mt2{margin-top:48px}
 .notes{display:none}
 
+/* practice scripts (luyện đọc) */
+.script-tele{display:none;position:absolute;left:100px;right:100px;bottom:36px;z-index:5;
+  max-height:210px;overflow:auto;padding:16px 22px;border-radius:16px;
+  background:rgba(18,19,26,.92);color:#f3f0ea;font:500 22px/1.45 var(--font);
+  border:1px solid rgba(255,179,138,.35);box-shadow:0 12px 40px rgba(0,0,0,.35)}
+.script-tele b{color:#ffb38a;font-weight:800}
+body.practice-mode .script-tele{display:block}
+body.practice-mode .slide:not(.cover-img) .footer,
+body.practice-mode .slide:not(.cover-img) .stripe-b{opacity:.15}
+body.practice-mode .deck{top:42%}
+#qaUnlock{cursor:pointer;user-select:none}
+.practice-badge{position:fixed;left:18px;bottom:16px;z-index:35;display:none;
+  font:700 13px/1.3 var(--font);color:#fff;background:var(--red);padding:8px 14px;border-radius:999px}
+body.practice-mode .practice-badge{display:block}
+
 /* ===== UI overlays (outside the canvas) ===== */
 .progress{position:fixed;left:0;right:0;bottom:0;height:5px;z-index:30}
+body.practice-mode .progress{bottom:0}
 .progress span{display:block;height:100%;width:0;background:var(--red);transition:width .3s var(--ease)}
 .hint{position:fixed;right:18px;bottom:16px;z-index:30;font:13px/1.4 var(--font);color:#9a9aa6;background:rgba(0,0,0,.45);padding:6px 12px;border-radius:8px;opacity:1;transition:opacity .6s}
 .hint.hide{opacity:0}
+body.practice-mode .hint{bottom:52px}
 .notes-panel{position:fixed;left:0;right:0;bottom:0;max-height:38vh;overflow:auto;z-index:40;background:rgba(18,19,26,.96);color:#eceef6;padding:18px 28px 24px;font:18px/1.6 var(--font);transform:translateY(100%);transition:transform .3s var(--ease);border-top:3px solid var(--red)}
 .notes-panel.open{transform:none}
 .notes-panel b{color:#ff9aa8}
@@ -150,7 +167,7 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
   html,body{overflow:visible;background:#fff}
   .deck{position:static;transform:none;width:1920px;height:auto;box-shadow:none}
   .slide{position:relative;opacity:1;transform:none;height:1080px;page-break-after:always;break-after:page}
-  .progress,.hint,.notes-panel,.overview{display:none!important}
+  .progress,.hint,.notes-panel,.overview,.practice-badge,.script-tele{display:none!important}
 }
 </style>
 </head>
@@ -495,37 +512,6 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
     <div class="footer"><span>operations · evidence · escalation</span><span>ECHO MOVE</span></div>
   </section>
 
-  <!-- 14. DEPLOY -->
-  <section class="slide" data-title="Triển khai">
-    <div class="stripe"></div>
-    <div class="chrome"><span class="tag blue">Triển khai</span><span class="page"></span></div>
-    <div class="kicker">Mọi tính năng mới chỉ là biến môi trường tuỳ chọn</div>
-    <h2 class="h2">Local · Docker · Pages · <span class="grn">VPS demo</span></h2>
-    <div class="grid2 mt">
-      <pre class="code" style="font-size:22px"><span class="cm"># Local</span>
-<span class="kw">make</span> install-ai &amp;&amp; <span class="kw">make</span> run   <span class="cm"># :8000</span>
-<span class="cm"># Docker demo trên VPS + domain HTTPS</span>
-<span class="kw">docker</span> compose -p echo-move -f docker/docker-compose.vps.yml up -d
-<span class="cm"># UI: https://test.antokr.com</span>
-<span class="cm"># Deploy trực tiếp VPS (không dùng Actions deploy)</span>
-
-<span class="kw">export</span> ECHO_CAMERAS=<span class="st">"kho=rtsp://…"</span>
-<span class="kw">export</span> ECHO_TELEGRAM_TOKEN=<span class="st">…</span></pre>
-      <div>
-        <div class="grid2">
-          <div class="card t-green" style="text-align:center"><div class="big-num grn">74</div><p>test tự động (pytest)</p></div>
-          <div class="card t-blue" style="text-align:center"><div class="big-num blu">5</div><p>chỉ số IQA + Overall</p></div>
-        </div>
-        <div class="alert green mt">
-          <h3>CI kiểm thử · deploy tay</h3>
-          <p>ruff · mypy · pytest · Pages. VPS cập nhật trực tiếp; UI public: <code>https://test.antokr.com</code>.</p>
-        </div>
-      </div>
-    </div>
-    <div class="stripe-b"></div>
-    <div class="footer"><span>deploy · unchanged</span><span>ECHO MOVE</span></div>
-  </section>
-
   <!-- 15. EVALUATION -->
   <section class="slide" data-title="Đánh giá">
     <div class="stripe"></div>
@@ -595,7 +581,7 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
       </div>
       <div class="card t-green">
         <div class="lbl">Hướng phát triển</div>
-        <ul><li>Hiệu chỉnh ngưỡng bằng dữ liệu nhà xưởng thật và nút "Báo nhầm"</li><li>Mô hình học chuỗi thời gian (LSTM / ST-GCN) trên keypoint</li><li>Thêm re-ID theo ngoại hình</li><li>Cải thiện PARTIAL trên góc camera hẹp / che khuất mạnh</li></ul>
+        <ul><li>Hiệu chỉnh ngưỡng bằng dữ liệu nhà xưởng thật và nút "Báo nhầm"</li><li>Mô hình học chuỗi thời gian (LSTM / ST-GCN) trên keypoint</li><li>Thêm re-ID theo ngoại hình · cải thiện PARTIAL khi che khuất</li><li>Mở rộng ngoài nhà xưởng: gia đình / người già · bệnh viện · theo dõi trẻ ngồi đúng tư thế</li></ul>
       </div>
     </div>
     <div class="stripe-b"></div>
@@ -608,8 +594,7 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
     <div class="chrome"><span class="tag green">Q &amp; A</span><span class="page"></span></div>
     <div class="body">
       <div class="kicker">Hết phần trình bày</div>
-      <h1 class="h1" style="font-size:170px">Cảm ơn <span class="red">·</span> Q&amp;A</h1>
-      <p class="sub" style="font-size:36px">Demo trực tuyến: <a href="../" style="color:var(--red);font-weight:800">fsb-msa36hn.github.io/echo-move</a><br>Mã nguồn, tài liệu thuật toán và hướng dẫn sử dụng trong thư mục <code>docs/</code>.</p>
+      <h1 class="h1" id="qaUnlock" style="font-size:170px" title="Click 7 lần để bật/tắt script luyện đọc">Cảm ơn <span class="red">·</span> Q&amp;A</h1>
       <div class="grid4 mt2">
         <div class="card t-red"><div class="lbl">Pose</div><p>YOLOv8-Pose · MediaPipe</p></div>
         <div class="card t-amber"><div class="lbl">IQA</div><p>Pech-Pacheco · Immerkær · Peli · PIQE</p></div>
@@ -624,6 +609,7 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
 </main>
 
 <div class="progress"><span id="bar"></span></div>
+<div class="practice-badge" id="practiceBadge">SCRIPT ON · click 7× «Cảm ơn · Q&A» để tắt</div>
 <div class="hint" id="hint">← / → chuyển slide · F toàn màn hình · N ghi chú · O tổng quan</div>
 <div class="notes-panel" id="notes"></div>
 <nav class="overview" id="overview" aria-label="Tổng quan slide"></nav>
@@ -637,13 +623,52 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
   const notes = document.getElementById('notes');
   const overview = document.getElementById('overview');
   const pad = n => String(n).padStart(2, '0');
+  const LS_KEY = 'echo-move-practice-scripts';
   let cur = 0;
 
-  slides.forEach((s, i) => s.querySelectorAll('.page').forEach(p => { p.textContent = `${pad(i + 1)} / ${pad(N)}`; }));
+  // Script luyện đọc theo data-title
+  const SCRIPTS = {
+    'Poster': 'Xin chào thầy cô và các bạn. Em xin mở đầu bằng poster đề tài Edge AI giám sát an toàn lao động — nhóm Phạm Ngọc Hoà, Nguyễn Đăng Huy Hoàng và Đặng Trung Thành.',
+    'ECHO MOVE': 'Một câu thôi: camera không chỉ ghi hình — phải kịp cảnh báo. ECHO MOVE nhận diện ngã và tư thế theo thời gian thực, có IQA, nhật ký và Telegram.',
+    'Vấn đề': 'Ba việc dễ bỏ lỡ: người ngã góc khuất; cúi khom cả ca không ai ghi; và lúc chỉ thấy nửa người thì đoán bừa rất nguy hiểm. Bảo vệ không thể nhìn mười màn hình tám giờ — máy phải lọc giúp.',
+    'Mục tiêu': 'Sáu tiêu chí ngắn: chạy realtime trên CPU, ít báo nhầm, nhiều người nhiều camera, đủ bốn tư thế cộng PARTIAL, có bằng chứng, và IQA trung thực trên panel.',
+    'Kiến trúc 3 tầng': 'Ba tầng rõ việc: MATLAB phân tích offline; Python là bộ não realtime; Web là SOC để giám sát. JSON từ MATLAB sang Python, WebSocket nối ra giao diện.',
+    'Pipeline mỗi frame': 'Một frame đi sáu bước: YOLO nhận dạng → Tracker giữ ID → phân loại tư thế → IQA → xác nhận cảnh báo → lưu và gửi Telegram. Đơn giản, đúng code đang chạy.',
+    'Đánh giá chất lượng ảnh': 'Camera mờ thì AI cũng sai. Năm chỉ số: mờ, nhiễu, tương phản, PIQE và phơi sáng. Tổng dưới bốn mươi thì báo trên panel — không tạo sự kiện ảo.',
+    'Hiệu chỉnh trọng số IQA': 'Trọng số lấy từ thực nghiệm 275 ảnh, không đoán. F1 tăng từ 0,46 lên 0,69. Blur được ưu tiên vì điểm mờ mới thật sự kéo Overall xuống.',
+    'Phân loại tư thế': 'Từ 17 điểm xương: thiếu người thì PARTIAL; rồi mới xét ngã, ngồi xổm, cúi khom, đứng. Không đủ người thì không đoán tư thế.',
+    'Ngã đa tín hiệu': 'Ngã về phía camera khó thấy. Em dùng ba tín hiệu: nằm ngang, đầu thấp, và sụp người. Đủ từ hai tín hiệu thì báo FALL.',
+    'Xác nhận theo thời gian': 'Một khung hình nhiễu không đủ để hú còi. Ngã phải kéo dài khoảng 1,5 giây; cúi và ngồi xổm 3 giây. Có cooldown để không spam.',
+    'Năm sự kiện tư thế': 'FALL khẩn cấp; STOOP cảnh báo; SQUAT ghi nhận; STANDING chỉ đếm thống kê; PARTIAL chỉ khung vàng — không alert.',
+    'PARTIAL bbox-only': 'Chỉ thấy một phần người? Chỉ vẽ bbox vàng, không skeleton, không cảnh báo. Tránh model bịa chân rồi phân loại sai.',
+    'Tracking nhiều người': 'Nhiều người cùng lúc: mỗi người một ID ổn định, cảnh báo không bị lẫn. Giữ được ID cả khi người ngã đột ngột.',
+    'Vận hành thực tế': 'Có clip trước–sau, Telegram, leo thang nếu chưa xử lý, Báo nhầm để chỉnh ngưỡng, và làm mờ mặt trên ảnh lưu.',
+    'Đánh giá': 'Không báo cáo bằng cảm tính — đo bằng dataset và calibrate IQA. Số nào chưa chạy thì nói rõ chưa đo.',
+    'Demo': 'Demo nhanh: mở camera hoặc video → cúi để ra STOOP → nằm để ra FALL → sát mép khung để thấy PARTIAL → xem Events có ảnh bằng chứng.',
+    'Hạn chế & hướng phát triển': 'Còn hạn chế góc camera và chưa re-ID. Hướng tới: học chuỗi thời gian, dữ liệu thật, và mở rộng nhà, bệnh viện, theo dõi trẻ ngồi đúng tư thế.',
+    'Cảm ơn · Q&A': 'Em xin cảm ơn thầy cô và các bạn. Nhóm sẵn sàng nhận câu hỏi.',
+  };
+
+  slides.forEach((s, i) => {
+    s.querySelectorAll('.page').forEach(p => { p.textContent = `${pad(i + 1)} / ${pad(N)}`; });
+    const title = s.dataset.title || '';
+    const text = SCRIPTS[title] || (s.querySelector('.notes')?.textContent?.trim()) || 'Chưa có script cho slide này.';
+    const box = document.createElement('div');
+    box.className = 'script-tele';
+    box.innerHTML = `<b>${pad(i + 1)} · ${title}</b><br>${text}`;
+    s.appendChild(box);
+  });
 
   function fit() {
-    const s = Math.min(innerWidth / 1920, innerHeight / 1080);
+    const practice = document.body.classList.contains('practice-mode');
+    const s = Math.min(innerWidth / 1920, innerHeight / 1080) * (practice ? 0.88 : 1);
     deck.style.setProperty('--s', s);
+  }
+
+  function setPractice(on) {
+    document.body.classList.toggle('practice-mode', on);
+    try { localStorage.setItem(LS_KEY, on ? '1' : '0'); } catch (_) {}
+    fit();
   }
 
   function renderNotes() {
@@ -671,6 +696,24 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
     overview.appendChild(b);
   });
 
+  // 7× click «Cảm ơn · Q&A» → bật/tắt script
+  const qa = document.getElementById('qaUnlock');
+  let qaClicks = 0;
+  let qaTimer = null;
+  if (qa) {
+    qa.addEventListener('click', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      qaClicks += 1;
+      clearTimeout(qaTimer);
+      qaTimer = setTimeout(() => { qaClicks = 0; }, 2500);
+      if (qaClicks >= 7) {
+        qaClicks = 0;
+        setPractice(!document.body.classList.contains('practice-mode'));
+      }
+    });
+  }
+
   addEventListener('keydown', e => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     const k = e.key;
@@ -686,7 +729,7 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
   });
 
   deck.addEventListener('click', e => {
-    if (e.target.closest('a,button,code')) return;
+    if (e.target.closest('a,button,code,#qaUnlock')) return;
     const r = deck.getBoundingClientRect();
     go(e.clientX - r.left < r.width / 3 ? cur - 1 : cur + 1);
   });
@@ -706,6 +749,10 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
     if (n && n - 1 !== cur) go(n - 1);
   });
   setTimeout(() => document.getElementById('hint').classList.add('hide'), 5000);
+
+  try {
+    if (localStorage.getItem(LS_KEY) === '1') setPractice(true);
+  } catch (_) {}
 
   fit();
   go((parseInt(location.hash.slice(1), 10) || 1) - 1);
