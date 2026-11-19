@@ -164,6 +164,13 @@ body {
 .deck > .panel {
   min-height: 220px;
 }
+.iqa-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--gap);
+  align-items: stretch;
+}
+.iqa-row > .panel { min-height: 0; min-width: 0; }
 #panel-ev-stats { min-height: 0; }
 #panel-ev-chart { min-height: 240px; }
 #panel-ev-list { min-height: 360px; max-height: none; }
@@ -489,6 +496,7 @@ body.panel-zoom-open::before {
   .hdr { flex-wrap: wrap; height: auto; padding: 10px 12px; }
   .metrics-stack .metric-card.span2 { grid-column: span 2; }
   .sys-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .iqa-row { grid-template-columns: 1fr; }
 }
 @media (max-width: 600px) {
   .metrics-stack { grid-template-columns: 1fr; }

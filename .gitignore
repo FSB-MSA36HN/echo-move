@@ -12,6 +12,10 @@ venv/
 data/*.mp4
 data/*.avi
 data/*.mov
+data/test_videos/*.mp4
+data/test_videos/*.avi
+data/test_videos/*.mov
+data/urfd/
 # MATLAB output
 output/*
 !output/.gitkeep

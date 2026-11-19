@@ -3,7 +3,7 @@
   "use strict";
   const $ = id => document.getElementById(id);
   const esc = s => EchoAlerts.esc(s);
-  const PAGE = 30;
+  const PAGE = 8;
   const E = {active: false, offset: 0, total: 0, unack: 0, reloadTimer: null};
   const TYPE_COLOR = {FALL: '#ef4444', STANDING: '#22c55e', SQUAT: '#38bdf8', STOOP: '#f59e0b',
                       PARTIAL: '#facc15'};
@@ -26,7 +26,7 @@
       <ul>
         <li><b>Thống kê</b>: tổng số, chưa xử lý, theo loại FALL / STANDING / SQUAT / STOOP (PARTIAL không tạo event).</li>
         <li><b>Biểu đồ giờ</b>: phân bố sự kiện theo khung giờ 0–23 trong khoảng lọc.</li>
-        <li><b>Danh sách &amp; ảnh</b>: FALL / SQUAT / STOOP (STANDING chỉ đếm trong thống kê).</li>
+        <li><b>Danh sách &amp; ảnh</b>: tối đa 8 ảnh/lần (Load more); FALL / SQUAT / STOOP.</li>
       </ul>
       <div class="guide-actions"><button class="b" data-ev-retry>↻ Thử kết nối lại</button></div>
     </div>`;
@@ -58,7 +58,7 @@
       E.total = page.total;
       E.offset += page.items.length;
       $('evMore').innerHTML = E.offset < E.total
-        ? `<button class="b" id="evNext">Xem thêm (${E.total - E.offset})</button>` : '';
+        ? `<button class="b" id="evNext">Load more (${E.total - E.offset})</button>` : '';
       if ($('evNext')) $('evNext').onclick = () => load(true);
     } catch (e) {
       $('evList').innerHTML = `<div class="hint">Không tải được sự kiện: ${esc(e.message)}</div>`;

@@ -11,7 +11,7 @@ Approved: wall + side rail, no tabs, drop Citations, add System metrics.
     - Event hourly chart (0–23h)
     - Event gallery (snapshots, ack / false-alarm, clips)
     - System metrics
-    - IQA Live + Cảnh báo IQA (near bottom)
+    - IQA Live (left) + Cảnh báo IQA (right) one row, above Thống kê sự kiện
     - Cameras (server streams + feature guide when offline/empty) — bottom
 - Tools drawer (collapsed): MATLAB, Bench, Report, Test, Log, WS URL
 - Each `.panel` header has ⛶ zoom: expands that section fullscreen overlay; Escape / ✕ to exit

@@ -53,7 +53,7 @@ Mặc định UI ở trạng thái **chờ nguồn** — chọn một trong các
 2. **SERVER (Python)** — bấm **Camera**/**Video** rồi **Server** (địa chỉ WebSocket được điền tự động khi đã kết nối backend). Dùng YOLOv8-Pose + tracking + xác nhận cảnh báo trên server. Không có YOLO → WebSocket trả `{"error":"AI unavailable"}`.
 
 ### 3.2 IQA Live & cảnh báo theo chỉ số
-Panel **IQA Live** hiện đủ: PIQE, Blur, Contrast, Noise, Exposure, Tổng. Panel **Cảnh báo IQA** liệt kê từng cảnh báo trực tiếp từ ngưỡng metric (không suy luận bụi/khói/lửa):
+Trên deck, **IQA Live** (trái) và **Cảnh báo IQA** (phải) cùng một hàng, đặt **trên** Thống kê sự kiện. IQA Live hiện PIQE, Blur, Contrast, Noise, Exposure, Tổng. Cảnh báo IQA liệt kê từng cảnh báo từ ngưỡng metric (không suy luận bụi/khói/lửa):
 
 | Metric | Điều kiện | Label |
 |---|---|---|
