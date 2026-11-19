@@ -15,14 +15,15 @@ def shifted(kps, dx=0.0, dy=0.0):
 
 def test_scenarios_classified_as_expected():
     sc = load_scenarios()
-    expected = {"an_toan": "NONE", "nang_dung": "PROPER_LIFT", "cui_sai": "IMPROPER", "nga": "FALL"}
+    expected = {"an_toan": "STANDING", "nang_dung": "SQUAT", "cui_sai": "STOOP", "nga": "FALL"}
     for name, technique in expected.items():
         assert classify_posture(sc[name]["kps"], CFG, ASPECT)["technique"] == technique, name
 
 
-def test_low_visibility_is_safe():
+def test_low_visibility_is_partial():
     kps = [[0.5, 0.5, 0.0]] * 17
-    assert classify_posture(kps, CFG, ASPECT)["detail"] == "Không đủ điểm"
+    out = classify_posture(kps, CFG, ASPECT)
+    assert out["technique"] == "PARTIAL"
 
 
 def test_fall_needs_wide_body_not_just_tilted_spine():

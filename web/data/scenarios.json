@@ -94,9 +94,9 @@
     1,
     0
    ],
-   "label": "AN TOÀN",
+   "label": "ĐỨNG",
    "detail": "Bình thường",
-   "technique": "NONE"
+   "technique": "STANDING"
   },
   "env": {
    "hazards": [],
@@ -211,9 +211,9 @@
     1,
     0
    ],
-   "label": "NÂNG ĐÚNG KỸ THUẬT",
+   "label": "NGỒI XỔM",
    "detail": "Gối 119°",
-   "technique": "PROPER_LIFT"
+   "technique": "SQUAT"
   },
   "env": {
    "hazards": [],
@@ -328,9 +328,9 @@
     0,
     0
    ],
-   "label": "SAI TƯ THẾ",
+   "label": "CÚI KHOM",
    "detail": "Cúi 63°",
-   "technique": "IMPROPER"
+   "technique": "STOOP"
   },
   "env": {
    "hazards": [],
@@ -562,9 +562,9 @@
     1,
     0
    ],
-   "label": "AN TOÀN",
+   "label": "ĐỨNG",
    "detail": "Bình thường",
-   "technique": "NONE"
+   "technique": "STANDING"
   },
   "env": {
    "hazards": [
@@ -685,9 +685,9 @@
     1,
     0
    ],
-   "label": "AN TOÀN",
+   "label": "ĐỨNG",
    "detail": "Bình thường",
-   "technique": "NONE"
+   "technique": "STANDING"
   },
   "env": {
    "hazards": [
@@ -815,7 +815,7 @@
    ],
    "label": "KHÓ THẤY",
    "detail": "Ảnh tối",
-   "technique": "NONE"
+   "technique": "STANDING"
   },
   "env": {
    "hazards": [
@@ -938,7 +938,7 @@
    ],
    "label": "KHÔNG PHÁT HIỆN",
    "detail": "Camera lỗi",
-   "technique": "NONE"
+   "technique": "STANDING"
   },
   "env": {
    "hazards": [

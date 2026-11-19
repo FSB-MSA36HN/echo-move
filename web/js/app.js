@@ -147,10 +147,14 @@ function goc(p1, p2, p3) {
 
 // Keypoints are normalised (x/width, y/height); `aspect` = width/height restores true angles.
 function classify(kps0, aspect) {
-  if (!kps0 || kps0.length < 17) return {level:'SAFE',color:[0,1,0],label:'CHƯA ĐỦ',detail:'-',technique:'NONE'};
+  if (!kps0 || kps0.length < 17)
+    return {level:'WARNING',color:[1,.65,0],label:'MỘT PHẦN CƠ THỂ',detail:'Không đủ skeleton',technique:'PARTIAL'};
+  const rawVis = kps0.filter(k => k[2] > VIS).length;
+  if (rawVis < 8)
+    return {level:'WARNING',color:[1,.65,0],label:'MỘT PHẦN CƠ THỂ',detail:`Chỉ thấy ${rawVis}/17 điểm`,technique:'PARTIAL'};
+  if (![5,6,11,12].every(i => kps0[i][2] > VIS))
+    return {level:'WARNING',color:[1,.65,0],label:'MỘT PHẦN CƠ THỂ',detail:'Thiếu vai/hông',technique:'PARTIAL'};
   const kps = kps0.map(k => [k[0]*(aspect||1), k[1], k[2]]);
-  if (![5,6,11,12].every(i => kps[i][2] > VIS))
-    return {level:'SAFE',color:[0,1,0],label:'CHƯA RÕ',detail:'Cần vai+hông',technique:'NONE'};
   const vy = (kps[5][1]+kps[6][1])/2, hy = (kps[11][1]+kps[12][1])/2;
   const vx = (kps[5][0]+kps[6][0])/2, hx = (kps[11][0]+kps[12][0])/2;
   const sp = Math.atan2(Math.abs(vx-hx), Math.abs(vy-hy)+1e-6) * 180 / Math.PI;
@@ -158,9 +162,13 @@ function classify(kps0, aspect) {
   if ([11,12,13,14,15,16].every(i => kps[i][2] > VIS))
     goi = (goc(kps[11],kps[13],kps[15]) + goc(kps[12],kps[14],kps[16])) / 2;
   const vis = kps.filter(k => k[2] > VIS);
-  const bw = Math.max(...vis.map(k => k[0])) - Math.min(...vis.map(k => k[0]));
-  const bh = Math.max(...vis.map(k => k[1])) - Math.min(...vis.map(k => k[1]));
-  // Multi-signal fall rule (same as backend pose/classifier.py + pose/fall.py).
+  const x0 = Math.min(...vis.map(k => k[0])), x1 = Math.max(...vis.map(k => k[0]));
+  const y0 = Math.min(...vis.map(k => k[1])), y1 = Math.max(...vis.map(k => k[1]));
+  const bw = x1 - x0, bh = y1 - y0;
+  const legs = [13,14,15,16].filter(i => kps[i][2] > VIS).length;
+  const atEdge = x0 < .03 || y0 < .03 || x1 > .97 || y1 > .97;
+  if (atEdge && legs < 2)
+    return {level:'WARNING',color:[1,.65,0],label:'MỘT PHẦN CƠ THỂ',detail:'Cắt mép khung hình',technique:'PARTIAL'};
   const lying = sp > 65 && bw / (bh + 1e-6) > 1.0;
   const head = [0,1,2,3,4].filter(i => kps[i][2] > VIS);
   const headY = head.length ? head.reduce((s, i) => s + kps[i][1], 0) / head.length : null;
@@ -170,10 +178,9 @@ function classify(kps0, aspect) {
   const r = (o) => Object.assign(o, extra);
   if (isFall(lying, headLow, false))
     return r({level:'RISK',color:[1,0,0],label:'PHÁT HIỆN NGÃ',detail: lying ? `Thân ${sp.toFixed(0)}° · nằm ngang` : 'Đầu thấp ngang hông',technique:'FALL'});
-  if (goi < 140 && sp < 45) return r({level:'SAFE',color:[0,1,0],label:'NÂNG ĐÚNG',detail:`Gối ${goi.toFixed(0)}° · Lưng ${sp.toFixed(0)}°`,technique:'PROPER_LIFT'});
-  if (sp > 60) return r({level:'RISK',color:[1,0,0],label:'SAI TƯ THẾ',detail:`Cúi ${sp.toFixed(0)}°`,technique:'IMPROPER'});
-  if (sp > 30) return r({level:'WARNING',color:[1,.65,0],label:'CHÚ Ý',detail:`Cúi ${sp.toFixed(0)}°`,technique:'PARTIAL'});
-  return r({level:'SAFE',color:[0,1,0],label:'AN TOÀN',detail:'Bình thường',technique:'NONE'});
+  if (goi < 140 && sp < 45) return r({level:'SAFE',color:[0,1,0],label:'NGỒI XỔM',detail:`Gối ${goi.toFixed(0)}° · Lưng ${sp.toFixed(0)}°`,technique:'SQUAT'});
+  if (sp > 60) return r({level:'RISK',color:[1,0,0],label:'CÚI KHOM',detail:`Cúi ${sp.toFixed(0)}°`,technique:'STOOP'});
+  return r({level:'SAFE',color:[0,1,0],label:'ĐỨNG',detail:'Bình thường',technique:'STANDING'});
 }
 
 function isFall(lying, headLow, collapsed) {
@@ -224,7 +231,7 @@ function fallRefine(id, s, t) {
   const b = FALL_BASE[id] || (FALL_BASE[id] = {h: 0, hip: 0, n: 0, t});
   b.t = t;
   const ready = b.n >= 5;
-  if (s.technique === 'NONE' && s.spine_deg < 20 && s.height > 0 && (!ready || s.height > .8 * b.h)) {
+  if (s.technique === 'STANDING' && s.spine_deg < 20 && s.height > 0 && (!ready || s.height > .8 * b.h)) {
     const a = ready ? .2 : 1 / (b.n + 1);
     b.h += a * (s.height - b.h); b.hip += a * (s.hip_y - b.hip); b.n++;
     return s;
@@ -607,7 +614,7 @@ function process(data) {
   if (ds[0] && ds[0].safety) {
     S.safety = ds[0].safety.level;
     const s = ds[0].safety;
-    if (s.technique !== 'NONE') {
+    if (s.technique && s.technique !== 'STANDING') {
       $('kt').style.display = 'block';
       const m = `rgb(${s.color.map(c => Math.round(c*255)).join(',')})`;
       $('kt').style.color = m; $('kt').style.borderColor = m;

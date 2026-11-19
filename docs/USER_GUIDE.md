@@ -38,13 +38,12 @@ Ba tab:
 - **📡 Camera** — lưới camera server (MJPEG có vẽ skeleton), trạng thái (Đang chạy / Mất tín hiệu — thử lại / Khựng hình), FPS, số người, IQA. Bấm một camera để người 3D mô phỏng người đầu tiên của camera đó; bấm lại để thôi. Nút ⚙ mở trình vẽ vùng nguy hiểm và bật/tắt luật (mục 4.4).
 - **📋 Sự kiện** — lịch sử cảnh báo đã xác nhận: lọc theo loại / thời gian / chưa xử lý, thống kê và biểu đồ theo giờ, ảnh chụp (bấm để phóng to), **▶ Clip**, nút **Xác nhận** (đã xử lý), **Báo nhầm**, **⬇ CSV**. Số đỏ trên tab = số sự kiện chưa xử lý trong 24 giờ.
 
-Khi một cảnh báo được xác nhận (ngã ≥ 1.5 s, cúi sai ≥ 3 s, camera kém ≥ 5 s): toast góc phải (bấm để mở tab Sự kiện), còi (ngã: còi hú; còn lại: 2 tiếng bíp), thông báo desktop nếu tab đang ẩn. Các loại cảnh báo của bản 22:
-- **Bất động sau ngã (MANDOWN)**: vẫn nằm 10 s sau khi ngã.
-- **Đã đứng dậy (RECOVERED)**: chỉ hiện toast xanh, không hú còi.
-- **REBA tích lũy (ERGO)**.
-- **Vùng cấm (ZONE)**.
-- **Thiếu đồ bảo hộ (PPE)**.
-- **Mất tín hiệu camera (OFFLINE)**.
+Khi một cảnh báo được xác nhận: toast góc phải (bấm để mở Events), còi (ngã: còi hú; còn lại: bíp), thông báo desktop nếu tab đang ẩn. Chỉ còn **5 loại sự kiện tư thế**:
+- **Ngã (FALL)** — CRITICAL, ≥ 1.5 s (0.75 s nếu hông rơi nhanh).
+- **Đứng (STANDING)** — INFO, ≥ 3 s.
+- **Ngồi xổm (SQUAT)** — INFO, ≥ 3 s.
+- **Cúi khom (STOOP)** — WARNING, ≥ 3 s.
+- **Một phần cơ thể (PARTIAL)** — WARNING, ≥ 5 s; YOLO/MediaPipe thiếu core keypoints hoặc cắt mép khung (nhiều người vẫn track theo ID).
 
 ### 3.1 Nguồn ở tab Giám sát
 Mặc định UI ở trạng thái **chờ nguồn** — chọn một trong các nguồn thật:
@@ -65,7 +64,7 @@ Panel **IQA Live** hiện đủ: PIQE, Blur, Contrast, Noise, Exposure, Tổng. 
 | Exposure | `> 90` | Ảnh chói sáng |
 | Overall | `< 40` | Ảnh kém (tổng) |
 
-Alert **CAMERA** trên backend vẫn chỉ dựa `overall < 40` kéo dài `quality_confirm_s`.
+IQA chỉ hiện trên panel UI; backend **không** còn event CAMERA — `quality_confirm_s` dùng cho PARTIAL.
 
 ### 3.3 Phím & nút
 | Phím | Chức năng |
@@ -105,22 +104,17 @@ Cấu hình bằng biến môi trường `ECHO_*` (xem [.env.example](../.env.ex
 | `ECHO_CAMERAS` | (trống) | Camera server, `tên=nguồn` cách nhau dấu phẩy |
 | `ECHO_CAMERAS_FILE` | (trống) | File JSON danh sách camera |
 | `ECHO_CAMERA_FPS` | 10 | Số frame phân tích mỗi giây cho mỗi camera |
-| `ECHO_FALL_CONFIRM_S` / `ECHO_POSTURE_CONFIRM_S` / `ECHO_QUALITY_CONFIRM_S` | 1.5 / 3 / 5 | Thời gian điều kiện phải kéo dài trước khi cảnh báo |
+| `ECHO_FALL_CONFIRM_S` / `ECHO_POSTURE_CONFIRM_S` / `ECHO_QUALITY_CONFIRM_S` | 1.5 / 3 / 5 | Confirm FALL / STANDING·SQUAT·STOOP / PARTIAL |
 | `ECHO_ALERT_COOLDOWN_S` | 30 | Không lặp cùng cảnh báo cho cùng người trong khoảng này |
 | `ECHO_DATA_DIR` | `./output` | Nơi lưu `echo.db` và `snapshots/` |
 | `ECHO_RECORD_BROWSER_EVENTS` | 1 | Ghi cả cảnh báo từ chế độ Server / AI trình duyệt |
 | `ECHO_TELEGRAM_TOKEN`, `ECHO_TELEGRAM_CHAT_ID` | (trống) | Bật thông báo Telegram |
 | `ECHO_WEBHOOK_URL` | (trống) | Bật webhook JSON |
 | `ECHO_WEB_DIR` | tự tìm `web/` | Thư mục giao diện phục vụ tại `/` |
-| `ECHO_FALL_MULTISIGNAL` | 1 | Luật ngã đa tín hiệu; `0` = luật v21 |
-| `ECHO_MANDOWN_S` | 10 | Vẫn nằm bao lâu sau khi ngã thì báo MANDOWN |
-| `ECHO_ERGO_REBA` / `ECHO_ERGO_EXPOSURE_S` | 6 / 60 | Ngưỡng REBA và số giây tích lũy trong 10 phút để báo ERGO |
-| `ECHO_PPE_MODEL` | (trống) | Model YOLO phát hiện mũ / áo phản quang; trống = tắt PPE |
-| `ECHO_PPE_REQUIRED` / `ECHO_PPE_CONFIRM_S` | `helmet,vest` / 5 | Đồ bắt buộc, thời gian xác nhận |
+| `ECHO_FALL_MULTISIGNAL` | 1 | Luật ngã đa tín hiệu; `0` = chỉ lying |
 | `ECHO_EVENT_CLIPS` | 1 | Ghi clip 5 s trước + 5 s sau sự kiện của camera server |
 | `ECHO_BLUR_FACES` | 1 | Làm mờ vùng đầu trong ảnh chụp và clip lưu lại |
 | `ECHO_RETENTION_DAYS` | 0 | Tự xoá sự kiện, ảnh, clip cũ hơn N ngày (0 = giữ mãi) |
-| `ECHO_OFFLINE_ALERT_S` | 30 | Camera mất tín hiệu bao lâu thì báo OFFLINE (0 = tắt) |
 | `ECHO_ZALO_OA_TOKEN`, `ECHO_ZALO_USER_ID` | (trống) | Bật thông báo Zalo OA |
 | `ECHO_ESCALATE_MIN` | 0 | Sự kiện CRITICAL chưa xác nhận sau N phút thì gửi lại (0 = tắt) |
 | `ECHO_ESCALATE_TELEGRAM_CHAT_ID` | (trống) | Chat của người giám sát nhận tin leo thang (mặc định chat chính) |
@@ -152,7 +146,7 @@ Mỗi cảnh báo gửi 1 tin kèm ảnh có vẽ skeleton. Webhook (`ECHO_WEBHO
 
 **Zalo OA**: tạo Official Account tại oa.zalo.me, lấy *access token* (API → Official Account API) và `user_id` của người nhận, tức là người đã quan tâm OA. Đặt `ECHO_ZALO_OA_TOKEN` và `ECHO_ZALO_USER_ID`. Tin gửi đi là tin tư vấn dạng văn bản. Token Zalo hết hạn định kỳ nên cần làm mới.
 
-**Leo thang**: đặt `ECHO_ESCALATE_MIN=3` thì sự kiện CRITICAL (ngã, bất động sau ngã) chưa được bấm *Đã xử lý* sau 3 phút sẽ được gửi lại kèm tiêu đề "⏫ LEO THANG". Tin đi tới `ECHO_ESCALATE_TELEGRAM_CHAT_ID` (ví dụ nhóm quản đốc) và Zalo. Mỗi sự kiện chỉ leo thang 1 lần, và có thẻ **LEO THANG** trong tab Sự kiện.
+**Leo thang**: đặt `ECHO_ESCALATE_MIN=3` thì sự kiện CRITICAL (FALL) chưa được bấm *Đã xử lý* sau 3 phút sẽ được gửi lại kèm tiêu đề "⏫ LEO THANG". Tin đi tới `ECHO_ESCALATE_TELEGRAM_CHAT_ID` (ví dụ nhóm quản đốc) và Zalo. Mỗi sự kiện chỉ leo thang 1 lần, và có thẻ **LEO THANG** trong Events.
 
 ### 4.3 Nhật ký sự kiện
 SQLite tại `output/echo.db` (bảng `events`), ảnh tại `output/snapshots/`, clip tại `output/clips/`. Sao lưu: copy cả thư mục `output/`. Xem/xuất trong tab **Sự kiện** hoặc API (`/api/events`, `/api/events.csv`, `/api/stats` — xem [ARCHITECTURE.md](ARCHITECTURE.md)).
@@ -163,23 +157,18 @@ SQLite tại `output/echo.db` (bảng `events`), ảnh tại `output/snapshots/`
 - **Riêng tư**: `ECHO_BLUR_FACES=1` (mặc định) làm mờ vùng đầu trong ảnh và clip lưu lại. Luồng xem trực tiếp không bị làm mờ.
 
 ### 4.4 Vùng nguy hiểm và luật theo từng camera
-Trong tab **Camera**, bấm ⚙ trên một camera:
-1. **Thêm vùng**: đặt tên, thời gian lưu lại tối thiểu (giây), rồi click lên hình để đặt ít nhất 3 đỉnh. Bấm *Xong vùng*.
-2. Bỏ chọn những luật không cần cho camera đó, ví dụ tắt ERGO ở camera cổng hoặc tắt PPE ở văn phòng.
-3. **Lưu**. Cấu hình được lưu vào `output/camera_config.json`, áp dụng ngay và giữ sau khi khởi động lại.
+Trong rail **Cameras**, bấm ⚙ trên một camera:
+1. **Thêm vùng** (overlay MJPEG): đặt tên, dwell_s, click ≥ 3 đỉnh. Bấm *Xong vùng*.
+2. Bỏ chọn luật không cần: `FALL` / `STANDING` / `SQUAT` / `STOOP` / `PARTIAL`.
+3. **Lưu** → `output/camera_config.json`, áp dụng ngay.
 
-Vùng cũng có thể khai báo sẵn trong `ECHO_CAMERAS_FILE` (dạng danh sách); toạ độ chuẩn hoá 0–1 theo khung hình:
 ```json
 [{"id": "kho", "source": "rtsp://...",
   "zones": [{"name": "Máy ép", "points": [[0.6, 0.5], [0.95, 0.5], [0.95, 0.95], [0.6, 0.95]], "dwell_s": 1}],
-  "disabled_rules": ["ERGO"]}]
+  "disabled_rules": ["STANDING"]}]
 ```
-Cấu hình lưu từ giao diện được ưu tiên hơn cấu hình trong file. Người bị coi là "trong vùng" khi **chân** (cổ chân, hoặc đáy khung người) nằm trong polygon.
 
-### 4.5 Phát hiện đồ bảo hộ (tùy chọn)
-Cần một model YOLO **detection** đã huấn luyện trên dataset PPE, ví dụ Roboflow *Construction Site Safety* hoặc *Hard Hat Workers*, xuất ra `ppe.pt`. Đặt `ECHO_PPE_MODEL=./models/ppe.pt` rồi chạy `make run`; log sẽ in danh sách lớp của model. Hệ thống nhận các tên lớp `Hardhat/helmet`, `NO-Hardhat/head`, `Safety Vest/vest`, `NO-Safety Vest`. Lớp khác (Person, Mask, machinery...) bị bỏ qua. Mỗi model PPE làm tăng thời gian xử lý của mỗi frame, nên có thể giảm `ECHO_CAMERA_FPS` nếu máy yếu.
-
-### 4.6 Hiệu chỉnh trọng số IQA (`make calibrate-iqa`)
+### 4.5 Hiệu chỉnh trọng số IQA (`make calibrate-iqa`)
 Chứng minh / tìm bộ trọng số `Overall` tốt nhất trên dataset suy giảm có kiểm soát:
 
 ```bash
@@ -230,8 +219,7 @@ Chạy test: `runtests('matlab/tests')`.
 | Không nghe còi | Bấm vào trang 1 lần (trình duyệt chặn âm thanh trước khi người dùng tương tác); kiểm tra nút 🔔 |
 | Không nhận Telegram | Kiểm tra `/health` có `"telegram"`; bot đã được thêm vào nhóm; xem log `notification failed` |
 | Không có nút ▶ Clip | Clip chỉ có cho sự kiện của camera server (không có cho trình duyệt); clip xuất hiện khoảng 5 s sau sự kiện; kiểm tra `ECHO_EVENT_CLIPS=1` |
-| Báo ZONE sai chỗ | Vẽ vùng theo vị trí **chân** trên sàn, không phải theo thân người |
-| Không có cảnh báo PPE | `ECHO_PPE_MODEL` chưa đặt hoặc lỗi nạp (xem log); người ở quá xa camera |
+| PARTIAL báo nhầm / bỏ sót | Người quá xa hoặc che khuất nhẹ — chỉnh `visibility_threshold` / góc camera |
 | Người 3D hiện dạng khối đơn giản | Không tải được mô hình GLTF/WebGL → fallback; kiểm tra Console |
 | MATLAB `Undefined function` | Thiếu Image Processing Toolbox (đã có fallback cho phần lớn hàm) |
 | MATLAB chậm | `cfg.piqeMode='fast'`, `cfg.piqeSampleN=60` |

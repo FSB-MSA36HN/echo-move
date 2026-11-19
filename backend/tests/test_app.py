@@ -62,7 +62,7 @@ def test_bridge_tolerates_partial_write(tmp_path):
 def test_events_crud_csv_stats(client):
     img = "data:image/jpeg;base64," + base64.b64encode(JPEG).decode()
     e1 = post_event(client, image=img, source="browser")
-    post_event(client, type="POSTURE", detail="Cúi 63°", source="kho")
+    post_event(client, type="STOOP", detail="Cúi 63°", source="kho")
     assert e1["level"] == "CRITICAL" and e1["has_image"]
 
     page = client.get("/api/events", params={"limit": 1}).json()
@@ -77,7 +77,7 @@ def test_events_crud_csv_stats(client):
 
     stats = client.get("/api/stats", params={"hours": 1}).json()
     assert stats["total"] == 2 and stats["unacknowledged"] == 1
-    assert stats["by_type"] == {"FALL": 1, "POSTURE": 1}
+    assert stats["by_type"] == {"FALL": 1, "STOOP": 1}
 
     csv = client.get("/api/events.csv")
     assert csv.headers["content-type"].startswith("text/csv")
@@ -89,7 +89,7 @@ def test_event_clip_and_false_alarm_endpoints(client):
     import cv2
     import numpy as np
 
-    ev = post_event(client, type="MANDOWN", detail="Nằm bất động 12 s")
+    ev = post_event(client, type="FALL", detail="Nằm trên sàn")
     assert ev["level"] == "CRITICAL" and ev["has_clip"] is False
     assert client.get(f"/api/events/{ev['id']}/clip").status_code == 404
     jpeg = cv2.imencode(".jpg", np.zeros((48, 64, 3), np.uint8))[1].tobytes()
@@ -131,10 +131,10 @@ def test_camera_config_roundtrip(tmp_path, monkeypatch):
     zone = {"name": "Máy dập", "points": [[0, 0.5], [0.5, 0.5], [0.5, 1]], "dwell_s": 2}
     with TestClient(create_app(Settings())) as c:
         assert c.get("/api/cameras/kho/config").json()["zones"] == []
-        r = c.put("/api/cameras/kho/config", json={"zones": [zone], "disabled_rules": ["posture"]})
-        assert r.status_code == 200 and r.json()["disabled_rules"] == ["POSTURE"]
+        r = c.put("/api/cameras/kho/config", json={"zones": [zone], "disabled_rules": ["stoop"]})
+        assert r.status_code == 200 and r.json()["disabled_rules"] == ["STOOP"]
         cam = c.get("/api/cameras").json()[0]
-        assert cam["zones"][0]["name"] == "Máy dập" and cam["disabled_rules"] == ["POSTURE"]
+        assert cam["zones"][0]["name"] == "Máy dập" and cam["disabled_rules"] == ["STOOP"]
         bad = {"zones": [{"points": [[0, 0], [2, 2], [0, 1]]}]}
         assert c.put("/api/cameras/kho/config", json=bad).status_code == 422
         assert c.put("/api/cameras/kho/config",
@@ -143,7 +143,7 @@ def test_camera_config_roundtrip(tmp_path, monkeypatch):
     saved = json.loads((tmp_path / "camera_config.json").read_text())
     assert saved["kho"]["zones"][0]["dwell_s"] == 2.0
     with TestClient(create_app(Settings())) as c:  # survives a restart
-        assert c.get("/api/cameras/kho/config").json()["disabled_rules"] == ["POSTURE"]
+        assert c.get("/api/cameras/kho/config").json()["disabled_rules"] == ["STOOP"]
 
 
 def test_web_ui_served_at_root(client):

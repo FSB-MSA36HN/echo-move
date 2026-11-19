@@ -2,18 +2,22 @@
 
 Keypoints are normalised (x / width, y / height, confidence). ``aspect`` (width / height)
 restores true angles, otherwise a 16:9 frame would distort the spine angle by ~40 %.
-Temporal confirmation (how long a posture lasts) lives in ``alerts.engine``; the
-track-dependent "collapsed vs. standing height" fall signal lives in ``pose.fall``.
+Temporal confirmation lives in ``alerts.engine``; track-dependent collapse lives in
+``pose.fall``.
 
-Fall signals (multi-signal rule, ``cfg.fall_multisignal``):
+Techniques (also used as event types):
+
+* PARTIAL  — YOLO/MediaPipe saw only part of the body (missing core joints / cut at edge);
+* FALL     — multi-signal fall (lying / head_low / collapsed);
+* SQUAT    — knees bent, spine relatively upright;
+* STOOP    — deep forward bend (spine > risk threshold);
+* STANDING — upright standing.
+
+Fall signals (``cfg.fall_multisignal``):
 
 * lying     — torso > ``fall_spine_deg`` from vertical and body box wider than tall;
 * head_low  — head less than ``head_low_ratio`` × body height above the hips;
 * collapsed — body height < ``fall_collapse_ratio`` × the track's standing height.
-
-FALL needs two signals (a lying body whose head is not visible also counts), so a worker
-bent over a box (head low only) or sitting on the floor (collapsed only) is not a fall,
-while a fall towards the camera (collapsed + head low, torso foreshortened) is.
 """
 
 from __future__ import annotations
@@ -26,13 +30,14 @@ from ..config import Settings
 NOSE, L_SHOULDER, R_SHOULDER, L_ELBOW, R_ELBOW, L_WRIST, R_WRIST = 0, 5, 6, 7, 8, 9, 10
 L_HIP, R_HIP, L_KNEE, R_KNEE, L_ANKLE, R_ANKLE = 11, 12, 13, 14, 15, 16
 HEAD = (0, 1, 2, 3, 4)
+CORE = (L_SHOULDER, R_SHOULDER, L_HIP, R_HIP)
+MIN_VISIBLE_JOINTS = 8
+EDGE_MARGIN = 0.03
 
 GREEN: list[float] = [0, 1, 0]
 ORANGE: list[float] = [1, 0.65, 0]
 RED: list[float] = [1, 0, 0]
 
-# REBA tables (Hignett & McAtamney, 2000).
-# TABLE_A[trunk-1][neck-1][legs-1], TABLE_B[upper_arm-1][lower_arm-1][wrist-1], TABLE_C[A-1][B-1]
 TABLE_A = [
     [[1, 2, 3, 4], [1, 2, 3, 4], [3, 3, 5, 6]],
     [[2, 3, 4, 5], [3, 4, 5, 6], [4, 5, 6, 7]],
@@ -76,7 +81,6 @@ def _result(
 
 
 def joint_angle(p1: list[float], p2: list[float], p3: list[float]) -> float:
-    """Angle at ``p2`` (degrees) formed by p1-p2-p3."""
     v1 = (p1[0] - p2[0], p1[1] - p2[1])
     v2 = (p3[0] - p2[0], p3[1] - p2[1])
     cos = (v1[0] * v2[0] + v1[1] * v2[1]) / ((math.hypot(*v1) + 1e-6) * (math.hypot(*v2) + 1e-6))
@@ -103,9 +107,35 @@ def head_point(pts: list[list[float]], vis: float) -> tuple[float, float] | None
     return sum(p[0] for p in head) / len(head), sum(p[1] for p in head) / len(head)
 
 
+def visible_count(kps: list[list[float]], vis: float) -> int:
+    return sum(1 for k in kps if k[2] > vis)
+
+
+def is_partial_body(kps: list[list[float]], vis: float) -> tuple[bool, str]:
+    """True when YOLO/MediaPipe only recovered part of the person."""
+    if not kps or len(kps) < 17:
+        return True, "Không đủ skeleton"
+    n_vis = visible_count(kps, vis)
+    if n_vis < MIN_VISIBLE_JOINTS:
+        return True, f"Chỉ thấy {n_vis}/{len(kps)} điểm"
+    if not all(kps[i][2] > vis for i in CORE):
+        missing = [name for name, i in (("vai T", L_SHOULDER), ("vai P", R_SHOULDER),
+                                        ("hông T", L_HIP), ("hông P", R_HIP))
+                   if kps[i][2] <= vis]
+        return True, "Thiếu: " + ", ".join(missing) if missing else "Thiếu thân"
+    box = body_bbox(kps, vis)
+    if box is None:
+        return True, "Không đủ điểm"
+    x0, y0, x1, y1 = box
+    at_edge = (x0 < EDGE_MARGIN or y0 < EDGE_MARGIN
+               or x1 > 1.0 - EDGE_MARGIN or y1 > 1.0 - EDGE_MARGIN)
+    legs = sum(1 for i in (L_KNEE, R_KNEE, L_ANKLE, R_ANKLE) if kps[i][2] > vis)
+    if at_edge and legs < 2:
+        return True, "Cắt mép khung hình"
+    return False, ""
+
+
 def reba_score(pts: list[list[float]], vis: float, spine: float, knee: float) -> int:
-    """Simplified REBA from one 2D frame: trunk, neck, legs, upper/lower arm. Load, coupling,
-    twisting and wrist deviation are not observable and are scored as neutral."""
     trunk = 1 if spine <= 5 else 2 if spine <= 20 else 3 if spine <= 60 else 4
     sh = ((pts[L_SHOULDER][0] + pts[R_SHOULDER][0]) / 2,
           (pts[L_SHOULDER][1] + pts[R_SHOULDER][1]) / 2)
@@ -146,12 +176,11 @@ FALL_RESULT = ("RISK", RED, "PHÁT HIỆN NGÃ")
 def classify_posture(
     kps: list[list[float]], cfg: Settings, aspect: float = 1.0
 ) -> dict[str, Any]:
-    safe = _result("SAFE", GREEN, "AN TOÀN", "Bình thường", "NONE")
-    if not kps or len(kps) < 17:
-        return safe
     vis = cfg.visibility_threshold
-    if not all(kps[i][2] > vis for i in (L_SHOULDER, R_SHOULDER, L_HIP, R_HIP)):
-        return _result("SAFE", GREEN, "AN TOÀN", "Không đủ điểm", "NONE")
+    partial, why = is_partial_body(kps, vis)
+    if partial:
+        return _result("WARNING", ORANGE, "MỘT PHẦN CƠ THỂ", why or "Partial body", "PARTIAL")
+
     pts = [[k[0] * aspect, k[1], k[2]] for k in kps]
 
     sx = (pts[L_SHOULDER][0] + pts[R_SHOULDER][0]) / 2
@@ -187,10 +216,7 @@ def classify_posture(
         level, color, label = FALL_RESULT
         return _result(level, color, label, detail, "FALL", extra, **m)
     if knee < cfg.knee_bent_deg and spine < cfg.lift_spine_max_deg:
-        return _result("SAFE", GREEN, "NÂNG ĐÚNG KỸ THUẬT", f"Gối {knee:.0f}°", "PROPER_LIFT",
-                       extra, **m)
+        return _result("SAFE", GREEN, "NGỒI XỔM", f"Gối {knee:.0f}°", "SQUAT", extra, **m)
     if spine > cfg.spine_risk_deg:
-        return _result("RISK", RED, "SAI TƯ THẾ", f"Cúi {spine:.0f}°", "IMPROPER", extra, **m)
-    if spine > cfg.spine_safe_deg:
-        return _result("WARNING", ORANGE, "CHÚ Ý", f"Cúi {spine:.0f}°", "PARTIAL", extra, **m)
-    return _result("SAFE", GREEN, "AN TOÀN", "Bình thường", "NONE", extra, **m)
+        return _result("RISK", RED, "CÚI KHOM", f"Cúi {spine:.0f}°", "STOOP", extra, **m)
+    return _result("SAFE", GREEN, "ĐỨNG", "Bình thường", "STANDING", extra, **m)

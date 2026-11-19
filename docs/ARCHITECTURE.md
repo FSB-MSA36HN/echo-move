@@ -13,8 +13,8 @@
    5. IQA.
    6. `AlertEngine` (xác nhận theo thời gian, cooldown, luật bị tắt theo camera).
 3. **`AlertHub`**: cảnh báo đã xác nhận → `EventStore` (SQLite `echo.db` + ảnh `snapshots/`, mặt đã làm mờ) → `Notifier` (Telegram/Zalo/webhook, luồng nền, hàng đợi có giới hạn, thử lại 3 lần) → đẩy realtime tới mọi client `/ws/events`. Camera server giữ ring buffer JPEG. Sau mỗi sự kiện, nó ghi thêm `ECHO_CLIP_POST_S` giây rồi gọi `AlertHub.attach_clip`, hàm này lưu `clips/<id>.mjpg` và `.mp4`, gửi `sendVideo`, rồi đẩy `{"update": "clip"}`.
-4. **`Maintenance`** chạy mỗi 60 s: xoá dữ liệu cũ hơn `ECHO_RETENTION_DAYS` (mỗi giờ) và gửi lại sự kiện CRITICAL chưa xác nhận sau `ECHO_ESCALATE_MIN` phút. `CameraWorker` tự phát OFFLINE khi camera mất tín hiệu quá `ECHO_OFFLINE_ALERT_S`.
-5. **Web**: tab *Giám sát* (nguồn cục bộ + người 3D), tab *Camera* (lưới MJPEG, chọn 1 camera để điều khiển người 3D), tab *Sự kiện* (lịch sử, thống kê, xác nhận, CSV). Còi WebAudio + thông báo desktop khi có cảnh báo.
+4. **`Maintenance`** chạy mỗi 60 s: xoá dữ liệu cũ hơn `ECHO_RETENTION_DAYS` (mỗi giờ) và gửi lại sự kiện CRITICAL chưa xác nhận sau `ECHO_ESCALATE_MIN` phút. Camera mất tín hiệu chỉ cập nhật trạng thái UI (không còn event OFFLINE).
+5. **Web**: SOC dashboard (live feed + 3D/IQA, rail Cameras | Events | System). Còi WebAudio + thông báo desktop khi có cảnh báo.
 
 ## Module backend (`backend/src/echo_move`)
 | Module | Nhiệm vụ |
@@ -28,13 +28,13 @@
 | `pose/fall.py` | `FallAnalyzer`: chiều cao lúc đứng của từng track → tín hiệu "sụp người" |
 | `pose/ppe.py` | Chuẩn hoá tên lớp PPE, gán mũ/áo cho người theo vùng đầu/thân |
 | `zones.py` | Vùng nguy hiểm (polygon), `CameraOptions`, `OptionsStore` (`camera_config.json`) |
-| `alerts/engine.py` | Xác nhận FALL / MANDOWN / RECOVERED / POSTURE / ERGO / ZONE / PPE / CAMERA theo thời gian, cooldown |
+| `alerts/engine.py` | Xác nhận FALL / STANDING / SQUAT / STOOP / PARTIAL theo thời gian, cooldown |
 | `alerts/hub.py` | Lưu → thông báo → phát realtime (thread-safe), gắn clip |
 | `storage/db.py` | `EventStore` SQLite (WAL, tự migrate cột mới) + ảnh JPEG + clip, thống kê, CSV, leo thang, xoá dữ liệu cũ |
 | `notify/` | Telegram `sendPhoto`/`sendMessage`/`sendVideo`, Zalo OA, webhook JSON |
 | `maintenance.py` | Tác vụ nền: retention + leo thang |
 | `evaluation.py` | Trích keypoint (cache) + phát lại luật + precision/recall/độ trễ |
-| `camera/worker.py`, `camera/manager.py` | Đọc RTSP/USB/file, kết nối lại, che mật khẩu trong log/API, ring buffer clip, cảnh báo OFFLINE |
+| `camera/worker.py`, `camera/manager.py` | Đọc RTSP/USB/file, kết nối lại, che mật khẩu trong log/API, ring buffer clip, trạng thái mất tín hiệu (UI) |
 | `pipeline.py` | `StreamPipeline` dùng chung cho camera server và `/ws/pose` |
 | `render.py` | Vẽ skeleton, nhãn, vùng nguy hiểm lên ảnh (MJPEG, ảnh sự kiện), làm mờ mặt |
 | `matlab_bridge.py` | Đọc JSON MATLAB |
@@ -58,7 +58,7 @@
 | POST | `/api/events/{id}/false-alarm` | Đánh dấu đã xử lý **và** báo nhầm |
 | GET | `/api/events/{id}/clip` | Phát lại clip dạng MJPEG (dùng trong `<img>`) |
 | GET | `/api/events/{id}/clip.mp4` | Tải clip MP4 |
-| GET / PUT | `/api/cameras/{id}/config` | Vùng nguy hiểm + luật bị tắt: `{"zones": [{"name", "points": [[x,y]...], "dwell_s"}], "disabled_rules": ["ERGO"]}` (422 nếu sai) |
+| GET / PUT | `/api/cameras/{id}/config` | Vùng nguy hiểm + luật bị tắt: `{"zones": [...], "disabled_rules": ["STOOP","STANDING"]}` (422 nếu sai; luật hợp lệ: FALL/STANDING/SQUAT/STOOP/PARTIAL) |
 | GET | `/api/stats?hours=24` | Tổng, chưa xử lý, theo loại / mức / nguồn / giờ |
 | WS | `/ws/events` | Đẩy sự kiện mới; `{"ping": t}` mỗi 20 s |
 | WS | `/ws/pose` | Frame từ trình duyệt (xem dưới) |
@@ -81,7 +81,7 @@ Server → client (rút gọn):
   "detected": true, "mode": "AI", "version": "22.0.0", "source": "browser",
   "persons": [{"id": 1, "bbox": [x0, y0, x1, y1], "keypoints": [[x, y, conf] x17],
                "safety": {"level": "SAFE|WARNING|RISK", "label": "...", "detail": "...",
-                          "technique": "NONE|PROPER_LIFT|IMPROPER|PARTIAL|FALL", "color": [r,g,b],
+                          "technique": "STANDING|SQUAT|STOOP|PARTIAL|FALL", "color": [r,g,b],
                           "spine_deg": 0, "knee_deg": 0, "bbox_ratio": 0, "reba": 1,
                           "signals": {"lying": false, "head_low": false, "collapsed": false}},
                "zones": [{"name": "Máy ép", "dwell_s": 1}],

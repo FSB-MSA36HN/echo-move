@@ -58,7 +58,7 @@ class PPEFakeDetector:
         return self.dets
 
 
-def test_pipeline_raises_ppe_alert_for_missing_helmet():
+def test_pipeline_still_attaches_ppe_but_does_not_alert():
     reg = regions(STAND, VIS)
     dets = [PPEDetection("vest", True, 0.9, inside(reg["vest"]))]
     cfg = Settings(demo_mode=True, ppe_confirm_s=1.0, ppe_required=("helmet", "vest"))
@@ -69,9 +69,7 @@ def test_pipeline_raises_ppe_alert_for_missing_helmet():
         out = pipe.process(frame, t=i * 0.1)
         alerts += out["alerts"]
     assert out["persons"][0]["ppe"] == {"helmet": False, "vest": True}
-    ppe = [a for a in alerts if a["type"] == "PPE"]
-    assert len(ppe) == 1 and "mũ bảo hộ" in ppe[0]["detail"]
-    assert "áo" not in ppe[0]["detail"]
+    assert all(a["type"] != "PPE" for a in alerts)
 
 
 def test_pipeline_skips_ppe_without_model():

@@ -44,7 +44,7 @@ log = logging.getLogger("echo_move")
 class EventIn(BaseModel):
     """Alert confirmed client-side (browser AI mode) and reported for logging."""
 
-    type: Literal["FALL", "MANDOWN", "RECOVERED", "POSTURE", "ERGO", "CAMERA"]
+    type: Literal["FALL", "STANDING", "SQUAT", "STOOP", "PARTIAL"]
     detail: str = Field(default="", max_length=200)
     track_id: int | None = None
     source: str = Field(default="browser", max_length=40)

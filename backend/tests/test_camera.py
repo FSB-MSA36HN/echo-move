@@ -113,33 +113,16 @@ def test_worker_records_event_clip(tmp_path):
     assert mp4 is not None and mp4.stat().st_size > 0
 
 
-def test_offline_alert_once_per_outage(tmp_path):
+def test_offline_no_longer_publishes_events(tmp_path):
     cfg = Settings(offline_alert_s=30, demo_mode=True)
     store = EventStore(tmp_path)
     pipe = StreamPipeline("kho", FakeDetector([]), cfg, AlertHub(store))
     w = CameraWorker("kho", "rtsp://cam", pipe, cfg, capture_factory=lambda s: FakeCapture())
     w.state, w.error = "reconnecting", "cannot open"
     w._check_offline(100.0)
-    w._check_offline(120.0)
-    assert store.list(type="OFFLINE")[1] == 0
     w._check_offline(131.0)
-    w._check_offline(200.0)
-    events = store.list(type="OFFLINE")[0]
-    assert len(events) == 1 and events[0]["source"] == "kho"
-    assert "cannot open" in events[0]["detail"]
-    w.state = "online"
-    w._check_offline(201.0)
-    w.state = "stalled"
-    w._check_offline(300.0)
-    w._check_offline(331.0)
-    assert store.list(type="OFFLINE")[1] == 2
-    pipe.engine.disabled = {"OFFLINE"}
-    w.state = "online"
-    w._check_offline(400.0)
-    w.state = "reconnecting"
-    w._check_offline(400.0)
-    w._check_offline(500.0)
-    assert store.list(type="OFFLINE")[1] == 2
+    assert store.list(type="OFFLINE")[1] == 0
+    assert w._offline_alerted is True
 
 
 def test_zone_geometry_and_parsing(tmp_path):
@@ -152,24 +135,23 @@ def test_zone_geometry_and_parsing(tmp_path):
         parse_options({"zones": [{"points": [[0, 0], [1, 1]]}]})
     f = tmp_path / "cams.json"
     f.write_text('[{"id": "kho", "source": "0", "zones": [{"name": "A", '
-                 '"points": [[0,0],[1,0],[1,1]]}], "disabled_rules": ["CAMERA"]}]')
+                 '"points": [[0,0],[1,0],[1,1]]}], "disabled_rules": ["STOOP"]}]')
     opts = load_file_options(str(f))
-    assert parse_options(opts["kho"]).disabled_rules == ["CAMERA"]
+    assert parse_options(opts["kho"]).disabled_rules == ["STOOP"]
 
 
-def test_zone_intrusion_raises_alert(tmp_path):
-    cfg = Settings(demo_mode=True)
+def test_zone_intrusion_still_tagged_but_no_zone_alert(tmp_path):
+    cfg = Settings(demo_mode=True, alert_cooldown_s=60)
     store = EventStore(tmp_path)
     stand = load_scenarios()["an_toan"]["kps"]  # ankles at y≈0.87
     pipe = StreamPipeline("kho", FakeDetector(stand), cfg, AlertHub(store))
     pipe.configure(parse_options({"zones": [{"name": "Máy dập", "dwell_s": 0.5,
                                              "points": [[0, 0.7], [1, 0.7], [1, 1], [0, 1]]}],
-                                  "disabled_rules": ["CAMERA"]}))
+                                  "disabled_rules": ["STANDING"]}))
     out = [pipe.process(FRAME, i * 0.1) for i in range(10)]
     assert out[0]["persons"][0]["zones"][0]["name"] == "Máy dập"
     events = [a for o in out for a in o["alerts"]]
-    assert [e["type"] for e in events] == ["ZONE"] and events[0]["detail"] == "Vùng: Máy dập"
-    assert store.get(events[0]["id"])["has_image"]
+    assert all(e["type"] != "ZONE" for e in events)
 
 
 def test_worker_reconnects_after_open_failure():

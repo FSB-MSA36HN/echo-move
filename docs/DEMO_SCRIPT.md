@@ -43,7 +43,7 @@
 
 **Độ chính xác bao nhiêu?** Trả lời bằng số **tự đo**: `make eval DATASET=urfd` trên UR Fall (30 video ngã, 40 video sinh hoạt) cho precision, recall, F1, độ trễ phát hiện và số báo nhầm/giờ, so sánh luật cũ với luật mới. Chưa chạy thì nói rõ là chưa đo.
 
-**Ngã xong người dậy được thì có còn báo không?** Có MANDOWN (vẫn nằm sau 10 s, kèm "bất động" hay "còn cử động") để ưu tiên cứu hộ, và RECOVERED (thông tin, không hú còi) khi đã đứng dậy. Sự kiện CRITICAL không ai xác nhận sau N phút sẽ được leo thang tới quản đốc.
+**Hệ thống ghi những sự kiện nào?** Chỉ 5 loại: FALL (CRITICAL), STANDING / SQUAT (INFO), STOOP / PARTIAL (WARNING). PARTIAL khi YOLO chỉ thấy một phần cơ thể (thiếu vai–hông, &lt; 8 joint, hoặc cắt mép). CRITICAL chưa xác nhận sau N phút vẫn leo thang tới quản đốc.
 
 **Quyền riêng tư?** Ảnh và clip lưu lại được làm mờ vùng đầu (`ECHO_BLUR_FACES=1`), dữ liệu tự xoá sau `ECHO_RETENTION_DAYS` ngày, chỉ xem trực tiếp mới thấy mặt.
 
@@ -53,7 +53,7 @@
 
 **Mất mạng?** Camera server tự kết nối lại → MediaPipe trong trình duyệt (đã tải) trên webcam/video cục bộ → khi Python tắt, UI về chờ nguồn (không còn demo kịch bản giả).
 
-**Camera bị che / tối / mờ?** IQA từng chỉ số vượt ngưỡng → badge "ẢNH MỜ", "ẢNH TỐI", …; `overall < 40` kéo dài ≥ 5 s thành sự kiện "Chất lượng camera kém". Hệ thống **không** suy luận thành bụi/khói/lửa từ IQA.
+**Camera bị che / tối / mờ?** IQA từng chỉ số vượt ngưỡng → badge "ẢNH MỜ", "ẢNH TỐI", … trên panel (không tạo event CAMERA). Hệ thống **không** suy luận thành bụi/khói/lửa từ IQA.
 
 **Có phát hiện cháy thật không?** Chưa — không có model detect lửa trong scope hiện tại. Cảnh báo IQA chỉ phản ánh chất lượng ảnh.
 

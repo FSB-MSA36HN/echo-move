@@ -17,7 +17,7 @@ from typing import Any
 import cv2
 import numpy as np
 
-from ..alerts.engine import MESSAGES, Alert
+from ..alerts.engine import Alert
 from ..config import Settings
 from ..pipeline import StreamPipeline, resize_max_width
 from ..render import annotate, blur_faces, encode_jpeg
@@ -193,7 +193,7 @@ class CameraWorker:
                 self.fps, count, tick = count / (now - tick), 0, now
 
     def _check_offline(self, now: float) -> None:
-        """One OFFLINE event per outage longer than ``offline_alert_s``."""
+        """Track outage timing for UI state; posture events no longer include OFFLINE."""
         if self.state == "online":
             if self._offline_alerted:
                 log.info("camera %s back online", self.id)
@@ -201,20 +201,12 @@ class CameraWorker:
             return
         if self._down_since is None:
             self._down_since = now
-        hub = self.pipeline.hub
-        if (self._offline_alerted or hub is None or self.cfg.offline_alert_s <= 0
-                or now - self._down_since < self.cfg.offline_alert_s
-                or "OFFLINE" in self.pipeline.engine.disabled):
+        if (self._offline_alerted or self.cfg.offline_alert_s <= 0
+                or now - self._down_since < self.cfg.offline_alert_s):
             return
         self._offline_alerted = True
-        level, message = MESSAGES["OFFLINE"]
-        down = now - self._down_since
-        detail = f"{self.state} {down:.0f} s" + (f" — {self.error}" if self.error else "")
-        try:
-            hub.publish(Alert("OFFLINE", level, self.id, message, detail, None, now,
-                              {"reconnects": self.reconnects}))
-        except Exception:
-            log.exception("camera %s: failed to publish OFFLINE", self.id)
+        log.warning("camera %s offline %s for %.0f s%s", self.id, self.state,
+                    now - self._down_since, f" — {self.error}" if self.error else "")
 
     # ------------------------------------------------------------------ event clips
     def _clip_step(self, t: float, jpeg: bytes, alerts: list[dict[str, Any]]) -> None:

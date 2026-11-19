@@ -14,8 +14,8 @@ EDGES = [(0, 1), (1, 3), (0, 2), (2, 4), (5, 6), (5, 7), (7, 9), (6, 8), (8, 10)
          (5, 11), (6, 12), (11, 12), (11, 13), (13, 15), (12, 14), (14, 16)]
 BGR = {"SAFE": (80, 200, 60), "WARNING": (0, 165, 255), "RISK": (40, 40, 230)}
 # Hershey fonts are ASCII-only, so overlay labels avoid Vietnamese diacritics.
-LABELS = {"NONE": "OK", "PROPER_LIFT": "PROPER LIFT", "PARTIAL": "BENDING",
-          "IMPROPER": "BAD POSTURE", "FALL": "FALL"}
+LABELS = {"STANDING": "STANDING", "SQUAT": "SQUAT", "STOOP": "STOOP",
+          "PARTIAL": "PARTIAL", "FALL": "FALL"}
 
 
 def ascii_text(s: str) -> str:

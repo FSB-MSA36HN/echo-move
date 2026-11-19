@@ -43,7 +43,7 @@ def test_fall_confirmed_only_after_persisting():
 
 def test_brief_dropout_does_not_reset_episode():
     eng = AlertEngine(cfg(), "cam")
-    frames = ([([person("FALL")], None)] * 8 + [([person("NONE")], None)] * 2
+    frames = ([([person("FALL")], None)] * 8 + [([person("STANDING")], None)] * 2
               + [([person("FALL")], None)] * 8)
     alerts, _ = run(eng, frames)
     assert [a.type for a in alerts] == ["FALL"]
@@ -51,7 +51,7 @@ def test_brief_dropout_does_not_reset_episode():
 
 def test_long_recovery_resets_episode():
     eng = AlertEngine(cfg(), "cam")
-    frames = ([([person("FALL")], None)] * 12 + [([person("NONE")], None)] * 10
+    frames = ([([person("FALL")], None)] * 12 + [([person("STANDING")], None)] * 10
               + [([person("FALL")], None)] * 12)
     alerts, _ = run(eng, frames)
     assert alerts == []
@@ -59,8 +59,8 @@ def test_long_recovery_resets_episode():
 
 def test_cooldown_suppresses_repeats_then_allows():
     eng = AlertEngine(cfg(alert_cooldown_s=10), "cam")
-    fall, ok = ([person("FALL")], None), ([person("NONE")], None)
-    a1, t = run(eng, [fall] * 20 + [ok] * 10 + [fall] * 20)  # second episode within 10 s
+    fall, ok = ([person("FALL")], None), ([person("STANDING")], None)
+    a1, t = run(eng, [fall] * 20 + [ok] * 10 + [fall] * 20)
     assert len(a1) == 1
     a2, _ = run(eng, [ok] * 10 + [fall] * 20, t0=t + 10)
     assert len(a2) == 1
@@ -68,47 +68,32 @@ def test_cooldown_suppresses_repeats_then_allows():
 
 def test_rapid_hip_drop_halves_fall_confirmation():
     eng = AlertEngine(cfg(), "cam")
-    frames = [([person("NONE", hip_y=0.45)], None)] * 3
-    frames += [([person("FALL", hip_y=0.85)], None)] * 9  # dropped 0.4 of a 0.6-tall body
+    frames = [([person("STANDING", hip_y=0.45)], None)] * 3
+    frames += [([person("FALL", hip_y=0.85)], None)] * 9
     alerts, _ = run(eng, frames)
     assert [a.type for a in alerts] == ["FALL"]
     assert alerts[0].detail == "Ngã đột ngột" and alerts[0].data["rapid_drop"] is True
 
 
-def test_mandown_after_lying_still_then_recovered():
-    eng = AlertEngine(cfg(mandown_s=3.0), "cam")
-    alerts, t = run(eng, [([person("FALL")], None)] * 50)  # 4.9 s lying, not moving
-    assert [a.type for a in alerts] == ["FALL", "MANDOWN"]
-    down = alerts[1]
-    assert down.level == "CRITICAL" and down.data["motionless"] is True
-    assert down.detail.startswith("Nằm bất động")
-    up, _ = run(eng, [([person("NONE")], None)] * 25, t0=t)
-    assert [a.type for a in up] == ["RECOVERED"] and up[0].level == "INFO"
-
-
-def test_mandown_reports_movement_and_needs_persistence():
-    eng = AlertEngine(cfg(mandown_s=3.0), "cam")
-    frames = [([person("FALL", hip_y=0.8 + 0.05 * (i % 2))], None) for i in range(50)]
-    alerts, _ = run(eng, frames)
-    down = next(a for a in alerts if a.type == "MANDOWN")
-    assert down.data["motionless"] is False and "còn cử động" in down.detail
-    eng = AlertEngine(cfg(mandown_s=3.0), "cam")
-    short, _ = run(eng, [([person("FALL")], None)] * 30 + [([person("NONE")], None)] * 30)
-    assert [a.type for a in short] == ["FALL", "RECOVERED"]
-
-
-def test_no_recovered_without_reported_fall():
+def test_stoop_squat_partial_standing_alerts():
     eng = AlertEngine(cfg(), "cam")
-    alerts, _ = run(eng, [([person("NONE")], None)] * 40)
-    assert alerts == []
-
-
-def test_posture_and_camera_alerts():
+    alerts, _ = run(eng, [([person("STOOP")], None)] * 35)
+    assert [a.type for a in alerts] == ["STOOP"] and alerts[0].level == "WARNING"
     eng = AlertEngine(cfg(), "cam")
-    alerts, _ = run(eng, [([person("IMPROPER")], {"overall": 20.0})] * 55)
-    assert sorted(a.type for a in alerts) == ["CAMERA", "POSTURE"]
-    cam = next(a for a in alerts if a.type == "CAMERA")
-    assert cam.track_id is None and cam.detail.startswith("IQA 20")
+    alerts, _ = run(eng, [([person("SQUAT")], None)] * 35)
+    assert [a.type for a in alerts] == ["SQUAT"]
+    eng = AlertEngine(cfg(), "cam")
+    alerts, _ = run(eng, [([person("PARTIAL")], None)] * 55)
+    assert [a.type for a in alerts] == ["PARTIAL"]
+    eng = AlertEngine(cfg(), "cam")
+    alerts, _ = run(eng, [([person("STANDING")], None)] * 35)
+    assert [a.type for a in alerts] == ["STANDING"] and alerts[0].level == "INFO"
+
+
+def test_iqa_does_not_raise_camera_events():
+    eng = AlertEngine(cfg(), "cam")
+    alerts, _ = run(eng, [([person("STANDING")], {"overall": 10.0})] * 60)
+    assert all(a.type != "CAMERA" for a in alerts)
 
 
 def test_tracks_are_independent():
@@ -121,10 +106,10 @@ def test_store_roundtrip(tmp_path):
     store = EventStore(tmp_path)
     a = store.add(Alert("FALL", "CRITICAL", "kho", "Ngã", "detail", 3, 1000.0,
                         {"spine_deg": 81}), b"\xff\xd8jpeg")
-    store.add(Alert("POSTURE", "WARNING", "cong", "Cúi", "", 4, 2000.0))
+    store.add(Alert("STOOP", "WARNING", "cong", "Cúi", "", 4, 2000.0))
     assert a["id"] == 1 and a["has_image"] and a["data"] == {"spine_deg": 81}
     items, total = store.list()
-    assert total == 2 and items[0]["type"] == "POSTURE"  # newest first
+    assert total == 2 and items[0]["type"] == "STOOP"
     assert store.list(type="FALL")[1] == 1
     assert store.list(since=1500)[1] == 1
     assert store.image_path(1).read_bytes() == b"\xff\xd8jpeg"
@@ -133,7 +118,7 @@ def test_store_roundtrip(tmp_path):
     assert store.get(1)["acknowledged"] is True
     s = store.stats()
     assert s["total"] == 2 and s["unacknowledged"] == 1
-    assert s["by_type"] == {"FALL": 1, "POSTURE": 1} and sum(s["by_hour"]) == 2
+    assert s["by_type"] == {"FALL": 1, "STOOP": 1} and sum(s["by_hour"]) == 2
     csv = store.to_csv()
     assert csv.splitlines()[0].startswith("id,time,source") and "kho" in csv
     store.close()
@@ -212,7 +197,7 @@ def test_notifier_video_zalo_and_escalation_chat():
 def test_store_migrates_clips_false_alarm_and_purge(tmp_path):
     import sqlite3
 
-    db = sqlite3.connect(tmp_path / "echo.db")  # a v21 database without the new columns
+    db = sqlite3.connect(tmp_path / "echo.db")
     db.execute("CREATE TABLE events (id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL NOT NULL,"
                " source TEXT NOT NULL, track_id INTEGER, type TEXT NOT NULL, level TEXT NOT NULL,"
                " message TEXT NOT NULL, detail TEXT NOT NULL DEFAULT '', snapshot TEXT,"
@@ -253,7 +238,7 @@ def test_maintenance_escalates_and_purges(tmp_path):
 
     store = EventStore(tmp_path)
     old = store.add(Alert("FALL", "CRITICAL", "kho", "Ngã", "", 1, 1000.0))
-    store.add(Alert("POSTURE", "WARNING", "kho", "Cúi", "", 1, 1000.0))
+    store.add(Alert("STOOP", "WARNING", "kho", "Cúi", "", 1, 1000.0))
     fresh = store.add(Alert("FALL", "CRITICAL", "kho", "Ngã", "", 2, 1250.0))
     notifier = Recorder()
     off = Maintenance(Settings(escalate_min=0, retention_days=0), store, notifier)
@@ -261,12 +246,12 @@ def test_maintenance_escalates_and_purges(tmp_path):
     m = Maintenance(Settings(escalate_min=5, retention_days=1), store, notifier)
     assert m.run_once(1310.0) == {"purged": 0, "escalated": 1}
     assert notifier.sent[0]["id"] == old["id"] and notifier.sent[0]["escalation"]
-    assert m.run_once(1320.0)["escalated"] == 0  # only once per event
+    assert m.run_once(1320.0)["escalated"] == 0
     store.acknowledge(fresh["id"])
-    assert m.run_once(2000.0)["escalated"] == 0  # acknowledged events are never escalated
+    assert m.run_once(2000.0)["escalated"] == 0
     assert m.run_once(1100.0 + 86400)["purged"] == 2
     assert [e["id"] for e in store.list()[0]] == [fresh["id"]]
-    assert m.run_once(1100.0 + 86400 + 600)["purged"] == 0  # purge runs at most hourly
+    assert m.run_once(1100.0 + 86400 + 600)["purged"] == 0
     store.close()
 
 

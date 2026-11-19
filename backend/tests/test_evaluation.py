@@ -54,8 +54,9 @@ def test_discover_urfd_and_le2i(tmp_path):
 def test_replay_detects_fall_and_scores_latency():
     ex = clip(load_scenarios()["nga"]["kps"])
     alerts = replay(ex, CFG)
-    assert alerts and alerts[0][0] == "FALL"
-    r = score(VideoCase("v", True, 3.0, 3.5), alerts, ex.duration_s)
+    falls = [a for a in alerts if a[0] == "FALL"]
+    assert falls
+    r = score(VideoCase("v", True, 3.0, 3.5), falls, ex.duration_s)
     assert r.detected and r.false_alarms == 0 and 1.0 <= r.latency_s <= 2.0
 
 
@@ -71,7 +72,7 @@ def test_multisignal_beats_legacy_on_fall_towards_camera():
 
 
 def test_summary_counts_false_alarms(tmp_path):
-    neg = score(VideoCase("adl", False), [("FALL", 1.0), ("POSTURE", 2.0)], 3600.0)
+    neg = score(VideoCase("adl", False), [("FALL", 1.0), ("STOOP", 2.0)], 3600.0)
     pos = score(VideoCase("f", True, 10.0, 12.0), [("FALL", 40.0)], 60.0)
     s = summarize([neg, pos])
     assert s["fp_videos"] == 1 and s["fn"] == 1 and s["false_alarms"] == 2

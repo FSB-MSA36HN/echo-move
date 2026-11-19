@@ -1,8 +1,8 @@
 # ECHO MOVE — Worker Safety Warning System
 
-Hệ thống cảnh báo an toàn lao động (đồ án môn **Xử lý ảnh**): nhận diện tư thế công nhân (cúi sai, nâng đúng kỹ thuật, ngã) bằng pose estimation và **đánh giá chất lượng ảnh (IQA)** để cảnh báo khi camera bị mờ/tối/bụi/che. Bản 21 chạy được ngoài thực tế: đọc **camera IP (RTSP) / USB / file video** ngay trên server, **xác nhận cảnh báo theo thời gian** (theo từng người, có tracking ID), **ghi nhật ký sự kiện** kèm ảnh chụp, gửi **Telegram / webhook**, và hiển thị **công nhân 3D** mặc đồ bảo hộ mô phỏng đúng tư thế.
+Hệ thống cảnh báo an toàn lao động (đồ án môn **Xử lý ảnh**): nhận diện **5 sự kiện tư thế** — **Ngã (FALL)**, **Đứng (STANDING)**, **Ngồi xổm (SQUAT)**, **Cúi khom (STOOP)**, **Một phần cơ thể (PARTIAL)** — bằng YOLOv8-Pose (COCO-17) + tracking nhiều người, kèm **IQA** trên dashboard. Đọc **camera IP (RTSP) / USB / file**, **xác nhận theo thời gian**, nhật ký + clip, Telegram/Zalo/webhook, **SOC dashboard** và người 3D.
 
-Bản 22 hướng tới dùng thật tại xưởng: luật ngã **đa tín hiệu** (bắt được cả ngã về phía camera), cảnh báo **bất động sau ngã (MANDOWN)** và **đã đứng dậy**, **vùng nguy hiểm** vẽ trên từng camera, **clip 5 s trước + 5 s sau** mỗi sự kiện, điểm **REBA** và phơi nhiễm tư thế tích lũy (ERGO), phát hiện **thiếu mũ / áo phản quang** (khi có model PPE), cảnh báo **camera mất tín hiệu**, **leo thang** sự kiện chưa xử lý, **Zalo OA**, làm mờ mặt, nút **Báo nhầm**, tự xoá dữ liệu cũ, và `make eval` đo precision/recall trên UR Fall / Le2i.
+Luật ngã **đa tín hiệu** (nằm ngang / đầu thấp / sụp người). PARTIAL dựa conf keypoints YOLO (thiếu core joints hoặc cắt mép). Clip 5 s trước+sau, leo thang CRITICAL, làm mờ mặt, Báo nhầm, retention, `make eval` trên UR Fall / Le2i.
 
 ```
  Camera IP/USB/file ──▶ ┌───────────────────────────────┐ ── /api/cameras/*/stream (MJPEG) ──▶ ┌──────────────────────┐
@@ -17,7 +17,7 @@ Bản 22 hướng tới dùng thật tại xưởng: luật ngã **đa tín hi�
 |---|---|---|
 | MATLAB | Phân tích IQA offline trên video, 9 biểu đồ, xuất JSON/CSV/PNG | [matlab/](matlab/) |
 | Python | Camera server, YOLOv8-Pose + tracking, 5 metric IQA, xác nhận cảnh báo, nhật ký SQLite, thông báo, phục vụ giao diện web | [backend/](backend/) |
-| Web | Giao diện 3 tab (Giám sát / Camera / Sự kiện), công nhân 3D (GLTF có xương), còi + thông báo, IQA 5 metric + cảnh báo theo chỉ số | [web/](web/) |
+| Web | SOC dashboard (live | 3D+IQA | Cameras/Events/System), công nhân 3D, còi + thông báo, 5 loại sự kiện tư thế | [web/](web/) |
 
 ## Chạy nhanh
 

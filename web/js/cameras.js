@@ -51,8 +51,8 @@
   }
 
   // ---------------------------------------------------------------- zone / rule editor
-  const RULE_NAMES = {FALL: 'Ngã', MANDOWN: 'Không dậy sau ngã', RECOVERED: 'Đã đứng dậy', POSTURE: 'Cúi sai',
-    ERGO: 'REBA tích lũy', ZONE: 'Vùng cấm', PPE: 'Đồ bảo hộ', CAMERA: 'Chất lượng ảnh', OFFLINE: 'Mất tín hiệu'};
+  const RULE_NAMES = {FALL: 'Ngã', STANDING: 'Đứng', SQUAT: 'Ngồi xổm', STOOP: 'Cúi khom',
+    PARTIAL: 'Một phần cơ thể'};
   const ED = {id: null, zones: [], disabled: [], rules: [], drawing: null};
 
   async function openEditor(id) {

@@ -26,26 +26,32 @@ Pipeline realtime chỉ đưa PIQE fast vào Overall. PIQE full (khối 16×16) 
 > Lưu ý trung thực: PIQE là bản xấp xỉ; tối ưu là trên dataset suy giảm có kiểm soát (không phải MOS người xem trên toàn bộ ảnh hiện trường). Chạy lại `make calibrate-iqa` khi đổi camera/miền.
 
 ## Phân loại tư thế theo từng frame (COCO-17, toạ độ chuẩn hoá)
+Năm kỹ thuật / sự kiện: **PARTIAL**, **FALL**, **SQUAT**, **STOOP**, **STANDING** (`pose/classifier.py`, cùng luật trong `web/js/app.js`).
+
 - Trước khi tính góc, `x` được nhân với tỉ lệ khung hình `W/H` (toạ độ chuẩn hoá làm méo góc: khung 16:9 lệch góc lưng tới ~40 %).
 - `spine` = `atan2(|x_vai − x_hông|, |y_vai − y_hông|)` (độ so với phương thẳng đứng).
 - `knee` = trung bình góc hông–gối–cổ chân hai bên (180° nếu thiếu điểm).
 - `bbox_ratio` = rộng / cao của khung bao các keypoint nhìn thấy.
-- Thứ tự luật: thiếu điểm (vai/hông conf ≤ 0.25) → SAFE; `spine > 65°` **và** `bbox_ratio > 1` → **NGÃ**; `knee < 140°` và `spine < 45°` → **NÂNG ĐÚNG**; `spine > 60°` → **SAI TƯ THẾ**; `spine > 30°` → **CHÚ Ý**; còn lại SAFE. Ngưỡng ở `Settings`. Luật ngã cũ (`|y_vai − y_hông| < 0.08`) báo nhầm khi cúi sâu nên đã bỏ; điều kiện khung người nằm ngang loại trường hợp cúi gập người (lưng ngang nhưng chân vẫn thẳng đứng → khung cao).
+- Thứ tự luật:
+  1. **PARTIAL** — YOLO/MediaPipe chỉ thấy một phần cơ thể: &lt; 8 joint conf đủ, thiếu vai/hông, hoặc bbox sát mép + &lt; 2 chân.
+  2. **FALL** — ngã đa tín hiệu (xem dưới).
+  3. **SQUAT** — `knee < 140°` và `spine < 45°` (ngồi xổm).
+  4. **STOOP** — `spine > 60°` (cúi khom).
+  5. **STANDING** — còn lại (đứng thẳng).
 
-### Ngã đa tín hiệu (v22, `pose/classifier.py` + `pose/fall.py`, cùng luật trong `web/js/app.js`)
-Luật "nằm ngang" ở trên bỏ sót khi người ngã **về phía** camera: thân co ngắn nên góc lưng nhỏ và khung không nằm ngang. Vì vậy có thêm hai tín hiệu:
-- **lying**: thân lớn hơn 65° và khung rộng hơn cao (luật v21).
-- **head_low**: đầu thấp ngang hông, cụ thể `y_đầu > y_hông − 0.15·chiều_cao_khung`. Đầu là trung bình các điểm mũi, mắt và tai nhìn thấy.
-- **collapsed**: `FallAnalyzer` giữ chiều cao lúc đứng của từng track (median của các frame đứng thẳng, cần ít nhất 5 mẫu). Tín hiệu bật khi chiều cao hiện tại nhỏ hơn 50 % chiều cao đó **và** hông đã rơi hơn 20 %.
+### Ngã đa tín hiệu (`pose/classifier.py` + `pose/fall.py`)
+Luật "nằm ngang" bỏ sót khi người ngã **về phía** camera: thân co ngắn nên góc lưng nhỏ. Ba tín hiệu:
+- **lying**: thân lớn hơn 65° và khung rộng hơn cao.
+- **head_low**: `y_đầu > y_hông − 0.15·chiều_cao_khung`.
+- **collapsed**: chiều cao hiện tại &lt; 50 % chiều cao lúc đứng của track **và** hông rơi &gt; 20 %.
 
-Kết luận FALL khi có ít nhất 2 tín hiệu, hoặc khi lying và không thấy đầu. Ngồi xổm hay nâng đồ (gối gập) không bị nâng thành FALL dù sụp chiều cao. Đặt `ECHO_FALL_MULTISIGNAL=0` để quay về luật v21.
+FALL khi ≥ 2 tín hiệu, hoặc lying mà không thấy đầu. SQUAT không bị nâng thành FALL dù chiều cao giảm. `ECHO_FALL_MULTISIGNAL=0` quay về chỉ dùng lying.
 
-### REBA rút gọn
-Từ một frame 2D tính điểm thân, cổ, chân, cánh tay trên và cẳng tay theo bảng A/B/C của REBA (Hignett & McAtamney 2000). Không có tải trọng, độ bám hay độ xoay cổ tay vì không đo được từ pose. Điểm 1–15 được trả trong `safety.reba`. **ERGO** là phơi nhiễm tích lũy: tổng thời gian có REBA ≥ `ECHO_ERGO_REBA` (6) trong cửa sổ 10 phút vượt `ECHO_ERGO_EXPOSURE_S` (60 s).
+### REBA rút gọn (metric, không còn event)
+Điểm REBA 1–15 vẫn trả trong `safety.reba` (bảng A/B/C, Hignett & McAtamney 2000) để hiển thị / phân tích — **không** phát sự kiện ERGO.
 
-### Vùng nguy hiểm và PPE
-- **Vùng**: polygon chuẩn hoá 0–1. Điểm chân là trung bình hai cổ chân, không có thì lấy đáy khung bao. Kiểm tra trong vùng bằng ray casting.
-- **PPE** (`pose/ppe.py`): detection của model PPE được gán cho người có vùng đầu (mũ) hoặc vùng thân, từ vai đến hông (áo), chứa nhiều nhất diện tích hộp, tối thiểu 30 %. Lớp dương cho kết quả True. Lớp âm (`NO-Hardhat`, `head`...) hoặc không thấy gì trong vùng nhìn rõ cho kết quả False. Vùng không nhìn thấy cho None, không bao giờ báo.
+### Vùng nguy hiểm và PPE (metric / overlay, không còn event)
+Vùng polygon và PPE vẫn có thể tính/vẽ trên MJPEG; **không** phát sự kiện ZONE/PPE. Event chỉ còn 5 loại tư thế ở trên.
 
 ## Tracking nhiều người
 `PoseTracker` theo kiểu ByteTrack (Zhang 2022) và bỏ Kalman vì pose đã được làm mượt. Mỗi detection lấy khung bao keypoint, điểm tin cậy là trung bình confidence của các keypoint.
@@ -62,16 +68,12 @@ Phân loại từng frame nhiễu (che khuất, mờ chuyển động, ngồi x�
 | Loại | Điều kiện mỗi frame | Phải kéo dài | Mức |
 |---|---|---|---|
 | FALL | `technique = FALL` | `ECHO_FALL_CONFIRM_S` = 1.5 s (0.75 s nếu hông rơi nhanh) | CRITICAL |
-| POSTURE | `technique = IMPROPER` | `ECHO_POSTURE_CONFIRM_S` = 3 s | WARNING |
-| MANDOWN | vẫn FALL sau khi đã báo ngã (lệch ≤ 2 s không reset) | `FALL_CONFIRM_S + ECHO_MANDOWN_S` (10 s) | CRITICAL |
-| RECOVERED | đã ngã, nay đứng / nâng / cúi nhẹ | 2 s | INFO (không còi) |
-| ERGO | REBA ≥ 6 tích lũy trong 10 phút | ≥ 60 s | WARNING |
-| ZONE | chân trong polygon vùng cấm | `dwell_s` của vùng (mặc định 1 s) | WARNING |
-| PPE | thiếu đồ bắt buộc (`ECHO_PPE_REQUIRED`) | `ECHO_PPE_CONFIRM_S` = 5 s | WARNING |
-| CAMERA | IQA tổng < 40 | `ECHO_QUALITY_CONFIRM_S` = 5 s | WARNING |
-| OFFLINE | camera ở trạng thái reconnecting/stalled | `ECHO_OFFLINE_ALERT_S` = 30 s, mỗi lần mất 1 lần | WARNING |
+| STOOP | `technique = STOOP` (cúi khom, spine > 60°) | `ECHO_POSTURE_CONFIRM_S` = 3 s | WARNING |
+| SQUAT | `technique = SQUAT` (ngồi xổm) | `ECHO_POSTURE_CONFIRM_S` = 3 s | INFO |
+| STANDING | `technique = STANDING` | `ECHO_POSTURE_CONFIRM_S` = 3 s | INFO |
+| PARTIAL | YOLO chỉ thấy một phần cơ thể (thiếu core joints / cắt mép) | `ECHO_QUALITY_CONFIRM_S` = 5 s | WARNING |
 
-MANDOWN ghi rõ "bất động" nếu chuyển động keypoint trung bình (EMA, đơn vị chiều cao người/giây) < 0.05, ngược lại "còn cử động".
+`PARTIAL` dùng conf keypoints YOLOv8-Pose (vai+hông, ≥ 8 joint thấy, hoặc bbox sát mép + thiếu chân) — không phải cúi nhẹ.
 
 - Mỗi (loại, track ID) là một "episode": mất điều kiện < 0.5 s không reset (chịu được vài frame lỗi); một episode chỉ phát 1 lần.
 - **Hông rơi nhanh**: trong 1.5 s gần nhất, `y_hông` tăng hơn 25 % chiều cao khung người lớn nhất → khả năng ngã thật cao, nên rút ngắn thời gian xác nhận một nửa.
@@ -89,12 +91,12 @@ MANDOWN ghi rõ "bất động" nếu chuyển động keypoint trung bình (EMA
 1. **Trích keypoint**: YOLO chạy một lần cho mỗi video và kết quả được cache trong `output/eval_cache/<dataset>/`.
 2. **Phát lại**: keypoint đi qua tracker, classifier, `FallAnalyzer` và `AlertEngine` với từng cấu hình luật (v21 so với đa tín hiệu). Nhờ có cache, thay ngưỡng chỉ tốn vài giây.
 
-Một video dương tính được tính là phát hiện đúng nếu có FALL trong khoảng `[bắt đầu ngã − 2 s, kết thúc + MANDOWN + 2 s]`. Le2i có nhãn frame trong `Annotation_files`. UR Fall dùng tên file (`fall-*` / `adl-*`). Thư mục tự do dùng `labels.csv`. Kết quả gồm precision, recall, F1, độ trễ phát hiện (trung vị, p90) và số báo nhầm/giờ trên video ADL, ghi ra `output/eval_<dataset>.json` cùng bảng Markdown.
+Một video dương tính được tính là phát hiện đúng nếu có FALL trong khoảng `[bắt đầu ngã − 2 s, kết thúc + 2 s]`. Le2i có nhãn frame trong `Annotation_files`. UR Fall dùng tên file (`fall-*` / `adl-*`). Thư mục tự do dùng `labels.csv`. Kết quả gồm precision, recall, F1, độ trễ phát hiện (trung vị, p90) và số báo nhầm/giờ trên video ADL, ghi ra `output/eval_<dataset>.json` cùng bảng Markdown.
 
 ## Hạn chế đã biết
 - Luật tư thế dựa trên 2D, nhạy với góc camera (camera nên đặt cao 2–3 m, nhìn chéo xuống).
 - Tracker có dự đoán vận tốc nhưng không có đặc trưng ngoại hình (re-ID): hai người mặc giống nhau đi sát và che nhau lâu vẫn có thể đổi ID.
 - Tín hiệu "sụp người" cần track đã thấy người đó đứng ≥ 5 frame. Người vào khung hình khi đã nằm thì chỉ dựa vào lying và head_low.
-- PPE phụ thuộc hoàn toàn vào chất lượng model PPE bên ngoài, và mũ ở xa camera (< 20 px) thường bị bỏ sót.
+- PARTIAL dựa trên conf keypoints / mép khung — người xa camera hoặc che khuất mạnh vẫn có thể false positive/negative.
 - Ngưỡng thời gian, góc và hệ số IQA là giá trị thực nghiệm, cần hiệu chỉnh trên dữ liệu nhà xưởng thật.
 - Chiều sâu 3D chỉ là ước lượng (một camera); hướng trước/sau của chi có thể sai khi chi song song trục camera.

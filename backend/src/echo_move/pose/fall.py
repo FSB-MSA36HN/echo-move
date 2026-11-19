@@ -49,7 +49,7 @@ class FallAnalyzer:
         b = self._base.setdefault(track_id, _Baseline())
         b.last_t = t
         ready = b.samples >= self.MIN_SAMPLES
-        upright = (safety.get("technique") == "NONE"
+        upright = (safety.get("technique") == "STANDING"
                    and safety.get("spine_deg", 90.0) < UPRIGHT_SPINE_DEG and height > 0
                    and (not ready or height > 0.8 * b.height))
         if upright:

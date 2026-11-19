@@ -5,7 +5,7 @@ Two stages so rule variants can be compared without re-running the detector:
 1. ``extract``  — run YOLOv8-Pose on every sampled frame, keep raw keypoints (cacheable JSON);
 2. ``replay``   — tracker → classifier → fall analyzer → alert engine on those keypoints.
 
-Scoring is per video: a positive video is detected when a FALL/MANDOWN alert lands inside the
+Scoring is per video: a positive video is detected when a FALL alert lands inside the
 annotated fall window (± tolerance), or anywhere when the dataset has no frame annotation.
 Every FALL alert on a negative (ADL) video, or outside the window, is a false alarm.
 """
@@ -28,7 +28,7 @@ from .pose.fall import FallAnalyzer
 from .pose.tracker import PoseTracker
 
 VIDEO_EXT = {".mp4", ".avi", ".mov", ".mkv", ".m4v"}
-FALL_TYPES = ("FALL", "MANDOWN")
+FALL_TYPES = ("FALL",)
 
 
 @dataclass

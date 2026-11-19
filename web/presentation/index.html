@@ -144,10 +144,10 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
     <div class="body">
       <div class="kicker">ECHO MOVE v22 · Worker Safety Warning System</div>
       <h1 class="h1" style="font-size:132px">Camera không chỉ <span class="strike">ghi hình</span><br>mà phải <span class="red">kịp cảnh báo</span></h1>
-      <p class="sub" style="font-size:38px">Nhận diện tư thế, phát hiện ngã và bất động, đánh giá chất lượng ảnh, rồi gửi cảnh báo an toàn lao động theo thời gian thực.</p>
+      <p class="sub" style="font-size:38px">Năm sự kiện tư thế (FALL · STANDING · SQUAT · STOOP · PARTIAL), IQA trên dashboard, cảnh báo realtime.</p>
       <div class="alert mt2" style="max-width:1450px">
         <h3>Một câu tóm tắt</h3>
-        <p>Pose estimation (YOLOv8-Pose) + luật hình học + <b>xác nhận theo thời gian</b> + IQA, chạy trên camera IP/USB, ghi nhật ký, gửi Telegram/Zalo, có người 3D trực quan hoá.</p>
+        <p>YOLOv8-Pose + luật hình học + <b>xác nhận theo thời gian</b> + IQA panel, camera IP/USB, nhật ký + Telegram/Zalo, SOC dashboard + người 3D.</p>
       </div>
     </div>
     <div class="stripe-b"></div>
@@ -162,9 +162,9 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
     <div class="kicker">Tại sao cần hệ thống này</div>
     <h2 class="h2">Ba rủi ro mà <span class="red">giám sát thủ công</span> hay bỏ lỡ</h2>
     <div class="grid3 mt">
-      <div class="card t-red"><div class="lbl">Rủi ro 1 · Khẩn cấp</div><h4>Ngã và bất động</h4><p>Người ngã ở góc khuất, không ai thấy. Mỗi phút chậm trễ đều làm tăng hậu quả.</p></div>
-      <div class="card t-amber"><div class="lbl">Rủi ro 2 · Tích lũy</div><h4>Tư thế sai khi nâng</h4><p>Cúi lưng nâng vật nặng lặp lại cả ca, gây chấn thương cột sống về lâu dài.</p></div>
-      <div class="card t-blue"><div class="lbl">Rủi ro 3 · Âm thầm</div><h4>Camera "mù"</h4><p>Ống kính bám bụi, bị che, thiếu sáng: có camera nhưng thực chất không giám sát được.</p></div>
+      <div class="card t-red"><div class="lbl">Rủi ro 1 · Khẩn cấp</div><h4>Ngã (FALL)</h4><p>Người ngã ở góc khuất, không ai thấy. Mỗi phút chậm trễ đều làm tăng hậu quả.</p></div>
+      <div class="card t-amber"><div class="lbl">Rủi ro 2 · Tư thế</div><h4>Cúi khom · ngồi xổm</h4><p>STOOP / SQUAT lặp lại cả ca — cần nhật ký rõ ràng theo từng người.</p></div>
+      <div class="card t-blue"><div class="lbl">Rủi ro 3 · Thiếu dữ liệu</div><h4>Một phần cơ thể</h4><p>Người cắt mép khung hoặc che khuất: YOLO thiếu keypoint → PARTIAL, không đoán bừa.</p></div>
     </div>
     <div class="alert amber mt2">
       <h3>Một người bảo vệ không thể nhìn 10 màn hình suốt 8 giờ</h3>
@@ -185,9 +185,9 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
       <div class="check ok"><div class="box">✓</div><div class="txt">Realtime trên CPU <span>— YOLOv8n-Pose, luôn xử lý frame mới nhất, không dồn trễ</span></div></div>
       <div class="check ok"><div class="box">✓</div><div class="txt">Ít báo nhầm <span>— điều kiện phải kéo dài mới thành cảnh báo, cooldown theo từng người</span></div></div>
       <div class="check ok"><div class="box">✓</div><div class="txt">Nhiều người, nhiều camera <span>— tracking ID ổn định, mỗi camera một pipeline</span></div></div>
-      <div class="check ok"><div class="box">✓</div><div class="txt">Biết khi chính camera kém <span>— 5 chỉ số IQA, cảnh báo camera kém và mất tín hiệu</span></div></div>
+      <div class="check ok"><div class="box">✓</div><div class="txt">5 sự kiện tư thế rõ ràng <span>— FALL · STANDING · SQUAT · STOOP · PARTIAL</span></div></div>
       <div class="check ok"><div class="box">✓</div><div class="txt">Có bằng chứng và truy vết <span>— ảnh, clip 10 s, nhật ký SQLite, xuất CSV</span></div></div>
-      <div class="check ok"><div class="box">✓</div><div class="txt">IQA trung thực <span>— 5 chỉ số + Overall, cảnh báo theo từng metric (mờ/nhiễu/tối/chói)</span></div></div>
+      <div class="check ok"><div class="box">✓</div><div class="txt">IQA trung thực trên panel <span>— 5 chỉ số + badge theo metric (không tạo event CAMERA)</span></div></div>
     </div>
     <div class="stripe-b"></div>
     <div class="footer"><span>goals · requirements</span><span>ECHO MOVE</span></div>
@@ -210,7 +210,7 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
       </div>
       <div class="col" style="border-color:var(--blue)">
         <h4>Web · Three.js</h4><div class="role blu">Giao diện</div>
-        <ul><li>3 tab: Giám sát · Camera · Sự kiện</li><li>Công nhân 3D mặc đồ bảo hộ</li><li>Còi, toast, thông báo desktop</li><li>Nguồn thật: Webcam · Video · Server</li></ul>
+        <ul><li>SOC dashboard: live · 3D/IQA · Cameras/Events/System</li><li>Công nhân 3D mặc đồ bảo hộ</li><li>Còi, toast, thông báo desktop</li><li>Nguồn thật: Webcam · Video · Server</li></ul>
       </div>
     </div>
     <div class="links"><span>MATLAB → <b>*_iqa.json</b> → Python</span><span>Python ⇄ <b>/ws/pose · /ws/events · MJPEG</b> ⇄ Web</span></div>
@@ -233,8 +233,8 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
     </div>
     <div class="flow" style="margin-top:22px">
       <span class="arrow">→</span>
-      <div class="chip a">5 · Vùng cấm + PPE<small>polygon, mũ / áo</small></div><span class="arrow">→</span>
-      <div class="chip g">6 · IQA<small>5 chỉ số chất lượng</small></div><span class="arrow">→</span>
+      <div class="chip a">5 · 5 sự kiện tư thế<small>FALL · STANDING · SQUAT · STOOP · PARTIAL</small></div><span class="arrow">→</span>
+      <div class="chip g">6 · IQA<small>panel UI, không tạo event</small></div><span class="arrow">→</span>
       <div class="chip r">7 · AlertEngine<small>xác nhận theo thời gian</small></div><span class="arrow">→</span>
       <div class="chip r">8 · AlertHub<small>lưu → gửi → đẩy realtime</small></div>
     </div>
@@ -261,7 +261,7 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
       <tr><td>Exposure</td><td>Tỉ lệ điểm ảnh cháy sáng (&gt; 0.95) và tối (&lt; 0.05)</td><td>Tinh thần ISO 18434-1</td></tr>
     </table>
     <pre class="code mt"><span class="kw">Overall</span> = <span class="st">0.05</span>·PIQE + <span class="st">0.50</span>·Blur + <span class="st">0.20</span>·Contrast + <span class="st">0.15</span>·Noise + <span class="st">0.10</span>·Exposure
-<span class="cm"># Overall &lt; 40 kéo dài 5 s  →</span> <span class="bad">CAMERA WARNING</span>
+<span class="cm"># Overall &lt; 40 → badge trên panel IQA (không tạo event)</span>
 <span class="cm"># Trọng số sau make calibrate-iqa (slide kế)</span></pre>
     <div class="stripe-b"></div>
     <div class="footer"><span>iqa · 5 metrics</span><span>ECHO MOVE</span></div>
@@ -297,36 +297,36 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
     <p class="sub mt" style="font-size:26px">Blur nặng hơn PIQE vì PIQE-fast có thể <b>tăng</b> khi ảnh mờ (std MSCN giảm) — nếu để PIQE = 0.25 thì Overall không giảm khi camera mất nét.</p>
     <div class="stripe-b"></div>
     <div class="footer"><span>iqa · weight calibration</span><span>ECHO MOVE</span></div>
-    <aside class="notes">Nhấn mạnh: đây là tối ưu trên dataset suy giảm có kiểm soát, khớp ngưỡng CAMERA của hệ thống — trung thực nói chưa phải MOS người xem trên ảnh hiện trường.</aside>
+    <aside class="notes">Nhấn mạnh: tối ưu trên dataset suy giảm có kiểm soát — trung thực nói chưa phải MOS người xem trên ảnh hiện trường. IQA không còn tạo event CAMERA.</aside>
   </section>
 
   <!-- 8. POSTURE -->
   <section class="slide" data-title="Phân loại tư thế">
     <div class="stripe"></div>
     <div class="chrome"><span class="tag amber">Tư thế</span><span class="page"></span></div>
-    <div class="kicker">Luật hình học trên 17 keypoint</div>
-    <h2 class="h2">Từ keypoint đến <span class="red">mức nguy hiểm</span></h2>
+    <div class="kicker">YOLOv8-Pose · 5 kỹ thuật duy nhất</div>
+    <h2 class="h2">Từ 17 keypoint đến <span class="red">5 sự kiện</span></h2>
     <div class="grid2 mt">
       <div>
-        <pre class="code" style="font-size:24px"><span class="cm"># x nhân W/H trước khi tính góc</span>
+        <pre class="code" style="font-size:22px"><span class="cm"># x nhân W/H trước khi tính góc</span>
 <span class="kw">spine</span> = atan2(|x_vai − x_hông|, |y_vai − y_hông|)
 <span class="kw">knee</span>  = góc hông–gối–cổ chân
-<span class="kw">ratio</span> = rộng / cao khung keypoint
 
-<span class="kw">if</span> spine &gt; <span class="st">65°</span> <span class="kw">and</span> ratio &gt; <span class="st">1</span>  → <span class="bad">NẰM NGANG</span>
-<span class="kw">if</span> knee &lt; <span class="st">140°</span> <span class="kw">and</span> spine &lt; <span class="st">45°</span> → <span class="st">NÂNG ĐÚNG</span>
-<span class="kw">if</span> spine &gt; <span class="st">60°</span>               → <span class="bad">SAI TƯ THẾ</span>
-<span class="kw">if</span> spine &gt; <span class="st">30°</span>               → CHÚ Ý</pre>
+<span class="kw">if</span> partial_body(YOLO conf)     → <span class="bad">PARTIAL</span>
+<span class="kw">if</span> fall_multisignal (≥ 2/3)    → <span class="bad">FALL</span>
+<span class="kw">if</span> knee &lt; <span class="st">140°</span> <span class="kw">and</span> spine &lt; <span class="st">45°</span> → <span class="st">SQUAT</span>
+<span class="kw">if</span> spine &gt; <span class="st">60°</span>                 → <span class="bad">STOOP</span>
+<span class="kw">else</span>                           → <span class="st">STANDING</span></pre>
       </div>
       <div class="checks">
-        <div class="check ok"><div class="box">✓</div><div class="txt">Hiệu chỉnh tỉ lệ khung hình <span>— khung 16:9 từng làm lệch góc lưng tới ~40 %</span></div></div>
-        <div class="check ok"><div class="box">✓</div><div class="txt">Bỏ luật cũ |y_vai − y_hông| &lt; 0.08 <span>— báo nhầm khi cúi sâu</span></div></div>
-        <div class="check ok"><div class="box">✓</div><div class="txt">Thiếu điểm vai / hông <span>— coi là an toàn, không đoán</span></div></div>
-        <div class="check ok"><div class="box">✓</div><div class="txt">Python và JS dùng <b>cùng một luật</b> <span>— kiểm tra chéo bằng Node</span></div></div>
+        <div class="check ok"><div class="box">✓</div><div class="txt">PARTIAL = thiếu core joints / &lt; 8 điểm / cắt mép <span>— không còn “cúi nhẹ”</span></div></div>
+        <div class="check ok"><div class="box">✓</div><div class="txt">Hiệu chỉnh tỉ lệ khung hình <span>— khung 16:9 từng làm lệch góc lưng ~40 %</span></div></div>
+        <div class="check ok"><div class="box">✓</div><div class="txt">Nhiều người qua ByteTrack <span>— mỗi ID một episode riêng</span></div></div>
+        <div class="check ok"><div class="box">✓</div><div class="txt">Python và JS dùng <b>cùng một luật</b></div></div>
       </div>
     </div>
     <div class="stripe-b"></div>
-    <div class="footer"><span>posture · geometry rules</span><span>ECHO MOVE</span></div>
+    <div class="footer"><span>posture · 5 events</span><span>ECHO MOVE</span></div>
   </section>
 
   <!-- 8. MULTI-SIGNAL FALL -->
@@ -367,80 +367,57 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
     <table class="tbl mt">
       <tr><th>Loại</th><th>Điều kiện mỗi frame</th><th>Phải kéo dài</th><th>Mức</th></tr>
       <tr><td>FALL</td><td>technique = FALL</td><td>1.5 s (0.75 s nếu hông rơi nhanh)</td><td><span class="lv c">CRITICAL</span></td></tr>
-      <tr><td>MANDOWN</td><td>vẫn nằm sau khi đã báo ngã</td><td>+ 10 s</td><td><span class="lv c">CRITICAL</span></td></tr>
-      <tr><td>ZONE</td><td>chân trong vùng cấm</td><td>dwell của vùng (1 s)</td><td><span class="lv w">WARNING</span></td></tr>
-      <tr><td>POSTURE</td><td>cúi sai tư thế</td><td>3 s</td><td><span class="lv w">WARNING</span></td></tr>
-      <tr><td>ERGO</td><td>REBA ≥ 6, tích lũy trong 10 phút</td><td>60 s</td><td><span class="lv w">WARNING</span></td></tr>
-      <tr><td>PPE</td><td>thiếu mũ / áo phản quang</td><td>5 s</td><td><span class="lv w">WARNING</span></td></tr>
-      <tr><td>CAMERA · OFFLINE</td><td>IQA &lt; 40 · mất tín hiệu</td><td>5 s · 30 s</td><td><span class="lv w">WARNING</span></td></tr>
-      <tr><td>RECOVERED</td><td>đã ngã, nay đứng dậy</td><td>2 s</td><td><span class="lv i">INFO</span></td></tr>
+      <tr><td>STOOP</td><td>technique = STOOP (cúi khom)</td><td>3 s</td><td><span class="lv w">WARNING</span></td></tr>
+      <tr><td>PARTIAL</td><td>YOLO chỉ thấy một phần cơ thể</td><td>5 s</td><td><span class="lv w">WARNING</span></td></tr>
+      <tr><td>SQUAT</td><td>technique = SQUAT (ngồi xổm)</td><td>3 s</td><td><span class="lv i">INFO</span></td></tr>
+      <tr><td>STANDING</td><td>technique = STANDING</td><td>3 s</td><td><span class="lv i">INFO</span></td></tr>
     </table>
-    <p class="sub mt" style="font-size:28px">Mất dấu &lt; 0.5 s không reset · mỗi (loại, người) chỉ báo một lần · cooldown 30 s để không spam.</p>
+    <p class="sub mt" style="font-size:28px">Chỉ 5 event · mất dấu &lt; 0.5 s không reset · mỗi (loại, người) một lần · cooldown 30 s.</p>
     <div class="stripe-b"></div>
     <div class="footer"><span>alerts · temporal confirmation</span><span>ECHO MOVE</span></div>
   </section>
 
-  <!-- 10. MAN-DOWN TIMELINE -->
-  <section class="slide" data-title="Ngã → bất động → đứng dậy">
+  <!-- 10. FIVE EVENTS -->
+  <section class="slide" data-title="Năm sự kiện tư thế">
     <div class="stripe"></div>
-    <div class="chrome"><span class="tag">Man-down</span><span class="page"></span></div>
-    <div class="kicker">Ngã rồi đứng dậy khác hẳn ngã rồi nằm im</div>
-    <h2 class="h2">Một sự cố, <span class="red">ba thông điệp</span></h2>
-    <svg viewBox="0 0 1660 330" style="width:100%;margin-top:30px" xmlns="http://www.w3.org/2000/svg" font-family="Be Vietnam Pro, sans-serif">
-      <line x1="40" y1="230" x2="1620" y2="230" stroke="#14141a" stroke-width="4"/>
-      <rect x="140" y="170" width="1100" height="60" fill="#ffecee"/>
-      <rect x="140" y="170" width="110" height="60" fill="#e0314a" opacity=".35"/>
-      <rect x="1240" y="170" width="220" height="60" fill="#e8f8ee"/>
-      <text x="690" y="208" text-anchor="middle" font-size="26" fill="#e0314a" font-weight="700">nằm trên sàn</text>
-      <text x="1350" y="208" text-anchor="middle" font-size="26" fill="#067647" font-weight="700">đứng dậy</text>
-      <g font-size="22" fill="#8a8892" text-anchor="middle">
-        <text x="140" y="270">0 s</text><text x="250" y="270">1.5 s</text><text x="1150" y="270">11.5 s</text><text x="1460" y="270">+2 s</text>
-      </g>
-      <g>
-        <line x1="250" y1="170" x2="250" y2="100" stroke="#e0314a" stroke-width="4"/>
-        <rect x="160" y="30" width="250" height="70" rx="14" fill="#e0314a"/><text x="285" y="76" text-anchor="middle" font-size="30" font-weight="900" fill="#fff">FALL</text>
-        <line x1="1150" y1="170" x2="1150" y2="100" stroke="#e0314a" stroke-width="4"/>
-        <rect x="1010" y="30" width="280" height="70" rx="14" fill="#14141a"/><text x="1150" y="76" text-anchor="middle" font-size="30" font-weight="900" fill="#ff9aa8">MANDOWN</text>
-        <line x1="1460" y1="170" x2="1460" y2="100" stroke="#067647" stroke-width="4"/>
-        <rect x="1310" y="30" width="300" height="70" rx="14" fill="#067647"/><text x="1460" y="76" text-anchor="middle" font-size="30" font-weight="900" fill="#fff">RECOVERED</text>
-      </g>
-      <text x="40" y="320" font-size="22" fill="#4a4955">MANDOWN tính từ lúc ngã được xác nhận: 1.5 s + ECHO_MANDOWN_S (10 s); lệch ≤ 2 s không reset.</text>
-    </svg>
-    <div class="grid3 mt">
-      <div class="card t-red"><div class="lbl">Còi hú</div><h4>FALL</h4><p>Có người vừa ngã, kèm ảnh có skeleton.</p></div>
-      <div class="card t-red"><div class="lbl">Ưu tiên cứu hộ</div><h4>MANDOWN</h4><p>Ghi rõ "<b>bất động</b>" hay "còn cử động" (chuyển động keypoint &lt; 0.05).</p></div>
-      <div class="card t-green"><div class="lbl">Không còi</div><h4>RECOVERED</h4><p>Toast xanh: người đã đứng dậy ≥ 2 s.</p></div>
+    <div class="chrome"><span class="tag">Events</span><span class="page"></span></div>
+    <div class="kicker">Một taxonomy · dễ lọc · dễ demo</div>
+    <h2 class="h2">Chỉ còn <span class="red">5 loại</span> trong nhật ký</h2>
+    <div class="grid3 mt" style="grid-template-columns:repeat(5,1fr);gap:18px">
+      <div class="card t-red"><div class="lbl">CRITICAL</div><h4>FALL</h4><p>Ngã đa tín hiệu ≥ 1.5 s · còi hú · clip.</p></div>
+      <div class="card t-green"><div class="lbl">INFO</div><h4>STANDING</h4><p>Đứng thẳng ≥ 3 s · toast, không hú.</p></div>
+      <div class="card t-green"><div class="lbl">INFO</div><h4>SQUAT</h4><p>Ngồi xổm (gối gập, lưng thẳng) ≥ 3 s.</p></div>
+      <div class="card t-amber"><div class="lbl">WARNING</div><h4>STOOP</h4><p>Cúi khom spine &gt; 60° ≥ 3 s.</p></div>
+      <div class="card t-amber"><div class="lbl">WARNING</div><h4>PARTIAL</h4><p>YOLO chỉ thấy một phần cơ thể ≥ 5 s.</p></div>
+    </div>
+    <div class="alert mt">
+      <h3>Đã bỏ MANDOWN · RECOVERED · POSTURE · ERGO · ZONE · PPE · CAMERA · OFFLINE</h3>
+      <p>IQA vẫn hiện trên panel; vùng/PPE có thể vẽ overlay nhưng không tạo event.</p>
     </div>
     <div class="stripe-b"></div>
-    <div class="footer"><span>man-down · timeline</span><span>ECHO MOVE</span></div>
+    <div class="footer"><span>events · taxonomy</span><span>ECHO MOVE</span></div>
   </section>
 
-  <!-- 11. REBA / ZONE / PPE -->
-  <section class="slide" data-title="REBA · Vùng cấm · PPE">
+  <!-- 11. PARTIAL / YOLO -->
+  <section class="slide" data-title="PARTIAL từ YOLO">
     <div class="stripe"></div>
-    <div class="chrome"><span class="tag amber">Luật mở rộng</span><span class="page"></span></div>
-    <div class="kicker">Từ "một khoảnh khắc" đến "cả ca làm việc"</div>
-    <h2 class="h2">Ba luật cho <span class="amb">hiện trường thật</span></h2>
-    <div class="grid3 mt">
-      <div class="card t-amber">
-        <div class="lbl">Ergonomics</div><h4>REBA &amp; ERGO</h4>
-        <ul><li>Điểm REBA rút gọn từ bảng A/B/C (Hignett &amp; McAtamney 2000)</li><li>Thân, cổ, chân, cánh tay, cẳng tay</li><li>ERGO: REBA ≥ 6 cộng dồn &gt; 60 s trong 10 phút</li></ul>
+    <div class="chrome"><span class="tag amber">Partial body</span><span class="page"></span></div>
+    <div class="kicker">Không đoán tư thế khi skeleton thiếu</div>
+    <h2 class="h2">PARTIAL = <span class="amb">YOLO visibility</span>, không phải cúi nhẹ</h2>
+    <div class="grid2 mt">
+      <div class="checks">
+        <div class="check ok"><div class="box">1</div><div class="txt">&lt; 8 joint có conf đủ <span>— che khuất / người quá xa</span></div></div>
+        <div class="check ok"><div class="box">2</div><div class="txt">Thiếu vai hoặc hông <span>— không tính được spine tin cậy</span></div></div>
+        <div class="check ok"><div class="box">3</div><div class="txt">Bbox sát mép + &lt; 2 chân <span>— người bị cắt khung hình</span></div></div>
+        <div class="check ok"><div class="box">4</div><div class="txt">Nhiều người OK <span>— ByteTrack giữ ID; mỗi người một PARTIAL riêng</span></div></div>
       </div>
-      <div class="card t-red">
-        <div class="lbl">Danger zone</div><h4>Vùng cấm</h4>
-        <ul><li>Polygon vẽ trực tiếp trên tab Camera (nút ⚙)</li><li>Lấy điểm <b>chân</b> (cổ chân hoặc đáy khung)</li><li>Bật / tắt luật theo từng camera</li></ul>
+      <div class="alert amber" style="align-self:start">
+        <h3>Tại sao cần?</h3>
+        <p>Báo “một phần cơ thể” thay vì đoán FALL/STOOP sai khi YOLO chỉ trả nửa skeleton. Confirm 5 s + cooldown 30 s.</p>
       </div>
-      <div class="card t-blue">
-        <div class="lbl">Tuỳ chọn</div><h4>Đồ bảo hộ (PPE)</h4>
-        <ul><li>Model YOLO PPE riêng (<code>ECHO_PPE_MODEL</code>)</li><li>Mũ gán theo vùng đầu, áo theo vùng thân</li><li>Không thấy vùng → "không rõ", không báo</li></ul>
-      </div>
-    </div>
-    <div class="alert amber mt2">
-      <h3>Cấu hình lưu ngay, áp dụng ngay</h3>
-      <p>Vùng và luật lưu vào <code>output/camera_config.json</code>, không cần khởi động lại server.</p>
     </div>
     <div class="stripe-b"></div>
-    <div class="footer"><span>rules · reba · zones · ppe</span><span>ECHO MOVE</span></div>
+    <div class="footer"><span>partial · yolo keypoints</span><span>ECHO MOVE</span></div>
   </section>
 
   <!-- 12. TRACKER -->
@@ -563,13 +540,13 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
         <div class="check ok"><div class="box">1</div><div class="txt">MATLAB chạy IQA <span>— 9 biểu đồ, JSON tự nạp sang web</span></div></div>
         <div class="check ok"><div class="box">2</div><div class="txt">Tab Camera <span>— MJPEG có skeleton, người 3D theo camera</span></div></div>
         <div class="check ok"><div class="box">3</div><div class="txt">IQA Live đủ chỉ số <span>— Blur/Noise/… + badge cảnh báo theo metric</span></div></div>
-        <div class="check ok"><div class="box">4</div><div class="txt">Cúi sai trước webcam <span>— cảnh báo sau 3 s, Telegram nhận ảnh</span></div></div>
+        <div class="check ok"><div class="box">4</div><div class="txt">Cúi khom trước webcam <span>— STOOP sau 3 s, Telegram nhận ảnh</span></div></div>
       </div>
       <div class="checks">
-        <div class="check ok"><div class="box">5</div><div class="txt">Nằm yên 10 s rồi đứng dậy <span>— MANDOWN → RECOVERED</span></div></div>
-        <div class="check ok"><div class="box">6</div><div class="txt">Tab Sự kiện <span>— ▶ Clip, Xác nhận, Báo nhầm, CSV</span></div></div>
-        <div class="check ok"><div class="box">7</div><div class="txt">Vẽ vùng cấm, bước vào <span>— cảnh báo ZONE</span></div></div>
-        <div class="check ok"><div class="box">8</div><div class="txt">Che ống kính / tắt đèn <span>— cảnh báo Ảnh mờ / Ảnh tối (không lửa giả)</span></div></div>
+        <div class="check ok"><div class="box">5</div><div class="txt">Nằm xuống ≥ 1.5 s <span>— FALL CRITICAL + clip</span></div></div>
+        <div class="check ok"><div class="box">6</div><div class="txt">Đứng / ngồi xổm <span>— STANDING · SQUAT (INFO)</span></div></div>
+        <div class="check ok"><div class="box">7</div><div class="txt">Đứng sát mép khung / che thân <span>— PARTIAL sau 5 s</span></div></div>
+        <div class="check ok"><div class="box">8</div><div class="txt">Events + IQA panel <span>— Clip, Báo nhầm; badge mờ/tối (không event CAMERA)</span></div></div>
       </div>
     </div>
     <div class="stripe-b"></div>
@@ -590,7 +567,7 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
       </div>
       <div class="card t-green">
         <div class="lbl">Hướng phát triển</div>
-        <ul><li>Hiệu chỉnh ngưỡng bằng dữ liệu nhà xưởng thật và nút "Báo nhầm"</li><li>Mô hình học chuỗi thời gian (LSTM / ST-GCN) trên keypoint</li><li>Thêm re-ID theo ngoại hình</li><li>Huấn luyện model PPE trên ảnh công trường Việt Nam</li></ul>
+        <ul><li>Hiệu chỉnh ngưỡng bằng dữ liệu nhà xưởng thật và nút "Báo nhầm"</li><li>Mô hình học chuỗi thời gian (LSTM / ST-GCN) trên keypoint</li><li>Thêm re-ID theo ngoại hình</li><li>Cải thiện PARTIAL trên góc camera hẹp / che khuất mạnh</li></ul>
       </div>
     </div>
     <div class="stripe-b"></div>

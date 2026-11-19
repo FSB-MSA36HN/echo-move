@@ -6,7 +6,7 @@ Configured in ``ECHO_CAMERAS_FILE`` (or edited from the web UI, saved to
     [{"id": "kho", "source": "rtsp://...",
       "zones": [{"name": "Máy dập", "points": [[0.1, 0.6], [0.4, 0.6], [0.4, 1], [0.1, 1]],
                  "dwell_s": 1}],
-      "disabled_rules": ["POSTURE"]}]
+      "disabled_rules": ["STOOP"]}]
 
 Points are normalised (x / width, y / height). A worker is inside a zone when the point
 between the ankles (or the bottom-centre of the body box) lies in the polygon.

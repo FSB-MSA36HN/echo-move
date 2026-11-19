@@ -5,8 +5,8 @@
   const esc = s => EchoAlerts.esc(s);
   const PAGE = 30;
   const E = {active: false, offset: 0, total: 0, unack: 0, reloadTimer: null};
-  const TYPE_COLOR = {FALL: '#ef4444', MANDOWN: '#b91c1c', RECOVERED: '#10b981', POSTURE: '#f59e0b',
-                      ERGO: '#d97706', ZONE: '#e11d48', PPE: '#eab308', CAMERA: '#0ea5e9', OFFLINE: '#64748b'};
+  const TYPE_COLOR = {FALL: '#ef4444', STANDING: '#22c55e', SQUAT: '#38bdf8', STOOP: '#f59e0b',
+                      PARTIAL: '#a78bfa'};
 
   function params(extra) {
     const p = new URLSearchParams();
@@ -60,12 +60,12 @@
     $('evStats').innerHTML =
       cell('Tổng sự kiện', s.total, 'var(--c)') +
       cell('Chưa xử lý', s.unacknowledged, s.unacknowledged ? '#ef4444' : '#10b981') +
-      cell('Ngã / không dậy', `${by.FALL || 0} / ${by.MANDOWN || 0}`, TYPE_COLOR.FALL) +
-      cell('Cúi sai / REBA', `${by.POSTURE || 0} / ${by.ERGO || 0}`, TYPE_COLOR.POSTURE) +
-      cell('Vùng cấm / bảo hộ', `${by.ZONE || 0} / ${by.PPE || 0}`, TYPE_COLOR.ZONE) +
-      cell('Camera kém / mất', `${by.CAMERA || 0} / ${by.OFFLINE || 0}`, TYPE_COLOR.CAMERA) +
-      cell('Báo nhầm', s.total ? `${fa} (${Math.round(100 * fa / s.total)}%)` : 0, '#94a3b8') +
-      cell('Nguồn', Object.keys(s.by_source || {}).length, '#a78bfa');
+      cell('Ngã', by.FALL || 0, TYPE_COLOR.FALL) +
+      cell('Đứng', by.STANDING || 0, TYPE_COLOR.STANDING) +
+      cell('Ngồi xổm', by.SQUAT || 0, TYPE_COLOR.SQUAT) +
+      cell('Cúi khom', by.STOOP || 0, TYPE_COLOR.STOOP) +
+      cell('Một phần', by.PARTIAL || 0, TYPE_COLOR.PARTIAL) +
+      cell('Báo nhầm', s.total ? `${fa} (${Math.round(100 * fa / s.total)}%)` : 0, '#94a3b8');
     chart(s.by_hour || []);
   }
 
