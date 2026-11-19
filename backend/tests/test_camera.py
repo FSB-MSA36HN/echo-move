@@ -25,7 +25,7 @@ class FakeDetector:
         self.kps = kps
 
     def detect_raw(self, frame):
-        return [self.kps], []
+        return [self.kps], [None], []
 
 
 class FakeCapture:

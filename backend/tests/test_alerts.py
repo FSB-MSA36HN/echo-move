@@ -83,10 +83,11 @@ def test_stoop_squat_partial_standing_alerts():
     eng = AlertEngine(cfg(), "cam")
     alerts, _ = run(eng, [([person("SQUAT")], None)] * 35)
     assert [a.type for a in alerts] == ["SQUAT"]
-    # STANDING / PARTIAL: confirm_s=0 → fire on first frame (still cooldown-limited).
+    # PARTIAL: overlay-only — never raises an alert.
     eng = AlertEngine(cfg(), "cam")
     alerts, _ = run(eng, [([person("PARTIAL")], None)] * 3)
-    assert [a.type for a in alerts] == ["PARTIAL"]
+    assert alerts == []
+    # STANDING: confirm_s=0 → fire on first frame (still cooldown-limited).
     eng = AlertEngine(cfg(), "cam")
     alerts, _ = run(eng, [([person("STANDING")], None)] * 3)
     assert [a.type for a in alerts] == ["STANDING"] and alerts[0].level == "INFO"

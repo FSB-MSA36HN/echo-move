@@ -43,7 +43,7 @@ Khi một cảnh báo được xác nhận: toast góc phải (bấm để mở 
 - **Đứng (STANDING)** — INFO, ghi ngay (log-only); **không lưu ảnh**, tự đánh dấu đã xử lý.
 - **Ngồi xổm (SQUAT)** — INFO, ≥ 3 s; lưu ảnh + clip.
 - **Cúi khom (STOOP)** — WARNING, ≥ 3 s; lưu ảnh + clip.
-- **Một phần cơ thể (PARTIAL)** — WARNING, ghi ngay (log-only); YOLO thiếu core keypoints / cắt mép; **không lưu ảnh**, tự ack.
+- **Một phần của người (PARTIAL)** — trạng thái detect (thiếu mặt/tay/chân); **không cảnh báo**, chỉ vẽ bbox quanh người; tư thế chỉ khi người đủ.
 
 ### 3.1 Nguồn ở tab Giám sát
 Mặc định UI ở trạng thái **chờ nguồn** — chọn một trong các nguồn thật:
@@ -64,7 +64,7 @@ Panel **IQA Live** hiện đủ: PIQE, Blur, Contrast, Noise, Exposure, Tổng. 
 | Exposure | `> 90` | Ảnh chói sáng |
 | Overall | `< 40` | Ảnh kém (tổng) |
 
-IQA chỉ hiện trên panel UI; backend **không** còn event CAMERA — `quality_confirm_s` dùng cho PARTIAL.
+IQA chỉ hiện trên panel UI; backend **không** còn event CAMERA / PARTIAL.
 
 ### 3.3 Phím & nút
 | Phím | Chức năng |
@@ -104,7 +104,7 @@ Cấu hình bằng biến môi trường `ECHO_*` (xem [.env.example](../.env.ex
 | `ECHO_CAMERAS` | (trống) | Camera server, `tên=nguồn` cách nhau dấu phẩy |
 | `ECHO_CAMERAS_FILE` | (trống) | File JSON danh sách camera |
 | `ECHO_CAMERA_FPS` | 10 | Số frame phân tích mỗi giây cho mỗi camera |
-| `ECHO_FALL_CONFIRM_S` / `ECHO_POSTURE_CONFIRM_S` | 1.5 / 3 | Confirm FALL / SQUAT·STOOP (STANDING·PARTIAL = 0 s, không ảnh) |
+| `ECHO_FALL_CONFIRM_S` / `ECHO_POSTURE_CONFIRM_S` | 1.5 / 3 | Confirm FALL / SQUAT·STOOP (STANDING = 0 s log-only; PARTIAL không alert) |
 | `ECHO_ALERT_COOLDOWN_S` | 30 | Không lặp cùng cảnh báo cho cùng người trong khoảng này |
 | `ECHO_DATA_DIR` | `./output` | Nơi lưu `echo.db` và `snapshots/` |
 | `ECHO_RECORD_BROWSER_EVENTS` | 1 | Ghi cả cảnh báo từ chế độ Server / AI trình duyệt |
@@ -159,7 +159,7 @@ SQLite tại `output/echo.db` (bảng `events`), ảnh tại `output/snapshots/`
 ### 4.4 Vùng nguy hiểm và luật theo từng camera
 Trong rail **Cameras**, bấm ⚙ trên một camera:
 1. **Thêm vùng** (overlay MJPEG): đặt tên, dwell_s, click ≥ 3 đỉnh. Bấm *Xong vùng*.
-2. Bỏ chọn luật không cần: `FALL` / `STANDING` / `SQUAT` / `STOOP` / `PARTIAL`.
+2. Bỏ chọn luật không cần: `FALL` / `STANDING` / `SQUAT` / `STOOP` (PARTIAL không tạo event).
 3. **Lưu** → `output/camera_config.json`, áp dụng ngay.
 
 ```json
@@ -219,7 +219,7 @@ Chạy test: `runtests('matlab/tests')`.
 | Không nghe còi | Bấm vào trang 1 lần (trình duyệt chặn âm thanh trước khi người dùng tương tác); kiểm tra nút 🔔 |
 | Không nhận Telegram | Kiểm tra `/health` có `"telegram"`; bot đã được thêm vào nhóm; xem log `notification failed` |
 | Không có nút ▶ Clip | Clip chỉ có cho sự kiện của camera server (không có cho trình duyệt); clip xuất hiện khoảng 5 s sau sự kiện; kiểm tra `ECHO_EVENT_CLIPS=1` |
-| PARTIAL báo nhầm / bỏ sót | Người quá xa hoặc che khuất nhẹ — chỉnh `visibility_threshold` / góc camera |
+| PARTIAL quá nhạy / bỏ sót | Người quá xa hoặc che khuất — chỉnh góc camera / `visibility_threshold` (chỉ ảnh hưởng overlay bbox) |
 | Người 3D hiện dạng khối đơn giản | Không tải được mô hình GLTF/WebGL → fallback; kiểm tra Console |
 | MATLAB `Undefined function` | Thiếu Image Processing Toolbox (đã có fallback cho phần lớn hàm) |
 | MATLAB chậm | `cfg.piqeMode='fast'`, `cfg.piqeSampleN=60` |

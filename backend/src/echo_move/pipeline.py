@@ -142,12 +142,12 @@ class StreamPipeline:
         started = time.perf_counter()
         t = time.time() if t is None else t
         h, w = frame.shape[:2]
-        raw, hands = self.detector.detect_raw(frame)
+        raw, det_boxes, hands = self.detector.detect_raw(frame)
         persons = [
             {"id": tp.track_id, "keypoints": tp.keypoints, "bbox": list(tp.bbox),
              "safety": self.fall.refine(tp.track_id,
                                         classify_posture(tp.keypoints, self.cfg, w / h), t)}
-            for tp in self.tracker.update(raw, t)
+            for tp in self.tracker.update(raw, t, det_boxes)
         ]
         self._zones(persons)
         self._ppe(frame, persons)

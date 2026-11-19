@@ -16,6 +16,7 @@ BGR = {"SAFE": (80, 200, 60), "WARNING": (0, 165, 255), "RISK": (40, 40, 230)}
 # Hershey fonts are ASCII-only, so overlay labels avoid Vietnamese diacritics.
 LABELS = {"STANDING": "STANDING", "SQUAT": "SQUAT", "STOOP": "STOOP",
           "PARTIAL": "PARTIAL", "FALL": "FALL"}
+PARTIAL_TECH = "PARTIAL"
 
 
 def ascii_text(s: str) -> str:
@@ -51,22 +52,32 @@ def annotate(frame: np.ndarray, persons: list[dict[str, Any]], *, title: str = "
         draw_zones(out, zones, active)
     for p in persons:
         safety = p.get("safety") or {}
+        tech = safety.get("technique", "NONE")
         color = BGR.get(safety.get("level", "SAFE"), BGR["SAFE"])
         thick = 3 if highlight is None or p.get("id") == highlight else 1
         kps = p["keypoints"]
         pts = [(int(k[0] * w), int(k[1] * h), k[2]) for k in kps]
-        for a, b in EDGES:
-            if pts[a][2] > vis and pts[b][2] > vis:
-                cv2.line(out, pts[a][:2], pts[b][:2], color, thick, cv2.LINE_AA)
-        for x, y, c in pts:
-            if c > vis:
-                cv2.circle(out, (x, y), 3 + thick, color, -1, cv2.LINE_AA)
+        # Incomplete person: traffic-style bbox only (no misleading skeleton).
+        if tech != PARTIAL_TECH:
+            for a, b in EDGES:
+                if pts[a][2] > vis and pts[b][2] > vis:
+                    cv2.line(out, pts[a][:2], pts[b][:2], color, thick, cv2.LINE_AA)
+            for x, y, c in pts:
+                if c > vis:
+                    cv2.circle(out, (x, y), 3 + thick, color, -1, cv2.LINE_AA)
         box = p.get("bbox")
+        if not box and pts:
+            vis_pts = [(x, y) for x, y, c in pts if c > vis]
+            if len(vis_pts) >= 2:
+                xs, ys = [p[0] for p in vis_pts], [p[1] for p in vis_pts]
+                box = (min(xs) / w, min(ys) / h, max(xs) / w, max(ys) / h)
         if box:
             x1, y1, x2, y2 = (int(box[0] * w) - 10, int(box[1] * h) - 10,
                               int(box[2] * w) + 10, int(box[3] * h) + 10)
             cv2.rectangle(out, (x1, y1), (x2, y2), color, thick)
-            label = f"#{p.get('id')} {LABELS.get(safety.get('technique', 'NONE'), '')}"
+            label = f"#{p.get('id')} {LABELS.get(tech, '')}"
+            if tech == PARTIAL_TECH:
+                label = f"#{p.get('id')} MỘT PHẦN"
             missing = [k for k, v in (p.get("ppe") or {}).items() if v is False]
             if missing:
                 label += " NO-" + "/".join(m.upper() for m in missing)

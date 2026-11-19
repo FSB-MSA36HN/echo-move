@@ -229,7 +229,7 @@ def create_app(cfg: Settings | None = None) -> FastAPI:
         store_or_503(request)
         level, message = MESSAGES[body.type]
         jpeg = None
-        # Ignore client images for STANDING / PARTIAL (log-only).
+        # Ignore client images for STANDING (log-only). PARTIAL is not emitted.
         if body.image and body.type in ACTION_TYPES:
             try:
                 jpeg = base64.b64decode(body.image.split(",", 1)[-1], validate=False)

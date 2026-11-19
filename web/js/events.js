@@ -24,7 +24,7 @@
     el.innerHTML = `<div class="hint feature-guide">
       <b>Sự kiện — nhật ký tư thế đã xác nhận</b>
       <ul>
-        <li><b>Thống kê</b>: tổng số, chưa xử lý, theo loại FALL / STANDING / SQUAT / STOOP / PARTIAL.</li>
+        <li><b>Thống kê</b>: tổng số, chưa xử lý, theo loại FALL / STANDING / SQUAT / STOOP (PARTIAL không tạo event).</li>
         <li><b>Biểu đồ giờ</b>: phân bố sự kiện theo khung giờ 0–23 trong khoảng lọc.</li>
         <li><b>Danh sách &amp; ảnh</b>: snapshot, xác nhận / báo nhầm, xem clip.</li>
       </ul>
@@ -78,7 +78,7 @@
       cell('Đứng', by.STANDING || 0, TYPE_COLOR.STANDING) +
       cell('Ngồi xổm', by.SQUAT || 0, TYPE_COLOR.SQUAT) +
       cell('Cúi khom', by.STOOP || 0, TYPE_COLOR.STOOP) +
-      cell('Một phần', by.PARTIAL || 0, TYPE_COLOR.PARTIAL) +
+      cell('Một phần người', by.PARTIAL || 0, TYPE_COLOR.PARTIAL) +
       cell('Báo nhầm', s.total ? `${fa} (${Math.round(100 * fa / s.total)}%)` : 0, '#94a3b8');
     chart(s.by_hour || []);
   }

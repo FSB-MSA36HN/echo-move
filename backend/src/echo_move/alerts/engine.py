@@ -7,7 +7,9 @@ Action events (snapshot + notify + optional clip) need a sustained pose:
 
 Log-only events fire immediately (confirm 0) and skip image/clip/notify:
 
-* STANDING / PARTIAL — cooldown still applies to avoid spam.
+* STANDING — cooldown still applies to avoid spam.
+
+PARTIAL is a detection state only (bbox overlay) — it never raises an alert.
 
 Short dropouts (< ``GRACE_S``) do not reset an episode. Each (type, track) pair fires at
 most once per ``alert_cooldown_s``.
@@ -28,12 +30,12 @@ MESSAGES = {
     "STANDING": ("INFO", "Công nhân đang đứng"),
     "SQUAT": ("INFO", "Công nhân ngồi xổm"),
     "STOOP": ("WARNING", "Công nhân cúi khom lưng"),
-    "PARTIAL": ("WARNING", "Chỉ nhận diện một phần cơ thể"),
+    "PARTIAL": ("WARNING", "Một phần của người"),  # kept for API/legacy rows; not emitted
 }
 ALERT_TYPES = tuple(MESSAGES)
 # Full handling (confirm + snapshot + notify/clip). Everything else is log-only.
 ACTION_TYPES = frozenset({"FALL", "SQUAT", "STOOP"})
-LOG_ONLY_TYPES = frozenset({"STANDING", "PARTIAL"})
+LOG_ONLY_TYPES = frozenset({"STANDING"})
 LYING = "FALL"
 
 
@@ -164,10 +166,8 @@ class AlertEngine:
             if self._check(("SQUAT", tid), tech == "SQUAT", t, cfg.posture_confirm_s):
                 out.append(self._alert("SQUAT", t, tid, safety.get("detail", ""),
                                        **_metrics(safety)))
-            # STANDING / PARTIAL: log immediately (confirm_s=0), still cooldown-limited.
-            if self._check(("PARTIAL", tid), tech == "PARTIAL", t, 0.0):
-                out.append(self._alert("PARTIAL", t, tid, safety.get("detail", ""),
-                                       **_metrics(safety)))
+            # PARTIAL: no alert — incomplete person is overlay-only.
+            # STANDING: log immediately (confirm_s=0), still cooldown-limited.
             if self._check(("STANDING", tid), tech == "STANDING", t, 0.0):
                 out.append(self._alert("STANDING", t, tid, safety.get("detail", ""),
                                        **_metrics(safety)))

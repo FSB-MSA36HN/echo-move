@@ -686,6 +686,10 @@ vec3 echoRegion(vec3 p, out float stripe) {
 
   function update(person, aspect) {
     if (!st.ok || !st.bones) return;
+    // Incomplete person: keep last idle pose — do not retarget a broken skeleton.
+    if (person && person.safety && person.safety.technique === 'PARTIAL') {
+      return;
+    }
     let kps = person && person.keypoints;
     let P = null;
     if (kps && kps.length >= 17) {

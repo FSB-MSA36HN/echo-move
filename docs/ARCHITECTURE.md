@@ -28,7 +28,7 @@
 | `pose/fall.py` | `FallAnalyzer`: chiều cao lúc đứng của từng track → tín hiệu "sụp người" |
 | `pose/ppe.py` | Chuẩn hoá tên lớp PPE, gán mũ/áo cho người theo vùng đầu/thân |
 | `zones.py` | Vùng nguy hiểm (polygon), `CameraOptions`, `OptionsStore` (`camera_config.json`) |
-| `alerts/engine.py` | Xác nhận FALL / STANDING / SQUAT / STOOP / PARTIAL theo thời gian, cooldown |
+| `alerts/engine.py` | Xác nhận FALL / STANDING / SQUAT / STOOP theo thời gian, cooldown (PARTIAL không emit) |
 | `alerts/hub.py` | Lưu → thông báo → phát realtime (thread-safe), gắn clip |
 | `storage/db.py` | `EventStore` SQLite (WAL, tự migrate cột mới) + ảnh JPEG + clip, thống kê, CSV, leo thang, xoá dữ liệu cũ |
 | `notify/` | Telegram `sendPhoto`/`sendMessage`/`sendVideo`, Zalo OA, webhook JSON |

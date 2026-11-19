@@ -52,7 +52,7 @@ class PPEFakeDetector:
         self.kps, self.dets = kps, dets
 
     def detect_raw(self, frame):
-        return [self.kps], []
+        return [self.kps], [None], []
 
     def detect_ppe(self, frame):
         return self.dets

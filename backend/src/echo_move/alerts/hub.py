@@ -34,7 +34,7 @@ class AlertHub:
     def publish(self, alert: Alert, jpeg: bytes | None = None) -> dict[str, Any]:
         log_only = alert.type in LOG_ONLY_TYPES
         if log_only:
-            jpeg = None  # STANDING / PARTIAL: DB row only, no snapshot
+            jpeg = None  # STANDING: DB row only, no snapshot
         try:
             event = self.store.add(alert, jpeg) if self.store else alert.to_dict()
             if log_only and self.store is not None and event.get("id") is not None:

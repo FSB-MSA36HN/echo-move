@@ -60,7 +60,7 @@
 
   // ---------------------------------------------------------------- zone / rule editor
   const RULE_NAMES = {FALL: 'Ngã', STANDING: 'Đứng', SQUAT: 'Ngồi xổm', STOOP: 'Cúi khom',
-    PARTIAL: 'Một phần cơ thể'};
+    PARTIAL: 'Một phần của người'};
   const ED = {id: null, zones: [], disabled: [], rules: [], drawing: null};
 
   async function openEditor(id) {

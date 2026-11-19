@@ -72,11 +72,14 @@ class PoseDetector:
         except Exception:
             log.warning("MediaPipe Hands unavailable — hand tracking disabled")
 
-    def detect_raw(self, frame_bgr: np.ndarray) -> tuple[list[list[list[float]]], list[Any]]:
-        """Return (raw keypoints per person, hands) for one BGR frame. Coordinates are 0-1."""
+    def detect_raw(self, frame_bgr: np.ndarray) -> tuple[
+        list[list[list[float]]], list[tuple[float, float, float, float] | None], list[Any]
+    ]:
+        """Return (keypoints, xyxyn boxes, hands) for one BGR frame. Coordinates are 0-1."""
         if self.model is None:
-            return [], []
+            return [], [], []
         people: list[list[list[float]]] = []
+        boxes: list[tuple[float, float, float, float] | None] = []
         with self._lock:
             res = self.model(frame_bgr, verbose=False, conf=self.cfg.yolo_conf, half=self._half)
             hands_res = (self.hands.process(cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB))
@@ -87,12 +90,23 @@ class PoseDetector:
             conf_np = (conf.cpu().numpy() if conf is not None
                        else np.ones(xyn.shape[:2], dtype=np.float32))
             kps_all = np.concatenate([xyn, conf_np[..., None]], axis=-1)
-            people = [kps_all[i].tolist() for i in range(min(len(kps_all), self.cfg.max_persons))]
+            n = min(len(kps_all), self.cfg.max_persons)
+            people = [kps_all[i].tolist() for i in range(n)]
+            xyxy = None
+            if res[0].boxes is not None and res[0].boxes.xyxyn is not None:
+                xyxy = res[0].boxes.xyxyn.cpu().numpy()
+            for i in range(n):
+                if xyxy is not None and i < len(xyxy):
+                    x1, y1, x2, y2 = (float(xyxy[i][0]), float(xyxy[i][1]),
+                                      float(xyxy[i][2]), float(xyxy[i][3]))
+                    boxes.append((x1, y1, x2, y2))
+                else:
+                    boxes.append(None)
         hands: list[Any] = []
         if hands_res is not None:
             for hd in hands_res.multi_hand_landmarks or []:
                 hands.append([{"x": lm.x, "y": lm.y, "z": lm.z} for lm in hd.landmark])
-        return people, hands
+        return people, boxes, hands
 
     def detect_ppe(self, frame_bgr: np.ndarray) -> list[PPEDetection] | None:
         """PPE detections for one frame, or None when no PPE model is configured."""

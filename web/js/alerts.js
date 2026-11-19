@@ -4,14 +4,14 @@
 (function () {
   "use strict";
   const RULES = {fallS: 1.5, postureS: 3, cooldownS: 30, graceS: 0.5};
-  // FALL / SQUAT / STOOP: confirm + snapshot. STANDING / PARTIAL: log only (confirm 0, no image).
+  // FALL / SQUAT / STOOP: confirm + snapshot. STANDING: log only. PARTIAL: no alert (bbox only).
   const ACTION = {FALL: 1, SQUAT: 1, STOOP: 1};
   const MESSAGES = {
     FALL: ['CRITICAL', 'Phát hiện công nhân bị ngã'],
     STANDING: ['INFO', 'Công nhân đang đứng'],
     SQUAT: ['INFO', 'Công nhân ngồi xổm'],
     STOOP: ['WARNING', 'Công nhân cúi khom lưng'],
-    PARTIAL: ['WARNING', 'Chỉ nhận diện một phần cơ thể'],
+    PARTIAL: ['WARNING', 'Một phần của người'],
   };
   const LABEL = {FALL: 'NGÃ', STANDING: 'ĐỨNG', SQUAT: 'XỔM', STOOP: 'CÚI KHOM', PARTIAL: 'MỘT PHẦN'};
 
@@ -54,8 +54,7 @@
         out.push({type: 'STOOP', track_id: id, detail: s.detail || ''});
       if (this.check('SQUAT|' + id, tech === 'SQUAT', t, RULES.postureS))
         out.push({type: 'SQUAT', track_id: id, detail: s.detail || ''});
-      if (this.check('PARTIAL|' + id, tech === 'PARTIAL', t, 0))
-        out.push({type: 'PARTIAL', track_id: id, detail: s.detail || ''});
+      // PARTIAL: no alert — incomplete person is overlay-only.
       if (this.check('STANDING|' + id, tech === 'STANDING', t, 0))
         out.push({type: 'STANDING', track_id: id, detail: s.detail || ''});
     });
@@ -142,7 +141,7 @@
       source: a.source || 'browser',
     };
     recent.push(full); if (recent.length > 50) recent.shift();
-    // Log-only (STANDING / PARTIAL): save quietly — no siren / desktop notify.
+    // Log-only (STANDING): save quietly — no siren / desktop notify.
     if (action) { siren(lvl); toast(full); notify(full); }
     else toast(full);
     if (!fromServer && window.EchoBackend && EchoBackend.online) {

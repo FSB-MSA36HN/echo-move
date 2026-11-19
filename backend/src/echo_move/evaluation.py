@@ -44,7 +44,7 @@ class Extraction:
     fps: float  # sampling rate actually used
     aspect: float  # width / height
     duration_s: float
-    frames: list[tuple[float, list[list[list[float]]]]] = field(default_factory=list)
+    frames: list[tuple] = field(default_factory=list)
 
 
 @dataclass
@@ -122,8 +122,8 @@ def extract(path: str, detector: Any, fps: float = 10.0) -> Extraction:
         if not ok:
             break
         if i % step == 0:
-            dets, _ = detector.detect_raw(frame)
-            ex.frames.append((i / src_fps, dets))
+            dets, boxes, _ = detector.detect_raw(frame)
+            ex.frames.append((i / src_fps, dets, boxes))
         i += 1
     cap.release()
     ex.duration_s = i / src_fps
@@ -133,12 +133,14 @@ def extract(path: str, detector: Any, fps: float = 10.0) -> Extraction:
 def replay(ex: Extraction, cfg: Settings) -> list[tuple[str, float]]:
     tracker, fall, engine = PoseTracker(), FallAnalyzer(cfg), AlertEngine(cfg, "eval")
     alerts: list[tuple[str, float]] = []
-    for t, dets in ex.frames:
+    for item in ex.frames:
+        t, dets = item[0], item[1]
+        boxes = item[2] if len(item) > 2 else None
         persons = [
             {"id": tp.track_id, "keypoints": tp.keypoints, "bbox": list(tp.bbox),
              "safety": fall.refine(tp.track_id,
                                    classify_posture(tp.keypoints, cfg, ex.aspect), t)}
-            for tp in tracker.update(dets, t)
+            for tp in tracker.update(dets, t, boxes)
         ]
         alerts += [(a.type, a.t) for a in engine.update(persons, None, t)]
     return alerts

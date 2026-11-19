@@ -33,7 +33,7 @@ Năm kỹ thuật / sự kiện: **PARTIAL**, **FALL**, **SQUAT**, **STOOP**, **
 - `knee` = trung bình góc hông–gối–cổ chân hai bên (180° nếu thiếu điểm).
 - `bbox_ratio` = rộng / cao của khung bao các keypoint nhìn thấy.
 - Thứ tự luật:
-  1. **PARTIAL** — YOLO/MediaPipe chỉ thấy một phần cơ thể: &lt; 8 joint conf đủ, thiếu vai/hông, hoặc bbox sát mép + &lt; 2 chân.
+  1. **PARTIAL** — chỉ một phần của người: thiếu mặt / &lt; 10 joint / thiếu vai–hông / thiếu tay hoặc chân / cắt mép. Không alert; chỉ bbox.
   2. **FALL** — ngã đa tín hiệu (xem dưới).
   3. **SQUAT** — `knee < 140°` và `spine < 45°` (ngồi xổm).
   4. **STOOP** — `spine > 60°` (cúi khom).
@@ -71,9 +71,9 @@ Phân loại từng frame nhiễu (che khuất, mờ chuyển động, ngồi x�
 | STOOP | `technique = STOOP` | `ECHO_POSTURE_CONFIRM_S` = 3 s | WARNING · ảnh + clip |
 | SQUAT | `technique = SQUAT` | `ECHO_POSTURE_CONFIRM_S` = 3 s | INFO · ảnh + clip |
 | STANDING | `technique = STANDING` | **0 s** (ghi ngay) | INFO · log-only, không ảnh, tự ack |
-| PARTIAL | YOLO partial body | **0 s** (ghi ngay) | WARNING · log-only, không ảnh, tự ack |
+| PARTIAL | một phần của người | — | **Không cảnh báo** · chỉ bbox overlay |
 
-`PARTIAL` dùng conf keypoints YOLOv8-Pose (vai+hông, ≥ 8 joint, hoặc bbox sát mép + thiếu chân).
+`PARTIAL` khi thiếu mặt / thân / tay / chân (gate trước tư thế). Overlay chỉ vẽ bounding box (không skeleton). FALL/SQUAT/STOOP/STANDING chỉ khi người đủ.
 
 - Mỗi (loại, track ID) là một "episode": mất điều kiện < 0.5 s không reset (chịu được vài frame lỗi); một episode chỉ phát 1 lần.
 - **Hông rơi nhanh**: trong 1.5 s gần nhất, `y_hông` tăng hơn 25 % chiều cao khung người lớn nhất → khả năng ngã thật cao, nên rút ngắn thời gian xác nhận một nửa.
@@ -97,6 +97,6 @@ Một video dương tính được tính là phát hiện đúng nếu có FALL 
 - Luật tư thế dựa trên 2D, nhạy với góc camera (camera nên đặt cao 2–3 m, nhìn chéo xuống).
 - Tracker có dự đoán vận tốc nhưng không có đặc trưng ngoại hình (re-ID): hai người mặc giống nhau đi sát và che nhau lâu vẫn có thể đổi ID.
 - Tín hiệu "sụp người" cần track đã thấy người đó đứng ≥ 5 frame. Người vào khung hình khi đã nằm thì chỉ dựa vào lying và head_low.
-- PARTIAL dựa trên conf keypoints / mép khung — người xa camera hoặc che khuất mạnh vẫn có thể false positive/negative.
+- PARTIAL (bbox-only) dựa trên conf keypoints / mép khung — người xa hoặc che khuất mạnh có thể gate sớm, chưa phân loại tư thế.
 - Ngưỡng thời gian, góc và hệ số IQA là giá trị thực nghiệm, cần hiệu chỉnh trên dữ liệu nhà xưởng thật.
 - Chiều sâu 3D chỉ là ước lượng (một camera); hướng trước/sau của chi có thể sai khi chi song song trục camera.

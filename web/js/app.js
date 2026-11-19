@@ -146,15 +146,34 @@ function jointAngle(p1, p2, p3) {
   return Math.acos(c) * 180 / Math.PI;
 }
 
+function isPartialBody(kps0) {
+  if (!kps0 || kps0.length < 17)
+    return {partial: true, detail: 'Không đủ skeleton'};
+  const rawVis = kps0.filter(k => k[2] > VIS).length;
+  if (rawVis < 10)
+    return {partial: true, detail: `Chỉ thấy ${rawVis}/17 điểm`};
+  if (![0,1,2,3,4].some(i => kps0[i][2] > VIS))
+    return {partial: true, detail: 'Thiếu mặt'};
+  if (![5,6,11,12].every(i => kps0[i][2] > VIS))
+    return {partial: true, detail: 'Thiếu vai/hông'};
+  const arms = [7,8,9,10].filter(i => kps0[i][2] > VIS).length;
+  if (arms < 2) return {partial: true, detail: 'Thiếu tay'};
+  const legs = [13,14,15,16].filter(i => kps0[i][2] > VIS).length;
+  if (legs < 3) return {partial: true, detail: 'Thiếu chân'};
+  const vis = kps0.filter(k => k[2] > VIS);
+  const x0 = Math.min(...vis.map(k => k[0])), x1 = Math.max(...vis.map(k => k[0]));
+  const y0 = Math.min(...vis.map(k => k[1])), y1 = Math.max(...vis.map(k => k[1]));
+  const atEdge = x0 < .03 || y0 < .03 || x1 > .97 || y1 > .97;
+  if (atEdge && legs < 4)
+    return {partial: true, detail: 'Cắt mép khung hình'};
+  return {partial: false, detail: ''};
+}
+
 // Keypoints are normalised (x/width, y/height); `aspect` = width/height restores true angles.
 function classify(kps0, aspect) {
-  if (!kps0 || kps0.length < 17)
-    return {level:'WARNING',color:[1,.65,0],label:'MỘT PHẦN CƠ THỂ',detail:'Không đủ skeleton',technique:'PARTIAL'};
-  const rawVis = kps0.filter(k => k[2] > VIS).length;
-  if (rawVis < 8)
-    return {level:'WARNING',color:[1,.65,0],label:'MỘT PHẦN CƠ THỂ',detail:`Chỉ thấy ${rawVis}/17 điểm`,technique:'PARTIAL'};
-  if (![5,6,11,12].every(i => kps0[i][2] > VIS))
-    return {level:'WARNING',color:[1,.65,0],label:'MỘT PHẦN CƠ THỂ',detail:'Thiếu vai/hông',technique:'PARTIAL'};
+  const gate = isPartialBody(kps0);
+  if (gate.partial)
+    return {level:'WARNING',color:[1,.65,0],label:'MỘT PHẦN CỦA NGƯỜI',detail:gate.detail,technique:'PARTIAL'};
   const kps = kps0.map(k => [k[0]*(aspect||1), k[1], k[2]]);
   const vy = (kps[5][1]+kps[6][1])/2, hy = (kps[11][1]+kps[12][1])/2;
   const vx = (kps[5][0]+kps[6][0])/2, hx = (kps[11][0]+kps[12][0])/2;
@@ -166,10 +185,6 @@ function classify(kps0, aspect) {
   const x0 = Math.min(...vis.map(k => k[0])), x1 = Math.max(...vis.map(k => k[0]));
   const y0 = Math.min(...vis.map(k => k[1])), y1 = Math.max(...vis.map(k => k[1]));
   const bw = x1 - x0, bh = y1 - y0;
-  const legs = [13,14,15,16].filter(i => kps[i][2] > VIS).length;
-  const atEdge = x0 < .03 || y0 < .03 || x1 > .97 || y1 > .97;
-  if (atEdge && legs < 2)
-    return {level:'WARNING',color:[1,.65,0],label:'MỘT PHẦN CƠ THỂ',detail:'Cắt mép khung hình',technique:'PARTIAL'};
   const lying = sp > 65 && bw / (bh + 1e-6) > 1.0;
   const head = [0,1,2,3,4].filter(i => kps[i][2] > VIS);
   const headY = head.length ? head.reduce((s, i) => s + kps[i][1], 0) / head.length : null;
@@ -263,7 +278,12 @@ function detect() {
         const kps = mp2coco(lms);
         const wl = r.worldLandmarks && r.worldLandmarks[i];
         const world = wl ? MP2COCO.map(j => [wl[j].x, wl[j].y, wl[j].z]) : null;
-        return {id:i, keypoints:kps, world,
+        const vis = kps.filter(k => k[2] > VIS);
+        const bbox = vis.length >= 2 ? [
+          Math.min(...vis.map(k => k[0])), Math.min(...vis.map(k => k[1])),
+          Math.max(...vis.map(k => k[0])), Math.max(...vis.map(k => k[1])),
+        ] : null;
+        return {id:i, keypoints:kps, world, bbox,
                 safety:fallRefine(i, classify(kps, (v.videoWidth||4)/(v.videoHeight||3)), now / 1000)};
       });
       persons.sort((a,b) => b.keypoints.reduce((s,k)=>s+k[2],0) - a.keypoints.reduce((s,k)=>s+k[2],0));
@@ -430,6 +450,17 @@ function showIdle() {
   return true;
 }
 
+function personBBox(p, W, H) {
+  if (p.bbox && p.bbox.length >= 4) {
+    return [p.bbox[0]*W, p.bbox[1]*H, p.bbox[2]*W, p.bbox[3]*H];
+  }
+  const kp = p.keypoints || [];
+  const vis = kp.filter(k => k[2] > VIS);
+  if (vis.length < 2) return null;
+  const xs = vis.map(k => k[0]*W), ys = vis.map(k => k[1]*H);
+  return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
+}
+
 function draw2D(ds) {
   const v = $('v');
   const W = v.videoWidth || 640, H = v.videoHeight || 480;
@@ -441,7 +472,25 @@ function draw2D(ds) {
   ds.forEach((p, i) => {
     const kp = p.keypoints;
     if (!kp || kp.length < 17) return;
-    const mau = CL[i % CL.length];
+    const tech = (p.safety && p.safety.technique) || '';
+    const partial = tech === 'PARTIAL';
+    const mau = partial ? '#f59e0b' : CL[i % CL.length];
+    const box = personBBox(p, W, H);
+    if (box) {
+      const pad = 8;
+      ctx.strokeStyle = mau; ctx.lineWidth = partial ? 3 : 2;
+      ctx.strokeRect(box[0]-pad, box[1]-pad, (box[2]-box[0])+pad*2, (box[3]-box[1])+pad*2);
+      const label = partial ? `P${i+1} MỘT PHẦN` : `P${i+1}`;
+      ctx.font = 'bold 12px IBM Plex Sans, sans-serif';
+      const tw = ctx.measureText(label).width;
+      const lx = box[0]-pad, ly = Math.max(16, box[1]-pad - 4);
+      ctx.fillStyle = mau;
+      ctx.fillRect(lx, ly - 14, tw + 10, 16);
+      ctx.fillStyle = '#0b1220';
+      ctx.fillText(label, lx + 5, ly - 2);
+    }
+    // Complete person only: draw COCO-17 skeleton (partial would be misleading).
+    if (partial) return;
     ctx.strokeStyle = mau; ctx.lineWidth = 3;
     ctx.shadowColor = mau; ctx.shadowBlur = 8;
     KN.forEach(([a,b]) => {
@@ -457,12 +506,6 @@ function draw2D(ds) {
       }
     });
     ctx.globalAlpha = 1; ctx.shadowBlur = 0;
-    if (kp[0] && kp[0][2] > VIS) {
-      ctx.fillStyle = 'rgba(0,0,0,.8)';
-      ctx.fillRect(kp[0][0]*W-30, kp[0][1]*H-25, 60, 18);
-      ctx.fillStyle = mau; ctx.font = 'bold 11px monospace'; ctx.textAlign = 'center';
-      ctx.fillText(`P${i+1}`, kp[0][0]*W, kp[0][1]*H-12);
-    }
   });
 }
 

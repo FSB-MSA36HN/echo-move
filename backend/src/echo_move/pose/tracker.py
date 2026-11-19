@@ -118,9 +118,14 @@ class PoseTracker:
             used.add(tid)
         return assigned
 
-    def update(self, detections: list[list[Keypoint]], t: float) -> list[TrackedPerson]:
+    def update(self, detections: list[list[Keypoint]], t: float,
+               det_boxes: list[BBox | None] | None = None) -> list[TrackedPerson]:
         self.tracks = {i: tr for i, tr in self.tracks.items() if t - tr.last_t <= self.max_age_s}
-        boxes = [keypoint_bbox(d) for d in detections]
+        # Prefer YOLO person boxes; fall back to keypoint hull.
+        if det_boxes is not None and len(det_boxes) == len(detections):
+            boxes = [db if db is not None else keypoint_bbox(d) for d, db in zip(detections, det_boxes, strict=True)]
+        else:
+            boxes = [keypoint_bbox(d) for d in detections]
         scores = [detection_score(d) for d in detections]
         high = [i for i, s in enumerate(scores) if s >= self.HIGH_SCORE]
         low = [i for i, s in enumerate(scores) if s < self.HIGH_SCORE]

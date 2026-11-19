@@ -24,6 +24,19 @@ def test_low_visibility_is_partial():
     kps = [[0.5, 0.5, 0.0]] * 17
     out = classify_posture(kps, CFG, ASPECT)
     assert out["technique"] == "PARTIAL"
+    assert "MỘT PHẦN CỦA NGƯỜI" in out["label"]
+
+
+def test_missing_face_is_partial():
+    sc = load_scenarios()["standing"]["kps"]
+    no_face = [[x, y, 0.0 if i < 5 else c] for i, (x, y, c) in enumerate(sc)]
+    assert classify_posture(no_face, CFG, ASPECT)["technique"] == "PARTIAL"
+
+
+def test_missing_legs_is_partial():
+    sc = load_scenarios()["standing"]["kps"]
+    no_legs = [[x, y, 0.0 if i >= 13 else c] for i, (x, y, c) in enumerate(sc)]
+    assert classify_posture(no_legs, CFG, ASPECT)["technique"] == "PARTIAL"
 
 
 def test_fall_needs_wide_body_not_just_tilted_spine():

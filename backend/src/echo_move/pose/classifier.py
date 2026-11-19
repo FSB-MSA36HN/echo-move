@@ -7,11 +7,13 @@ Temporal confirmation lives in ``alerts.engine``; track-dependent collapse lives
 
 Techniques (also used as event types):
 
-* PARTIAL  — YOLO/MediaPipe saw only part of the body (missing core joints / cut at edge);
+* PARTIAL  — only part of the person is visible (overlay bbox only; no posture alerts);
 * FALL     — multi-signal fall (lying / head_low / collapsed);
 * SQUAT    — knees bent, spine relatively upright;
 * STOOP    — deep forward bend (spine > risk threshold);
 * STANDING — upright standing.
+
+Posture (FALL/SQUAT/STOOP/STANDING) requires a *complete* person: face + core + limbs.
 
 Fall signals (``cfg.fall_multisignal``):
 
@@ -27,11 +29,15 @@ from typing import Any
 
 from ..config import Settings
 
-NOSE, L_SHOULDER, R_SHOULDER, L_ELBOW, R_ELBOW, L_WRIST, R_WRIST = 0, 5, 6, 7, 8, 9, 10
+NOSE, L_EYE, R_EYE, L_EAR, R_EAR = 0, 1, 2, 3, 4
+L_SHOULDER, R_SHOULDER, L_ELBOW, R_ELBOW, L_WRIST, R_WRIST = 5, 6, 7, 8, 9, 10
 L_HIP, R_HIP, L_KNEE, R_KNEE, L_ANKLE, R_ANKLE = 11, 12, 13, 14, 15, 16
-HEAD = (0, 1, 2, 3, 4)
+HEAD = (NOSE, L_EYE, R_EYE, L_EAR, R_EAR)
+FACE = (NOSE, L_EYE, R_EYE, L_EAR, R_EAR)
 CORE = (L_SHOULDER, R_SHOULDER, L_HIP, R_HIP)
-MIN_VISIBLE_JOINTS = 8
+ARM = (L_ELBOW, R_ELBOW, L_WRIST, R_WRIST)
+LEG = (L_KNEE, R_KNEE, L_ANKLE, R_ANKLE)
+MIN_VISIBLE_JOINTS = 10
 EDGE_MARGIN = 0.03
 
 GREEN: list[float] = [0, 1, 0]
@@ -112,25 +118,33 @@ def visible_count(kps: list[list[float]], vis: float) -> int:
 
 
 def is_partial_body(kps: list[list[float]], vis: float) -> tuple[bool, str]:
-    """True when YOLO/MediaPipe only recovered part of the person."""
+    """True when only part of the person is visible — posture rules must not run."""
     if not kps or len(kps) < 17:
         return True, "Không đủ skeleton"
     n_vis = visible_count(kps, vis)
     if n_vis < MIN_VISIBLE_JOINTS:
         return True, f"Chỉ thấy {n_vis}/{len(kps)} điểm"
+    face_ok = any(kps[i][2] > vis for i in FACE)
+    if not face_ok:
+        return True, "Thiếu mặt"
     if not all(kps[i][2] > vis for i in CORE):
         missing = [name for name, i in (("vai T", L_SHOULDER), ("vai P", R_SHOULDER),
                                         ("hông T", L_HIP), ("hông P", R_HIP))
                    if kps[i][2] <= vis]
         return True, "Thiếu: " + ", ".join(missing) if missing else "Thiếu thân"
+    arms = sum(1 for i in ARM if kps[i][2] > vis)
+    if arms < 2:
+        return True, "Thiếu tay"
+    legs = sum(1 for i in LEG if kps[i][2] > vis)
+    if legs < 3:
+        return True, "Thiếu chân"
     box = body_bbox(kps, vis)
     if box is None:
         return True, "Không đủ điểm"
     x0, y0, x1, y1 = box
     at_edge = (x0 < EDGE_MARGIN or y0 < EDGE_MARGIN
                or x1 > 1.0 - EDGE_MARGIN or y1 > 1.0 - EDGE_MARGIN)
-    legs = sum(1 for i in (L_KNEE, R_KNEE, L_ANKLE, R_ANKLE) if kps[i][2] > vis)
-    if at_edge and legs < 2:
+    if at_edge and legs < 4:
         return True, "Cắt mép khung hình"
     return False, ""
 
@@ -179,7 +193,7 @@ def classify_posture(
     vis = cfg.visibility_threshold
     partial, why = is_partial_body(kps, vis)
     if partial:
-        return _result("WARNING", ORANGE, "MỘT PHẦN CƠ THỂ", why or "Partial body", "PARTIAL")
+        return _result("WARNING", ORANGE, "MỘT PHẦN CỦA NGƯỜI", why or "Partial person", "PARTIAL")
 
     pts = [[k[0] * aspect, k[1], k[2]] for k in kps]
 

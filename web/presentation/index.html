@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ECHO MOVE — Thuyết trình · Hệ thống cảnh báo an toàn lao động</title>
-<meta name="description" content="ECHO MOVE: 5 sự kiện tư thế (FALL·STANDING·SQUAT·STOOP·PARTIAL), YOLOv8-Pose, ngã đa tín hiệu, IQA panel, SOC dashboard.">
+<meta name="description" content="ECHO MOVE: FALL·STANDING·SQUAT·STOOP (+ PARTIAL bbox-only), YOLOv8-Pose, ngã đa tín hiệu, IQA panel, SOC dashboard.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -144,7 +144,7 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
     <div class="body">
       <div class="kicker">ECHO MOVE v22 · Worker Safety Warning System</div>
       <h1 class="h1" style="font-size:132px">Camera không chỉ <span class="strike">ghi hình</span><br>mà phải <span class="red">kịp cảnh báo</span></h1>
-      <p class="sub" style="font-size:38px">Năm sự kiện tư thế (FALL · STANDING · SQUAT · STOOP · PARTIAL), IQA trên dashboard, cảnh báo realtime.</p>
+      <p class="sub" style="font-size:38px">Bốn loại cảnh báo tư thế (FALL · STANDING · SQUAT · STOOP); PARTIAL chỉ bbox, IQA trên dashboard.</p>
       <div class="alert mt2" style="max-width:1450px">
         <h3>Một câu tóm tắt</h3>
         <p>YOLOv8-Pose + luật hình học + <b>xác nhận theo thời gian</b> + IQA panel, camera IP/USB, nhật ký + Telegram/Zalo, SOC dashboard + người 3D.</p>
@@ -164,7 +164,7 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
     <div class="grid3 mt">
       <div class="card t-red"><div class="lbl">Rủi ro 1 · Khẩn cấp</div><h4>Ngã (FALL)</h4><p>Người ngã ở góc khuất, không ai thấy. Mỗi phút chậm trễ đều làm tăng hậu quả.</p></div>
       <div class="card t-amber"><div class="lbl">Rủi ro 2 · Tư thế</div><h4>Cúi khom · ngồi xổm</h4><p>STOOP / SQUAT lặp lại cả ca — cần nhật ký rõ ràng theo từng người.</p></div>
-      <div class="card t-blue"><div class="lbl">Rủi ro 3 · Thiếu dữ liệu</div><h4>Một phần cơ thể</h4><p>Người cắt mép khung hoặc che khuất: YOLO thiếu keypoint → PARTIAL, không đoán bừa.</p></div>
+      <div class="card t-blue"><div class="lbl">Rủi ro 3 · Thiếu dữ liệu</div><h4>Một phần của người</h4><p>Người cắt mép / che khuất: chỉ vẽ bbox PARTIAL, không đoán tư thế, không cảnh báo.</p></div>
     </div>
     <div class="alert amber mt2">
       <h3>Một người bảo vệ không thể nhìn 10 màn hình suốt 8 giờ</h3>
@@ -185,7 +185,7 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
       <div class="check ok"><div class="box">✓</div><div class="txt">Realtime trên CPU <span>— YOLOv8n-Pose, luôn xử lý frame mới nhất, không dồn trễ</span></div></div>
       <div class="check ok"><div class="box">✓</div><div class="txt">Ít báo nhầm <span>— điều kiện phải kéo dài mới thành cảnh báo, cooldown theo từng người</span></div></div>
       <div class="check ok"><div class="box">✓</div><div class="txt">Nhiều người, nhiều camera <span>— tracking ID ổn định, mỗi camera một pipeline</span></div></div>
-      <div class="check ok"><div class="box">✓</div><div class="txt">5 sự kiện tư thế rõ ràng <span>— FALL · STANDING · SQUAT · STOOP · PARTIAL</span></div></div>
+      <div class="check ok"><div class="box">✓</div><div class="txt">4 cảnh báo tư thế + PARTIAL bbox <span>— FALL · STANDING · SQUAT · STOOP</span></div></div>
       <div class="check ok"><div class="box">✓</div><div class="txt">Có bằng chứng và truy vết <span>— ảnh, clip 10 s, nhật ký SQLite, xuất CSV</span></div></div>
       <div class="check ok"><div class="box">✓</div><div class="txt">IQA trung thực trên panel <span>— 5 chỉ số + badge theo metric (không tạo event CAMERA)</span></div></div>
     </div>
@@ -228,14 +228,14 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
     <div class="flow mt">
       <div class="chip b">1 · YOLOv8-Pose<small>17 keypoint COCO, chuẩn hoá 0–1</small></div><span class="arrow">→</span>
       <div class="chip b">2 · Tracker<small>ID ổn định + One-Euro</small></div><span class="arrow">→</span>
-      <div class="chip a">3 · classify_posture<small>PARTIAL → FALL → SQUAT → STOOP → STANDING</small></div><span class="arrow">→</span>
+      <div class="chip a">3 · classify_posture<small>PARTIAL gate → FALL → SQUAT → STOOP → STANDING</small></div><span class="arrow">→</span>
       <div class="chip a">4 · FallAnalyzer<small>chiều cao đứng / track</small></div>
     </div>
     <div class="flow" style="margin-top:22px">
       <span class="arrow">→</span>
       <div class="chip a">5 · Overlay<small>vùng / PPE (không tạo event)</small></div><span class="arrow">→</span>
       <div class="chip g">6 · IQA<small>5 metric → panel UI</small></div><span class="arrow">→</span>
-      <div class="chip r">7 · AlertEngine<small>5 loại · confirm + cooldown</small></div><span class="arrow">→</span>
+      <div class="chip r">7 · AlertEngine<small>4 loại alert · confirm + cooldown</small></div><span class="arrow">→</span>
       <div class="chip r">8 · AlertHub<small>SQLite · Telegram · /ws/events</small></div>
     </div>
     <div class="grid2 mt2">
@@ -304,8 +304,8 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
   <section class="slide" data-title="Phân loại tư thế">
     <div class="stripe"></div>
     <div class="chrome"><span class="tag amber">Tư thế</span><span class="page"></span></div>
-    <div class="kicker">YOLOv8-Pose · 5 kỹ thuật duy nhất</div>
-    <h2 class="h2">Từ 17 keypoint đến <span class="red">5 sự kiện</span></h2>
+    <div class="kicker">YOLOv8-Pose · tư thế chỉ khi người đủ</div>
+    <h2 class="h2">Từ 17 keypoint đến <span class="red">tư thế / bbox</span></h2>
     <div class="grid2 mt">
       <div>
         <pre class="code" style="font-size:22px"><span class="cm"># x nhân W/H trước khi tính góc</span>
@@ -320,7 +320,7 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
 <span class="cm"># label UI: ĐỨNG · NGỒI XỔM · CÚI KHOM · …</span></pre>
       </div>
       <div class="checks">
-        <div class="check ok"><div class="box">✓</div><div class="txt">PARTIAL = thiếu core joints / &lt; 8 điểm / cắt mép <span>— không còn “cúi nhẹ”</span></div></div>
+        <div class="check ok"><div class="box">✓</div><div class="txt">PARTIAL = thiếu mặt / tay / chân / thân <span>— chỉ bbox, không alert</span></div></div>
         <div class="check ok"><div class="box">✓</div><div class="txt">Hiệu chỉnh tỉ lệ khung hình <span>— khung 16:9 từng làm lệch góc lưng ~40 %</span></div></div>
         <div class="check ok"><div class="box">✓</div><div class="txt">Nhiều người qua ByteTrack <span>— mỗi ID một episode riêng</span></div></div>
         <div class="check ok"><div class="box">✓</div><div class="txt">Python và JS dùng <b>cùng một luật</b></div></div>
@@ -371,9 +371,9 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
       <tr><td>STOOP</td><td>technique = STOOP (cúi khom)</td><td>3 s</td><td><span class="lv w">WARNING</span></td></tr>
       <tr><td>SQUAT</td><td>technique = SQUAT (ngồi xổm)</td><td>3 s</td><td><span class="lv i">INFO</span></td></tr>
       <tr><td>STANDING</td><td>log-only (không ảnh)</td><td>0 s (ngay)</td><td><span class="lv i">INFO</span></td></tr>
-      <tr><td>PARTIAL</td><td>log-only (không ảnh)</td><td>0 s (ngay)</td><td><span class="lv w">WARNING</span></td></tr>
+      <tr><td>PARTIAL</td><td>một phần người · chỉ bbox</td><td>—</td><td><span class="lv w">không alert</span></td></tr>
     </table>
-    <p class="sub mt" style="font-size:28px">FALL/SQUAT/STOOP = xử lý đầy đủ · STANDING/PARTIAL = chỉ lưu DB · cooldown 30 s.</p>
+    <p class="sub mt" style="font-size:28px">FALL/SQUAT/STOOP = xử lý đầy đủ · STANDING = log-only · PARTIAL = overlay bbox · cooldown 30 s.</p>
     <div class="stripe-b"></div>
     <div class="footer"><span>alerts · temporal confirmation</span><span>ECHO MOVE</span></div>
   </section>
@@ -383,43 +383,44 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
     <div class="stripe"></div>
     <div class="chrome"><span class="tag">Events</span><span class="page"></span></div>
     <div class="kicker">Một taxonomy · dễ lọc · dễ demo</div>
-    <h2 class="h2">Chỉ còn <span class="red">5 loại</span> trong nhật ký</h2>
+    <h2 class="h2"><span class="red">4 loại</span> trong nhật ký + PARTIAL overlay</h2>
     <div class="grid3 mt" style="grid-template-columns:repeat(5,1fr);gap:18px">
       <div class="card t-red"><div class="lbl">CRITICAL</div><h4>FALL</h4><p>Ngã đa tín hiệu ≥ 1.5 s · còi hú · clip.</p></div>
       <div class="card t-green"><div class="lbl">INFO</div><h4>STANDING</h4><p>Đứng bình thường · log-only, không ảnh.</p></div>
       <div class="card t-green"><div class="lbl">INFO</div><h4>SQUAT</h4><p>Ngồi xổm (gối gập, lưng thẳng) ≥ 3 s.</p></div>
       <div class="card t-amber"><div class="lbl">WARNING</div><h4>STOOP</h4><p>Cúi khom spine &gt; 60° ≥ 3 s.</p></div>
-      <div class="card t-amber"><div class="lbl">WARNING</div><h4>PARTIAL</h4><p>Một phần cơ thể · log-only, không ảnh.</p></div>
+      <div class="card t-blue"><div class="lbl">OVERLAY</div><h4>PARTIAL</h4><p>Một phần của người · chỉ bbox, không event.</p></div>
     </div>
     <div class="alert mt">
       <h3>Xử lý khác nhau theo loại</h3>
       <p><b>FALL · SQUAT · STOOP</b>: confirm + ảnh + (clip/Telegram).
-         <b>STANDING · PARTIAL</b>: ghi nhật ký ngay, không confirm, không ảnh, tự đánh dấu đã xử lý.</p>
+         <b>STANDING</b>: ghi nhật ký ngay, không ảnh, tự ack.
+         <b>PARTIAL</b>: không tạo event — chỉ vẽ bbox khi thiếu mặt/tay/chân.</p>
     </div>
     <div class="stripe-b"></div>
     <div class="footer"><span>events · taxonomy</span><span>ECHO MOVE</span></div>
   </section>
 
   <!-- 11. PARTIAL / YOLO -->
-  <section class="slide" data-title="PARTIAL từ YOLO">
+  <section class="slide" data-title="PARTIAL bbox-only">
     <div class="stripe"></div>
-    <div class="chrome"><span class="tag amber">Partial body</span><span class="page"></span></div>
-    <div class="kicker">Không đoán tư thế khi skeleton thiếu</div>
-    <h2 class="h2">PARTIAL = <span class="amb">YOLO visibility</span>, không phải cúi nhẹ</h2>
+    <div class="chrome"><span class="tag amber">Partial person</span><span class="page"></span></div>
+    <div class="kicker">Không đoán tư thế khi người chưa đủ</div>
+    <h2 class="h2">PARTIAL = <span class="amb">một phần của người</span> · chỉ bbox</h2>
     <div class="grid2 mt">
       <div class="checks">
-        <div class="check ok"><div class="box">1</div><div class="txt">&lt; 8 joint có conf đủ <span>— che khuất / người quá xa</span></div></div>
-        <div class="check ok"><div class="box">2</div><div class="txt">Thiếu vai hoặc hông <span>— không tính được spine tin cậy</span></div></div>
-        <div class="check ok"><div class="box">3</div><div class="txt">Bbox sát mép + &lt; 2 chân <span>— người bị cắt khung hình</span></div></div>
-        <div class="check ok"><div class="box">4</div><div class="txt">Nhiều người OK <span>— ByteTrack giữ ID; mỗi người một PARTIAL riêng</span></div></div>
+        <div class="check ok"><div class="box">1</div><div class="txt">Thiếu mặt <span>— nose / eyes / ears conf thấp</span></div></div>
+        <div class="check ok"><div class="box">2</div><div class="txt">Thiếu tay hoặc chân <span>— &lt; 2 khớp tay / &lt; 3 khớp chân</span></div></div>
+        <div class="check ok"><div class="box">3</div><div class="txt">Thiếu thân / cắt mép <span>— vai–hông hoặc bbox sát biên</span></div></div>
+        <div class="check ok"><div class="box">4</div><div class="txt">Overlay giống giao thông <span>— chỉ rectangle + nhãn; không skeleton, không alert</span></div></div>
       </div>
       <div class="alert amber" style="align-self:start">
         <h3>Tại sao cần?</h3>
-        <p>Báo “một phần cơ thể” thay vì đoán FALL/STOOP sai khi YOLO chỉ trả nửa skeleton. Confirm 5 s + cooldown 30 s.</p>
+        <p>Không đoán FALL/STOOP khi YOLO chỉ thấy nửa người. Bbox YOLO ổn định; tư thế chỉ chạy khi đủ mặt + chân tay.</p>
       </div>
     </div>
     <div class="stripe-b"></div>
-    <div class="footer"><span>partial · yolo keypoints</span><span>ECHO MOVE</span></div>
+    <div class="footer"><span>partial · bbox overlay</span><span>ECHO MOVE</span></div>
   </section>
 
   <!-- 12. TRACKER -->
@@ -486,7 +487,7 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
 <span class="kw">export</span> ECHO_TELEGRAM_TOKEN=<span class="st">…</span></pre>
       <div>
         <div class="grid2">
-          <div class="card t-green" style="text-align:center"><div class="big-num grn">70</div><p>test tự động (pytest)</p></div>
+          <div class="card t-green" style="text-align:center"><div class="big-num grn">73</div><p>test tự động (pytest)</p></div>
           <div class="card t-blue" style="text-align:center"><div class="big-num blu">5</div><p>chỉ số IQA + Overall</p></div>
         </div>
         <div class="alert green mt">
@@ -546,7 +547,7 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
       <div class="checks">
         <div class="check ok"><div class="box">5</div><div class="txt">Nằm xuống ≥ 1.5 s <span>— FALL CRITICAL + clip</span></div></div>
         <div class="check ok"><div class="box">6</div><div class="txt">Đứng / ngồi xổm <span>— STANDING · SQUAT (INFO)</span></div></div>
-        <div class="check ok"><div class="box">7</div><div class="txt">Đứng sát mép khung / che thân <span>— PARTIAL log-only (không ảnh)</span></div></div>
+        <div class="check ok"><div class="box">7</div><div class="txt">Đứng sát mép khung / che thân <span>— PARTIAL chỉ bbox, không toast</span></div></div>
         <div class="check ok"><div class="box">8</div><div class="txt">Events 3 panel + IQA <span>— thống kê · chart giờ · ảnh; Clip / Báo nhầm</span></div></div>
       </div>
     </div>
