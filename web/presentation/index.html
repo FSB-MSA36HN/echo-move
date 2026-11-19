@@ -132,9 +132,9 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
 .notes{display:none}
 
 /* practice scripts (luyện đọc) */
-.script-tele{display:none;position:absolute;left:100px;right:100px;bottom:36px;z-index:5;
-  max-height:210px;overflow:auto;padding:16px 22px;border-radius:16px;
-  background:rgba(18,19,26,.92);color:#f3f0ea;font:500 22px/1.45 var(--font);
+.script-tele{display:none;position:absolute;left:80px;right:80px;bottom:28px;z-index:5;
+  max-height:280px;overflow:auto;padding:14px 20px;border-radius:16px;
+  background:rgba(18,19,26,.94);color:#f3f0ea;font:500 20px/1.45 var(--font);
   border:1px solid rgba(255,179,138,.35);box-shadow:0 12px 40px rgba(0,0,0,.35)}
 .script-tele b{color:#ffb38a;font-weight:800}
 body.practice-mode .script-tele{display:block}
@@ -628,25 +628,113 @@ body.practice-mode .hint{bottom:52px}
 
   // Script luyện đọc theo data-title
   const SCRIPTS = {
-    'Poster': 'Xin chào thầy cô và các bạn. Em xin mở đầu bằng poster đề tài Edge AI giám sát an toàn lao động — nhóm Phạm Ngọc Hoà, Nguyễn Đăng Huy Hoàng và Đặng Trung Thành.',
-    'ECHO MOVE': 'Một câu thôi: camera không chỉ ghi hình — phải kịp cảnh báo. ECHO MOVE nhận diện ngã và tư thế theo thời gian thực, có IQA, nhật ký và Telegram.',
-    'Vấn đề': 'Ba việc dễ bỏ lỡ: người ngã góc khuất; cúi khom cả ca không ai ghi; và lúc chỉ thấy nửa người thì đoán bừa rất nguy hiểm. Bảo vệ không thể nhìn mười màn hình tám giờ — máy phải lọc giúp.',
-    'Mục tiêu': 'Sáu tiêu chí ngắn: chạy realtime trên CPU, ít báo nhầm, nhiều người nhiều camera, đủ bốn tư thế cộng PARTIAL, có bằng chứng, và IQA trung thực trên panel.',
-    'Kiến trúc 3 tầng': 'Ba tầng rõ việc: MATLAB phân tích offline; Python là bộ não realtime; Web là SOC để giám sát. JSON từ MATLAB sang Python, WebSocket nối ra giao diện.',
-    'Pipeline mỗi frame': 'Một frame đi sáu bước: YOLO nhận dạng → Tracker giữ ID → phân loại tư thế → IQA → xác nhận cảnh báo → lưu và gửi Telegram. Đơn giản, đúng code đang chạy.',
-    'Đánh giá chất lượng ảnh': 'Camera mờ thì AI cũng sai. Năm chỉ số: mờ, nhiễu, tương phản, PIQE và phơi sáng. Tổng dưới bốn mươi thì báo trên panel — không tạo sự kiện ảo.',
-    'Hiệu chỉnh trọng số IQA': 'Trọng số lấy từ thực nghiệm 275 ảnh, không đoán. F1 tăng từ 0,46 lên 0,69. Blur được ưu tiên vì điểm mờ mới thật sự kéo Overall xuống.',
-    'Phân loại tư thế': 'Từ 17 điểm xương: thiếu người thì PARTIAL; rồi mới xét ngã, ngồi xổm, cúi khom, đứng. Không đủ người thì không đoán tư thế.',
-    'Ngã đa tín hiệu': 'Ngã về phía camera khó thấy. Em dùng ba tín hiệu: nằm ngang, đầu thấp, và sụp người. Đủ từ hai tín hiệu thì báo FALL.',
-    'Xác nhận theo thời gian': 'Một khung hình nhiễu không đủ để hú còi. Ngã phải kéo dài khoảng 1,5 giây; cúi và ngồi xổm 3 giây. Có cooldown để không spam.',
-    'Năm sự kiện tư thế': 'FALL khẩn cấp; STOOP cảnh báo; SQUAT ghi nhận; STANDING chỉ đếm thống kê; PARTIAL chỉ khung vàng — không alert.',
-    'PARTIAL bbox-only': 'Chỉ thấy một phần người? Chỉ vẽ bbox vàng, không skeleton, không cảnh báo. Tránh model bịa chân rồi phân loại sai.',
-    'Tracking nhiều người': 'Nhiều người cùng lúc: mỗi người một ID ổn định, cảnh báo không bị lẫn. Giữ được ID cả khi người ngã đột ngột.',
-    'Vận hành thực tế': 'Có clip trước–sau, Telegram, leo thang nếu chưa xử lý, Báo nhầm để chỉnh ngưỡng, và làm mờ mặt trên ảnh lưu.',
-    'Đánh giá': 'Không báo cáo bằng cảm tính — đo bằng dataset và calibrate IQA. Số nào chưa chạy thì nói rõ chưa đo.',
-    'Demo': 'Demo nhanh: mở camera hoặc video → cúi để ra STOOP → nằm để ra FALL → sát mép khung để thấy PARTIAL → xem Events có ảnh bằng chứng.',
-    'Hạn chế & hướng phát triển': 'Còn hạn chế góc camera và chưa re-ID. Hướng tới: học chuỗi thời gian, dữ liệu thật, và mở rộng nhà, bệnh viện, theo dõi trẻ ngồi đúng tư thế.',
-    'Cảm ơn · Q&A': 'Em xin cảm ơn thầy cô và các bạn. Nhóm sẵn sàng nhận câu hỏi.',
+    'Poster':
+      '[Người 1 · mở đầu ~30s] Xin chào thầy cô và các bạn. Em là …, thay mặt nhóm gồm Phạm Ngọc Hoà, Nguyễn Đăng Huy Hoàng và Đặng Trung Thành. ' +
+      'Hôm nay nhóm trình bày đề tài xử lý ảnh với hệ thống giám sát an toàn lao động Edge AI — tên sản phẩm là ECHO MOVE. ' +
+      'Poster này là hình ảnh tổng quan: camera, phát hiện người, và cảnh báo an toàn. Em xin mời thầy cô theo dõi phần tiếp theo.',
+
+    'ECHO MOVE':
+      '[Người 1 · ~45s] Ý tưởng trung tâm chỉ một câu: camera không chỉ ghi hình, mà phải kịp cảnh báo. ' +
+      'ECHO MOVE theo dõi công nhân theo thời gian thực, nhận diện ngã và các tư thế STANDING, SQUAT, STOOP. ' +
+      'Khi chỉ thấy một phần người, hệ thống không đoán bừa — chỉ vẽ bbox PARTIAL. ' +
+      'Ngoài ra có đánh giá chất lượng ảnh IQA trên dashboard, nhật ký sự kiện kèm ảnh/clip, và gửi Telegram khi cần người xử lý. ' +
+      'Phần sau em sẽ giải thích vì sao cần hệ thống này.',
+
+    'Vấn đề':
+      '[Người 1 · ~1 phút] Trong nhà xưởng, giám sát thủ công dễ bỏ lỡ ba rủi ro. ' +
+      'Thứ nhất là ngã: người nằm ở góc khuất, nếu không ai thấy thì mỗi phút chậm đều làm tăng hậu quả. ' +
+      'Thứ hai là tư thế xấu lặp lại cả ca — cúi khom, ngồi xổm — nếu không có nhật ký theo từng người thì rất khó cải thiện an toàn lao động. ' +
+      'Thứ ba là thiếu dữ liệu: camera chỉ thấy nửa người, nếu hệ thống vẫn “đoán” tư thế thì sẽ báo sai và mất niềm tin. ' +
+      'Thực tế một bảo vệ không thể nhìn mười màn hình suốt tám giờ. Vì vậy cần máy lọc giúp: chỉ gọi người khi thật sự cần.',
+
+    'Mục tiêu':
+      '[Người 1 · ~50s] Từ bài toán đó, nhóm đặt sáu tiêu chí. ' +
+      'Một, chạy realtime trên CPU với YOLOv8n-Pose, luôn lấy frame mới nhất, không dồn trễ. ' +
+      'Hai, ít báo nhầm: điều kiện phải kéo dài mới thành cảnh báo, có cooldown theo người. ' +
+      'Ba, nhiều người nhiều camera — mỗi camera một pipeline, ID ổn định. ' +
+      'Bốn, đủ bốn loại tư thế cộng PARTIAL bbox. ' +
+      'Năm, có bằng chứng: ảnh, clip khoảng mười giây, nhật ký SQLite, xuất CSV. ' +
+      'Sáu, IQA trung thực trên panel, không tạo event CAMERA ảo. ' +
+      'Tiếp theo em trình bày kiến trúc để đạt các tiêu chí này.',
+
+    'Kiến trúc 3 tầng':
+      '[Người 1 kết · ~1 phút] Hệ thống chia ba tầng, mỗi tầng một việc. ' +
+      'MATLAB làm phân tích offline: IQA trên video, biểu đồ Canny Laplacian histogram, xuất JSON CSV PNG. ' +
+      'Python FastAPI là bộ não realtime: nhận camera RTSP USB hoặc file, YOLO-Pose, tracker, luật tư thế, xác nhận theo thời gian, lưu SQLite, gửi Telegram. ' +
+      'Web Three.js là SOC dashboard: live feed, Worker 3D, Events, IQA, Cameras. ' +
+      'Luồng dữ liệu: MATLAB ra file JSON cho Python; Python nối WebSocket và MJPEG với giao diện. ' +
+      'Em xin chuyển sang phần pipeline từng frame — do bạn … trình bày.',
+
+    'Pipeline mỗi frame':
+      '[Người 2 · mở ~1 phút] Cảm ơn. Em sẽ đi theo đúng luồng một frame trong StreamPipeline. ' +
+      'Bước một: YOLOv8-Pose lấy mười bảy keypoint COCO và bbox. ' +
+      'Bước hai: Tracker gán ID ổn định, làm mượt One-Euro. ' +
+      'Bước ba: classify_posture và FallAnalyzer — thứ tự PARTIAL, FALL, SQUAT, STOOP, STANDING. ' +
+      'Bước bốn: IQA năm metric hiện badge trên panel, không tạo event. ' +
+      'Bước năm: AlertEngine xác nhận theo thời gian và cooldown. ' +
+      'Bước sáu: AlertHub ghi SQLite, gửi Telegram, đẩy /ws/events. ' +
+      'Lưu ý: một model YOLO dùng chung có khoá; mỗi camera một tracker và engine riêng. Suy luận chạy executor, không chặn event loop.',
+
+    'Đánh giá chất lượng ảnh':
+      '[Người 2 · ~1 phút] Trước khi tin tư thế, phải hỏi camera có đủ tốt không. Camera mờ, chói, tối thì AI cũng sai. ' +
+      'Nhóm dùng năm chỉ số: Blur — phương sai Laplacian; Noise — ước lượng Immerkær với mặt nạ Laplacian 3×3; Contrast — RMS; PIQE — proxy MSCN realtime; Exposure — tỉ lệ pixel cháy sáng và tối. ' +
+      'Overall là tổ hợp có trọng số. Dưới bốn mươi thì hiện badge cảnh báo trên panel IQA — nhấn mạnh: không tạo sự kiện CAMERA. ' +
+      'Vậy trọng số lấy từ đâu? Sang slide hiệu chỉnh.',
+
+    'Hiệu chỉnh trọng số IQA':
+      '[Người 2 · ~1 phút] Trọng số không đoán — đo trên 275 ảnh có nhãn. ' +
+      'Quy trình: sinh cảnh nhà xưởng cộng ảnh kho; suy giảm có kiểm soát blur noise contrast exposure; tìm trên simplex khoảng 800 bộ trọng số; tối ưu F1 khi Overall dưới bốn mươi, vẫn giữ ảnh sạch. ' +
+      'Kết quả: bộ cũ F1 khoảng 0,46; bộ mới 0,05/0,50/… đạt khoảng 0,69. ' +
+      'Blur nặng hơn PIQE vì điểm MSCN đôi khi tăng khi ảnh mờ — nếu PIQE quá nặng thì Overall không giảm khi camera mất nét. Đây là chỗ nhóm trung thực với số liệu.',
+
+    'Phân loại tư thế':
+      '[Người 2 · ~1 phút] Từ mười bảy keypoint chuẩn hoá, em nhân tỉ lệ khung hình rồi tính góc lưng và gối. ' +
+      'Thứ tự luật rất quan trọng: trước hết PARTIAL nếu thiếu mặt, tay hoặc chân; rồi FALL; SQUAT khi gối dưới 140 độ và lưng tương đối thẳng; STOOP khi cúi trên 60 độ; còn lại STANDING. ' +
+      'Nguyên tắc: không đủ người thì không đoán tư thế. Điều này tránh báo nhầm khi camera cắt người hoặc bị che.',
+
+    'Ngã đa tín hiệu':
+      '[Người 2 · ~1 phút] Luật “nằm ngang” cũ bỏ sót ngã về phía camera vì thân co ngắn, góc lưng nhỏ. ' +
+      'ECHO MOVE dùng ba tín hiệu: lying — thân nghiêng và khung rộng hơn cao; head_low — đầu thấp gần hông; collapsed — chiều cao hiện tại thấp hơn nhiều so với chiều cao đứng của chính track đó. ' +
+      'FALL khi có từ hai tín hiệu trở lên. FallAnalyzer giữ baseline đứng theo từng người. Luật đồng bộ Python và JavaScript.',
+
+    'Xác nhận theo thời gian':
+      '[Người 2 kết · ~50s] Một frame nhiễu không đủ để hú còi. ' +
+      'FALL phải kéo dài khoảng 1,5 giây — hoặc 0,75 giây nếu hông rơi nhanh. STOOP và SQUAT confirm 3 giây. STANDING log ngay nhưng không ảnh, không vào list. PARTIAL không alert. ' +
+      'Cooldown thêm cooldown 30 giây mỗi người để không spam. Em xin chuyển phần sự kiện và vận hành cho bạn …',
+
+    'Năm sự kiện tư thế':
+      '[Người 3 · mở ~50s] Cảm ơn. Em tóm tắt taxonomy. ' +
+      'FALL là CRITICAL — có ảnh, clip, còi. STOOP là WARNING. SQUAT là INFO. STANDING chỉ tăng ô thống kê, không list không toast. ' +
+      'PARTIAL chỉ overlay bbox vàng — không event. Cách xử lý khác nhau giúp SOC không bị ngập thông tin vô ích.',
+
+    'PARTIAL bbox-only':
+      '[Người 3 · ~50s] PARTIAL là “một phần của người”: thiếu mặt, tay, chân, hoặc chân bịa quá ngắn so với mặt trên crop cận cảnh. ' +
+      'Hệ thống chỉ vẽ bbox vàng với nhãn «chỉ hiển thị một phần người», không skeleton, không cảnh báo tư thế. ' +
+      'Đây là lựa chọn thiết kế: thà không đoán còn hơn đoán sai.',
+
+    'Tracking nhiều người':
+      '[Người 3 · ~45s] Nhiều người cùng khung hình: tracker kiểu ByteTrack ghép detection mạnh rồi yếu, dự đoán vận tốc, giữ ID khi người ngã đột ngột. ' +
+      'One-Euro làm mượt. Mỗi người một chuỗi sự kiện riêng — không lẫn cảnh báo giữa P1 và P2.',
+
+    'Vận hành thực tế':
+      '[Người 3 · ~1 phút] Phát hiện mới là một nửa — nửa còn lại là quy trình. ' +
+      'Có clip 5 giây trước và sau để xem lại; CRITICAL chưa xử lý thì leo thang Telegram tới quản đốc; webhook tùy chọn; camera mất tín hiệu tự kết nối lại; nút Báo nhầm để chỉnh ngưỡng; làm mờ mặt trên ảnh lưu; retention tự xoá dữ liệu cũ; xuất CSV. ' +
+      'Mục tiêu: cảnh báo đến đúng người, kèm bằng chứng.',
+
+    'Đánh giá':
+      '[Người 3 · ~45s] Nhóm không báo cáo bằng cảm tính. IQA đã chạy calibrate-iqa, F1 từ khoảng 0,46 lên 0,69. ' +
+      'Độ chính xác ngã đo bằng make eval trên UR Fall, Le2i hoặc video tự quay. Chưa chạy phần nào thì nói rõ chưa đo — giữ trung thực khi bảo vệ đồ án.',
+
+    'Demo':
+      '[Người 3 · ~1 phút] Kịch bản demo khoảng vài phút: mở SOC — cameras và Worker 3D; nhìn IQA Live; chọn video hoặc ảnh curated; cúi khom để ra STOOP; nằm xuống để ra FALL; đứng hoặc ngồi xổm; đứng sát mép khung để thấy PARTIAL; mở Events xem ảnh bằng chứng, tối đa tám ảnh rồi Load more. ' +
+      'Nếu demo hỏng: F5, phím T self-test, đổi sang video sẵn, hoặc Server nếu backend còn sống.',
+
+    'Hạn chế & hướng phát triển':
+      '[Người 3 · ~1 phút] Hạn chế hiện tại: luật 2D nhạy góc camera — nên đặt cao khoảng 2–3 mét; chưa re-ID nên người mặc giống nhau che nhau lâu có thể đổi ID; ngưỡng là thực nghiệm; chiều sâu 3D chỉ ước lượng. ' +
+      'Hướng phát triển: hiệu chỉnh bằng dữ liệu nhà xưởng thật và nút Báo nhầm; học chuỗi thời gian LSTM hoặc ST-GCN; thêm re-ID; cải thiện PARTIAL; và mở rộng ngoài nhà xưởng — gia đình theo dõi người già, bệnh viện, hoặc theo dõi trẻ ngồi đúng tư thế.',
+
+    'Cảm ơn · Q&A':
+      '[Cả nhóm · ~20s] Em xin cảm ơn thầy cô và các bạn đã lắng nghe. Nhóm ECHO MOVE sẵn sàng nhận câu hỏi.',
   };
 
   slides.forEach((s, i) => {
