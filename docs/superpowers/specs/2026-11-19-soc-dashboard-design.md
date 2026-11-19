@@ -3,7 +3,7 @@
 Approved: wall + side rail, no tabs, drop Citations, add System metrics.
 
 ## Layout
-- Header (sticky): brand, live status pills, source controls, mute, tools toggle
+- Header (sticky): brand, live status pills, source controls (Camera + device picker + flip front/rear), mute, tools toggle
 - Workspace (page scroll):
   - Main ops: video wall (left) | 3D + Detect/MATLAB/Session (right)
   - Deck panels (vertical stack):

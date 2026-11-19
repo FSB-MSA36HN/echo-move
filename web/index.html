@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=31">
+<link rel="stylesheet" href="css/styles.css?v=32">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
@@ -38,6 +38,8 @@
     <div class="hdr-src" role="toolbar" aria-label="Nguồn giám sát">
       <button class="b" id="bAI" title="MediaPipe AI">AI Detect</button>
       <button class="b" id="bCam">Camera</button>
+      <select id="camPick" class="cam-pick" hidden aria-label="Chọn camera" title="Chọn webcam / cam trước·sau"></select>
+      <button class="b sm" id="bCamFlip" hidden title="Đổi camera trước / sau">↻ Cam</button>
       <button class="b" id="bVid">Video</button>
       <button class="b" id="bSrv">Server</button>
       <input id="file" type="file" accept="video/*" hidden>
@@ -250,13 +252,13 @@
 <div id="toasts" aria-live="assertive"></div>
 <div id="imgv" hidden><img alt="Ảnh sự kiện"><div class="cap"></div></div>
 
-<script src="js/config.js?v=31"></script>
-<script src="js/backend.js?v=31"></script>
-<script src="js/alerts.js?v=31"></script>
-<script src="js/zoom.js?v=31"></script>
-<script src="js/human3d.js?v=31"></script>
-<script src="js/app.js?v=31"></script>
-<script src="js/cameras.js?v=31"></script>
-<script src="js/events.js?v=31"></script>
+<script src="js/config.js?v=32"></script>
+<script src="js/backend.js?v=32"></script>
+<script src="js/alerts.js?v=32"></script>
+<script src="js/zoom.js?v=32"></script>
+<script src="js/human3d.js?v=32"></script>
+<script src="js/app.js?v=32"></script>
+<script src="js/cameras.js?v=32"></script>
+<script src="js/events.js?v=32"></script>
 </body>
 </html>

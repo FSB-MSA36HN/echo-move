@@ -24,7 +24,8 @@ const S = {
   mIQA:null, mFile:null, mMtime:0, mTimer:null, mAuto:true,
   bench:{on:false}, cmp:{on:false, pct:50},
   sess:{on:false, hist:[]},
-  ext:null  // server camera id currently driving the 3D view (Camera tab)
+  ext:null,  // server camera id currently driving the 3D view (Camera tab)
+  cam:{devices:[], deviceId:null, facing:'environment'}
 };
 
 const KN = [[0,1],[1,3],[0,2],[2,4],[5,6],[5,7],[7,9],[6,8],[8,10],
@@ -824,8 +825,12 @@ function cleanup() {
   v.srcObject = null;
   if (S.url) { URL.revokeObjectURL(S.url); S.url = null; }
   v.removeAttribute('src');
+  v.style.transform = '';
   try { v.load(); } catch(e){}
   S.ready = false; S.last_vt = -1; S.dbg.video = '-';
+  const sel = $('camPick'), flip = $('bCamFlip');
+  if (sel) sel.hidden = true;
+  if (flip) { flip.hidden = true; flip.classList.remove('on'); }
 }
 
 function updAI() {
@@ -1067,6 +1072,119 @@ function bind() {
     return !!(window.isSecureContext && navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function');
   }
 
+  function preferRearCam() {
+    return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
+  }
+
+  function loadCamPref() {
+    try {
+      const id = localStorage.getItem('echo_cam_id');
+      const facing = localStorage.getItem('echo_cam_facing');
+      if (id) S.cam.deviceId = id;
+      if (facing === 'user' || facing === 'environment') S.cam.facing = facing;
+      else if (preferRearCam()) S.cam.facing = 'environment';
+      else S.cam.facing = 'user';
+    } catch (e) {
+      S.cam.facing = preferRearCam() ? 'environment' : 'user';
+    }
+  }
+
+  function saveCamPref() {
+    try {
+      if (S.cam.deviceId) localStorage.setItem('echo_cam_id', S.cam.deviceId);
+      else localStorage.removeItem('echo_cam_id');
+      localStorage.setItem('echo_cam_facing', S.cam.facing || 'user');
+    } catch (e) {}
+  }
+
+  function guessFacingLabel(label, index) {
+    const s = (label || '').toLowerCase();
+    if (/back|rear|environment|sau|world/i.test(s)) return 'Cam sau';
+    if (/front|user|face|trước|selfie/i.test(s)) return 'Cam trước';
+    return label || (`Camera ${index + 1}`);
+  }
+
+  function fillCamPick() {
+    const sel = $('camPick'), flip = $('bCamFlip');
+    if (!sel) return;
+    const devices = S.cam.devices || [];
+    if (!devices.length) {
+      sel.hidden = true;
+      if (flip) flip.hidden = true;
+      return;
+    }
+    const cur = S.cam.deviceId;
+    sel.innerHTML = devices.map((d, i) => {
+      const label = guessFacingLabel(d.label, i);
+      const selAttr = d.deviceId === cur ? ' selected' : '';
+      return `<option value="${d.deviceId.replace(/"/g, '&quot;')}"${selAttr}>${label}</option>`;
+    }).join('');
+    if (!cur && devices[0]) sel.selectedIndex = 0;
+    sel.hidden = false;
+    if (flip) {
+      flip.hidden = devices.length < 2;
+      flip.classList.toggle('on', S.mode === 'video' && !!S.stream);
+      flip.textContent = S.cam.facing === 'environment' ? '↻ Cam sau' : '↻ Cam trước';
+    }
+  }
+
+  async function refreshCamDevices() {
+    if (!webcamAvailable()) return [];
+    try {
+      const all = await navigator.mediaDevices.enumerateDevices();
+      S.cam.devices = all.filter(d => d.kind === 'videoinput');
+    } catch (e) { S.cam.devices = []; }
+    fillCamPick();
+    return S.cam.devices;
+  }
+
+  function videoConstraints(opts) {
+    const video = { width: { ideal: 1280 }, height: { ideal: 720 } };
+    if (opts && opts.deviceId) {
+      video.deviceId = { exact: opts.deviceId };
+    } else if (opts && opts.facingMode) {
+      video.facingMode = { ideal: opts.facingMode };
+    } else if (S.cam.deviceId) {
+      video.deviceId = { ideal: S.cam.deviceId };
+    } else {
+      video.facingMode = { ideal: S.cam.facing || (preferRearCam() ? 'environment' : 'user') };
+    }
+    return { audio: false, video };
+  }
+
+  async function startWebcam(opts) {
+    cleanup();
+    const constraints = videoConstraints(opts || {});
+    S.stream = await navigator.mediaDevices.getUserMedia(constraints);
+    const track = S.stream.getVideoTracks()[0];
+    const settings = track && track.getSettings ? track.getSettings() : {};
+    if (settings.deviceId) S.cam.deviceId = settings.deviceId;
+    if (settings.facingMode === 'user' || settings.facingMode === 'environment') {
+      S.cam.facing = settings.facingMode;
+    } else if (opts && opts.facingMode) {
+      S.cam.facing = opts.facingMode;
+    }
+    saveCamPref();
+    const v = $('v');
+    v.srcObject = S.stream; v.muted = true;
+    // Mirror front camera for natural selfie view; keep rear unmirrored.
+    v.style.transform = S.cam.facing === 'user' ? 'scaleX(-1)' : '';
+    await v.play();
+    S.ready = true; S.mode = 'video'; S.frame = 0;
+    const label = guessFacingLabel(
+      (S.cam.devices.find(d => d.deviceId === S.cam.deviceId) || {}).label,
+      0
+    );
+    S.dbg.video = `camera · ${label}`;
+    $('stt').textContent = (S.ai_on ? 'Camera + AI · ' : 'Camera · ') + label;
+    $('mode').textContent = S.cam.facing === 'environment' ? 'CAM SAU' : (S.cam.facing === 'user' ? 'CAM TRƯỚC' : 'CAMERA');
+    $('mode').className = 'chip';
+    await refreshCamDevices();
+    fillCamPick();
+  }
+
+  loadCamPref();
+
   const bCam = $('bCam');
   if (bCam && !webcamAvailable()) {
     bCam.title = 'Webcam cần HTTPS hoặc localhost. Trên HTTP (VPS) hãy dùng Video hoặc panel Cameras.';
@@ -1083,25 +1201,72 @@ function bind() {
       return;
     }
     try {
-      cleanup();
-      S.stream = await navigator.mediaDevices.getUserMedia({
-        video: {width:{ideal:640}, height:{ideal:480}}, audio:false
+      await startWebcam({
+        deviceId: S.cam.deviceId || undefined,
+        facingMode: S.cam.deviceId ? undefined : (S.cam.facing || (preferRearCam() ? 'environment' : 'user')),
       });
-      const v = $('v');
-      v.srcObject = S.stream; v.muted = true;
-      await v.play();
-      S.ready = true; S.mode = 'video'; S.frame = 0;
-      S.dbg.video = 'camera live';
-      $('stt').textContent = S.ai_on ? 'Camera + AI' : 'Camera (AI off)';
-      $('mode').textContent = 'CAMERA'; $('mode').className = 'chip';
     } catch (e) {
-      const denied = e && (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError');
-      const msg = denied
-        ? 'Bạn đã từ chối quyền camera — hãy cho phép trong trình duyệt rồi thử lại.'
-        : ('Lỗi webcam: ' + (e.message || e.name || e));
-      sourceNotice(msg, 'Hoặc dùng Video / panel Cameras.', 'NO WEBCAM');
+      // Fallback: retry without exact device (labels / permissions differ across browsers).
+      try {
+        S.cam.deviceId = null;
+        await startWebcam({ facingMode: preferRearCam() ? 'environment' : 'user' });
+      } catch (e2) {
+        const denied = e2 && (e2.name === 'NotAllowedError' || e2.name === 'PermissionDeniedError');
+        const msg = denied
+          ? 'Bạn đã từ chối quyền camera — hãy cho phép trong trình duyệt rồi thử lại.'
+          : ('Lỗi webcam: ' + (e2.message || e2.name || e2));
+        sourceNotice(msg, 'Hoặc dùng Video / panel Cameras.', 'NO WEBCAM');
+      }
     }
   };
+
+  const camPick = $('camPick');
+  if (camPick) {
+    camPick.onchange = async () => {
+      const id = camPick.value;
+      if (!id) return;
+      S.cam.deviceId = id;
+      saveCamPref();
+      try { await startWebcam({ deviceId: id }); }
+      catch (e) {
+        sourceNotice('Không đổi được camera', e.message || String(e), 'NO WEBCAM');
+      }
+    };
+  }
+
+  const bCamFlip = $('bCamFlip');
+  if (bCamFlip) {
+    bCamFlip.onclick = async () => {
+      if (!webcamAvailable()) return;
+      const nextFacing = S.cam.facing === 'environment' ? 'user' : 'environment';
+      // Prefer switching by facingMode on phones; also try next listed device.
+      const devices = S.cam.devices || [];
+      let nextId = null;
+      if (devices.length > 1 && S.cam.deviceId) {
+        const i = devices.findIndex(d => d.deviceId === S.cam.deviceId);
+        nextId = devices[(i + 1) % devices.length].deviceId;
+      }
+      S.cam.facing = nextFacing;
+      S.cam.deviceId = null;
+      saveCamPref();
+      try {
+        await startWebcam({ facingMode: nextFacing });
+      } catch (e) {
+        if (nextId) {
+          try {
+            S.cam.deviceId = nextId;
+            await startWebcam({ deviceId: nextId });
+            return;
+          } catch (e2) { /* fall through */ }
+        }
+        sourceNotice('Không đổi được camera', e.message || String(e), 'NO WEBCAM');
+      }
+    };
+  }
+
+  if (webcamAvailable() && navigator.mediaDevices.addEventListener) {
+    navigator.mediaDevices.addEventListener('devicechange', () => { refreshCamDevices(); });
+  }
 
   $('bVid').onclick = () => $('file').click();
   $('file').onchange = e => {

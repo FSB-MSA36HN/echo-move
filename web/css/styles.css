@@ -81,6 +81,13 @@ body {
 }
 .hdr-status { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
 .hdr-src, .hdr-actions { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.cam-pick {
+  max-width: min(200px, 42vw); min-height: 34px; padding: 5px 8px;
+  background: var(--panel-2); color: var(--text); border: 1px solid var(--border-hi);
+  border-radius: 7px; font-family: var(--font); font-size: var(--fs-sm);
+}
+.cam-pick:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
+#bCamFlip.on { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
 
 .pill {
   font-family: var(--mono); font-size: var(--fs-sm); padding: 5px 10px;
