@@ -386,10 +386,10 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
     <h2 class="h2">Chỉ còn <span class="red">5 loại</span> trong nhật ký</h2>
     <div class="grid3 mt" style="grid-template-columns:repeat(5,1fr);gap:18px">
       <div class="card t-red"><div class="lbl">CRITICAL</div><h4>FALL</h4><p>Ngã đa tín hiệu ≥ 1.5 s · còi hú · clip.</p></div>
-      <div class="card t-green"><div class="lbl">INFO</div><h4>STANDING</h4><p>Đứng thẳng ≥ 3 s · toast, không hú.</p></div>
+      <div class="card t-green"><div class="lbl">INFO</div><h4>STANDING</h4><p>Đứng bình thường · log-only, không ảnh.</p></div>
       <div class="card t-green"><div class="lbl">INFO</div><h4>SQUAT</h4><p>Ngồi xổm (gối gập, lưng thẳng) ≥ 3 s.</p></div>
       <div class="card t-amber"><div class="lbl">WARNING</div><h4>STOOP</h4><p>Cúi khom spine &gt; 60° ≥ 3 s.</p></div>
-      <div class="card t-amber"><div class="lbl">WARNING</div><h4>PARTIAL</h4><p>YOLO chỉ thấy một phần cơ thể ≥ 5 s.</p></div>
+      <div class="card t-amber"><div class="lbl">WARNING</div><h4>PARTIAL</h4><p>Một phần cơ thể · log-only, không ảnh.</p></div>
     </div>
     <div class="alert mt">
       <h3>Xử lý khác nhau theo loại</h3>
@@ -546,7 +546,7 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
       <div class="checks">
         <div class="check ok"><div class="box">5</div><div class="txt">Nằm xuống ≥ 1.5 s <span>— FALL CRITICAL + clip</span></div></div>
         <div class="check ok"><div class="box">6</div><div class="txt">Đứng / ngồi xổm <span>— STANDING · SQUAT (INFO)</span></div></div>
-        <div class="check ok"><div class="box">7</div><div class="txt">Đứng sát mép khung / che thân <span>— PARTIAL sau 5 s</span></div></div>
+        <div class="check ok"><div class="box">7</div><div class="txt">Đứng sát mép khung / che thân <span>— PARTIAL log-only (không ảnh)</span></div></div>
         <div class="check ok"><div class="box">8</div><div class="txt">Events 3 panel + IQA <span>— thống kê · chart giờ · ảnh; Clip / Báo nhầm</span></div></div>
       </div>
     </div>

@@ -39,16 +39,16 @@ Ba tab:
 - **📋 Sự kiện** — lịch sử cảnh báo đã xác nhận: lọc theo loại / thời gian / chưa xử lý, thống kê và biểu đồ theo giờ, ảnh chụp (bấm để phóng to), **▶ Clip**, nút **Xác nhận** (đã xử lý), **Báo nhầm**, **⬇ CSV**. Số đỏ trên tab = số sự kiện chưa xử lý trong 24 giờ.
 
 Khi một cảnh báo được xác nhận: toast góc phải (bấm để mở Events), còi (ngã: còi hú; còn lại: bíp), thông báo desktop nếu tab đang ẩn. Chỉ còn **5 loại sự kiện tư thế**:
-- **Ngã (FALL)** — CRITICAL, ≥ 1.5 s (0.75 s nếu hông rơi nhanh).
-- **Đứng (STANDING)** — INFO, ≥ 3 s.
-- **Ngồi xổm (SQUAT)** — INFO, ≥ 3 s.
-- **Cúi khom (STOOP)** — WARNING, ≥ 3 s.
-- **Một phần cơ thể (PARTIAL)** — WARNING, ≥ 5 s; YOLO/MediaPipe thiếu core keypoints hoặc cắt mép khung (nhiều người vẫn track theo ID).
+- **Ngã (FALL)** — CRITICAL, ≥ 1.5 s (0.75 s nếu hông rơi nhanh); lưu ảnh + clip.
+- **Đứng (STANDING)** — INFO, ghi ngay (log-only); **không lưu ảnh**, tự đánh dấu đã xử lý.
+- **Ngồi xổm (SQUAT)** — INFO, ≥ 3 s; lưu ảnh + clip.
+- **Cúi khom (STOOP)** — WARNING, ≥ 3 s; lưu ảnh + clip.
+- **Một phần cơ thể (PARTIAL)** — WARNING, ghi ngay (log-only); YOLO thiếu core keypoints / cắt mép; **không lưu ảnh**, tự ack.
 
 ### 3.1 Nguồn ở tab Giám sát
 Mặc định UI ở trạng thái **chờ nguồn** — chọn một trong các nguồn thật:
 
-1. **VIDEO/CAMERA + AI (MediaPipe trong trình duyệt)** — bấm **AI Detect** (`A`, chờ 3–8 giây tải lần đầu) → bấm **Camera** hoặc **Video**. Skeleton bám người thật, người 3D làm theo tư thế. Nếu đã kết nối backend, cảnh báo xác nhận được gửi lên nhật ký kèm ảnh (nguồn `browser`).
+1. **VIDEO/CAMERA + AI (MediaPipe trong trình duyệt)** — bấm **AI Detect** (`A`, chờ 3–8 giây tải lần đầu) → bấm **Camera** hoặc **Video**. Skeleton bám người thật, người 3D làm theo tư thế. Nếu đã kết nối backend, cảnh báo xác nhận được gửi lên nhật ký (nguồn `browser`); chỉ FALL/SQUAT/STOOP kèm ảnh.
 
 2. **SERVER (Python)** — bấm **Camera**/**Video** rồi **Server** (địa chỉ WebSocket được điền tự động khi đã kết nối backend). Dùng YOLOv8-Pose + tracking + xác nhận cảnh báo trên server. Không có YOLO → WebSocket trả `{"error":"AI unavailable"}`.
 
@@ -104,7 +104,7 @@ Cấu hình bằng biến môi trường `ECHO_*` (xem [.env.example](../.env.ex
 | `ECHO_CAMERAS` | (trống) | Camera server, `tên=nguồn` cách nhau dấu phẩy |
 | `ECHO_CAMERAS_FILE` | (trống) | File JSON danh sách camera |
 | `ECHO_CAMERA_FPS` | 10 | Số frame phân tích mỗi giây cho mỗi camera |
-| `ECHO_FALL_CONFIRM_S` / `ECHO_POSTURE_CONFIRM_S` / `ECHO_QUALITY_CONFIRM_S` | 1.5 / 3 / 5 | Confirm FALL / STANDING·SQUAT·STOOP / PARTIAL |
+| `ECHO_FALL_CONFIRM_S` / `ECHO_POSTURE_CONFIRM_S` | 1.5 / 3 | Confirm FALL / SQUAT·STOOP (STANDING·PARTIAL = 0 s, không ảnh) |
 | `ECHO_ALERT_COOLDOWN_S` | 30 | Không lặp cùng cảnh báo cho cùng người trong khoảng này |
 | `ECHO_DATA_DIR` | `./output` | Nơi lưu `echo.db` và `snapshots/` |
 | `ECHO_RECORD_BROWSER_EVENTS` | 1 | Ghi cả cảnh báo từ chế độ Server / AI trình duyệt |
