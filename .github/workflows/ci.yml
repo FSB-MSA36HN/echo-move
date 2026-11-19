@@ -18,4 +18,3 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
       - run: node --check web/js/app.js
-      - run: python3 scripts/export_scenarios.py && git diff --exit-code web/data

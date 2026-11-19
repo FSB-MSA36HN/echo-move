@@ -15,7 +15,7 @@ JPEG = b"\xff\xd8\xff\xe0fake-jpeg\xff\xd9"
 
 @pytest.fixture()
 def client(tmp_path, monkeypatch):
-    monkeypatch.setenv("ECHO_DEMO_MODE", "1")
+    monkeypatch.setattr("echo_move.pose.detector.PoseDetector._load", lambda self: None)
     monkeypatch.setenv("ECHO_MATLAB_DIR", str(tmp_path))
     monkeypatch.setenv("ECHO_DATA_DIR", str(tmp_path / "data"))
     monkeypatch.setenv("ECHO_CAMERAS", "")
@@ -34,7 +34,8 @@ def post_event(client, **kw):
 
 def test_health(client):
     body = client.get("/health").json()
-    assert body["status"] == "ok" and body["demo_mode"] is True
+    assert body["status"] == "ok" and "demo_mode" not in body
+    assert "yolo" in body
     assert body["cameras"] == 0 and body["events_db"] is True and body["notify"] == []
 
 
@@ -135,7 +136,7 @@ def test_cameras_empty_and_404(client):
 
 
 def test_camera_config_roundtrip(tmp_path, monkeypatch):
-    monkeypatch.setenv("ECHO_DEMO_MODE", "1")
+    monkeypatch.setattr("echo_move.pose.detector.PoseDetector._load", lambda self: None)
     monkeypatch.setenv("ECHO_DATA_DIR", str(tmp_path))
     monkeypatch.setenv("ECHO_CAMERAS", f"kho={tmp_path / 'missing.mp4'}")
     zone = {"name": "Press", "points": [[0, 0.5], [0.5, 0.5], [0.5, 1]], "dwell_s": 2}

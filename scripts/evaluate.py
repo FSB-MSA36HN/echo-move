@@ -15,7 +15,7 @@ import hashlib
 import json
 import sys
 import time
-from dataclasses import asdict, replace
+from dataclasses import asdict
 from pathlib import Path
 
 from echo_move.config import Settings
@@ -49,7 +49,7 @@ def main() -> int:
     if not cases:
         print(f"Không tìm thấy video trong {a.root}", file=sys.stderr)
         return 1
-    cfg = replace(Settings(), demo_mode=False)
+    cfg = Settings()
     cache = Path(a.cache) / a.dataset
     detector = None
     extractions = {}

@@ -157,13 +157,6 @@ class StreamPipeline:
             "mode": "AI" if self.detector.available else "IQA", "version": __version__,
         }
 
-    def observe(self, payload: dict[str, Any], t: float | None = None) -> dict[str, Any]:
-        """Run alert rules on an externally produced payload (demo generator)."""
-        t = time.time() if t is None else t
-        alerts = self.engine.update(payload.get("persons", []), payload.get("quality"), t)
-        payload["alerts"] = [self._publish(a, None, payload.get("persons", [])) for a in alerts]
-        return payload
-
     def _publish(self, alert: Any, frame: np.ndarray | None,
                  persons: list[dict[str, Any]]) -> dict[str, Any]:
         from .alerts.engine import ACTION_TYPES

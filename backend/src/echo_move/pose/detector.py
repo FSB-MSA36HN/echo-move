@@ -33,14 +33,11 @@ class PoseDetector:
         return self.model is not None
 
     def _load(self) -> None:
-        if self.cfg.demo_mode:
-            log.warning("DEMO_MODE enabled — models not loaded")
-            return
         try:
             import torch
             from ultralytics import YOLO
         except ImportError:
-            log.warning("ultralytics/torch not installed → DEMO mode")
+            log.warning("ultralytics/torch not installed — pose AI unavailable")
             return
         try:
             device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -48,7 +45,7 @@ class PoseDetector:
             log.info("Loading %s on %s", self.cfg.model_name, device)
             self.model = YOLO(self.cfg.model_name).to(device)
         except Exception:
-            log.exception("YOLO failed to load → DEMO mode")
+            log.exception("YOLO failed to load — pose AI unavailable")
             self.model = None
             return
         try:

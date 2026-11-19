@@ -13,30 +13,20 @@
 clear; clc; close all;
 addpath(fileparts(mfilename('fullpath')));
 cfg = config();
-% cfg.demoMode = true;    % uncomment to run without a video file
 
 if ~exist(cfg.outputDir, 'dir'), mkdir(cfg.outputDir); end
 fprintf('Output: %s | PIQE_MODE=%s (full every %d frames)\n', ...
         cfg.outputDir, cfg.piqeMode, cfg.piqeSampleN);
 
 %% Video source
-reader = [];
-if ~cfg.demoMode
-    [fileName, folder] = uigetfile({'*.mp4;*.avi;*.mov', 'Video'}, 'Chọn video');
-    if isequal(fileName, 0)
-        warning('No video selected — falling back to demo mode.');
-        cfg.demoMode = true;
-    else
-        reader = VideoReader(fullfile(folder, fileName));
-        nFrames = floor(reader.Duration * reader.FrameRate);
-        fps = reader.FrameRate;
-        baseName = regexprep(fileName, '\.[^.]+$', '');
-    end
+[fileName, folder] = uigetfile({'*.mp4;*.avi;*.mov', 'Video'}, 'Chọn video');
+if isequal(fileName, 0)
+    error('No video selected — choose a video file to run IQA.');
 end
-if cfg.demoMode
-    nFrames = cfg.demoFrames; fps = 30;
-    fileName = 'demo_synthetic'; baseName = 'demo_synthetic';
-end
+reader = VideoReader(fullfile(folder, fileName));
+nFrames = floor(reader.Duration * reader.FrameRate);
+fps = reader.FrameRate;
+baseName = regexprep(fileName, '\.[^.]+$', '');
 fprintf('%s | %d frames | %.1f FPS\n', fileName, nFrames, fps);
 
 hasIPT = license('test', 'Image_Toolbox');
@@ -63,16 +53,12 @@ for k = 1:numel(names), B.(names{k}) = zeros(1, nFrames); end
 idx = 0; tTotal = tic;
 while idx < nFrames
     tFrame = tic;
-    if cfg.demoMode
-        frame = iqa.syntheticFrame(idx + 1, cfg.frameSize);
+    if ~hasFrame(reader), break; end
+    frame = readFrame(reader);
+    if hasIPT
+        frame = imresize(frame, cfg.frameSize);
     else
-        if ~hasFrame(reader), break; end
-        frame = readFrame(reader);
-        if hasIPT
-            frame = imresize(frame, cfg.frameSize);
-        else
-            frame = frame(1:4:end, 1:4:end, :);
-        end
+        frame = frame(1:4:end, 1:4:end, :);
     end
     idx = idx + 1;
     B.t(idx) = (idx - 1) / fps;
@@ -156,7 +142,7 @@ s = struct('video', video, 'frames', n, 'fps', fps, ...
     'time_fast_ms', mean(B.timeFast(1:n)), 'time_full_ms', mean(fullT), ...
     'avg_frame_ms', mean(B.frameMs(1:n)), 'effective_fps', 1000 / mean(B.frameMs(1:n)), ...
     'piqe_correlation', r, 'total_seconds', toc(tTotal), ...
-    'status', status, 'color', colors.(status), 'demo_mode', cfg.demoMode, ...
+    'status', status, 'color', colors.(status), ...
     'piqe_mode', cfg.piqeMode, 'progress', n / numel(B.t), 'version', cfg.version, ...
     'updated_at', datestr(now, 'yyyy-mm-dd HH:MM:SS'));
 end

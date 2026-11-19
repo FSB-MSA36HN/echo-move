@@ -111,7 +111,7 @@ def create_app(cfg: Settings | None = None) -> FastAPI:
     async def health(request: Request) -> dict[str, Any]:
         st = request.app.state
         det: PoseDetector = st.detector
-        return {"status": "ok", "demo_mode": not det.available, "yolo": det.available,
+        return {"status": "ok", "yolo": det.available,
                 "hands": det.hands is not None, "version": __version__,
                 "matlab_dir": str(cfg.matlab_dir.resolve()),
                 "cameras": len(st.cameras.workers), "events_db": st.store is not None,

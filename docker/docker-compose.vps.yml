@@ -15,7 +15,6 @@ services:
     environment:
       ECHO_HOST: "0.0.0.0"
       ECHO_PORT: "8000"
-      ECHO_DEMO_MODE: ${ECHO_DEMO_MODE:-0}
       ECHO_CORS_ORIGINS: "*"
       ECHO_CAMERAS: ${ECHO_CAMERAS:-}
       ECHO_TELEGRAM_TOKEN: ${ECHO_TELEGRAM_TOKEN:-}

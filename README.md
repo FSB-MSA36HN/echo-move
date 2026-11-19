@@ -25,9 +25,7 @@ Luật ngã **đa tín hiệu** (nằm ngang / đầu thấp / sụp người). 
 
 **2. Backend (giao diện được phục vụ luôn tại http://localhost:8000)**
 ```bash
-make install          # cài backend + công cụ dev
-make demo             # chế độ demo (không cần model AI)
-make install-ai && make run   # AI đầy đủ (YOLOv8-Pose + MediaPipe), tự tải yolov8n-pose.pt lần đầu
+make install-ai && make run   # YOLOv8-Pose + MediaPipe; tự tải yolov8n-pose.pt lần đầu
 ```
 Mở <http://localhost:8000> — web tự nhận backend (chấm xanh góc trên). Mở `web/index.html` trực tiếp vẫn được: web tự dò `localhost:8000`.
 
@@ -37,11 +35,11 @@ export ECHO_CAMERAS="kho=rtsp://user:pass@192.168.1.10:554/stream1,cong=0"
 export ECHO_TELEGRAM_TOKEN=123456:ABC... ECHO_TELEGRAM_CHAT_ID=-100123...
 make run
 ```
-Không đặt biến nào thì các tính năng này tự tắt — cách deploy cũ (`make run/demo`, `docker compose up`, Colab, GitHub Pages) giữ nguyên.
+Không đặt biến nào thì các tính năng này tự tắt.
 
-**Docker:** `cd docker && docker compose up --build` (demo mode, cổng 8000; nhật ký ở `output/`).
+**Docker:** `cd docker && docker compose up --build` (AI bật, cổng 8000; nhật ký ở `output/`).
 
-**VPS demo:** <https://test.antokr.com> (HTTPS; Docker nội bộ port 18080) — chi tiết / xoá stack: [docs/DEPLOY_VPS.md](docs/DEPLOY_VPS.md).
+**VPS:** <https://test.antokr.com> (HTTPS; Docker nội bộ port 18080) — chi tiết: [docs/DEPLOY_VPS.md](docs/DEPLOY_VPS.md).
 
 MATLAB: mở `matlab/run_iqa_engine.m`, bấm Run. Kết quả ghi vào `output/`, backend tự đọc.
 
@@ -52,9 +50,9 @@ backend/    package Python `echo_move`: camera/, pose/ (detector, tracker, class
             zones.py, maintenance.py, evaluation.py, pipeline.py, app.py; tests/
 matlab/     run_iqa_engine.m, config.m, +iqa/ (hàm metric), tests/
 web/        index.html, css/, js/ (app, human3d, backend, alerts, cameras, events),
-            assets/models/ (worker.glb), data/scenarios.json
+            assets/models/ (worker.glb)
 docs/       USER_GUIDE.md, ARCHITECTURE.md, ALGORITHMS.md, DEMO_SCRIPT.md
-scripts/    benchmark.py, evaluate.py, export_scenarios.py, embed_model.py
+scripts/    benchmark.py, evaluate.py, embed_model.py
 docker/     Dockerfile, docker-compose.yml
 output/     MATLAB JSON, echo.db, snapshots/, clips/, camera_config.json (không commit)
 data/       video mẫu (không commit)
@@ -64,7 +62,7 @@ data/       video mẫu (không commit)
 - [Hướng dẫn sử dụng](docs/USER_GUIDE.md) — cài đặt, camera RTSP, Telegram, các tab web, troubleshooting
 - [Kiến trúc & API](docs/ARCHITECTURE.md)
 - [Thuật toán & trích dẫn](docs/ALGORITHMS.md) — IQA, phân loại tư thế, tracking, xác nhận theo thời gian, dựng người 3D
-- [Kịch bản demo & Q&A bảo vệ](docs/DEMO_SCRIPT.md)
+- [Kịch bản thuyết trình & Q&A](docs/DEMO_SCRIPT.md)
 - [Changelog](CHANGELOG.md)
 
 ## Phát triển

@@ -44,7 +44,6 @@ class Settings:
     web_dir: Path = field(default_factory=lambda: Path(_env("WEB_DIR", str(_default_web()))))
 
     # Models
-    demo_mode: bool = field(default_factory=lambda: _env("DEMO_MODE", "0") == "1")
     model_name: str = field(default_factory=lambda: _env("MODEL", "yolov8n-pose.pt"))
     max_persons: int = field(default_factory=lambda: int(_env("MAX_PERSONS", "5")))
     yolo_conf: float = 0.25

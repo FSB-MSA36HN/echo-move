@@ -76,7 +76,7 @@ def test_source_helpers():
 
 
 def test_worker_processes_frames_and_raises_alerts(tmp_path):
-    cfg = Settings(camera_fps=25, fall_confirm_s=0.3, alert_cooldown_s=60, demo_mode=True)
+    cfg = Settings(camera_fps=25, fall_confirm_s=0.3, alert_cooldown_s=60)
     store = EventStore(tmp_path)
     pipe = StreamPipeline("kho", FakeDetector(load_scenarios()["fall"]["kps"]), cfg,
                           AlertHub(store))
@@ -95,7 +95,7 @@ def test_worker_processes_frames_and_raises_alerts(tmp_path):
 
 
 def test_worker_records_event_clip(tmp_path):
-    cfg = Settings(camera_fps=20, fall_confirm_s=0.3, alert_cooldown_s=60, demo_mode=True,
+    cfg = Settings(camera_fps=20, fall_confirm_s=0.3, alert_cooldown_s=60,  
                    clip_pre_s=0.5, clip_post_s=0.5)
     store = EventStore(tmp_path)
     pipe = StreamPipeline("kho", FakeDetector(load_scenarios()["fall"]["kps"]), cfg,
@@ -114,7 +114,7 @@ def test_worker_records_event_clip(tmp_path):
 
 
 def test_offline_no_longer_publishes_events(tmp_path):
-    cfg = Settings(offline_alert_s=30, demo_mode=True)
+    cfg = Settings(offline_alert_s=30)
     store = EventStore(tmp_path)
     pipe = StreamPipeline("kho", FakeDetector([]), cfg, AlertHub(store))
     w = CameraWorker("kho", "rtsp://cam", pipe, cfg, capture_factory=lambda s: FakeCapture())
@@ -141,7 +141,7 @@ def test_zone_geometry_and_parsing(tmp_path):
 
 
 def test_zone_intrusion_still_tagged_but_no_zone_alert(tmp_path):
-    cfg = Settings(demo_mode=True, alert_cooldown_s=60)
+    cfg = Settings(alert_cooldown_s=60)
     store = EventStore(tmp_path)
     stand = load_scenarios()["standing"]["kps"]  # ankles at y≈0.87
     pipe = StreamPipeline("kho", FakeDetector(stand), cfg, AlertHub(store))
@@ -155,7 +155,7 @@ def test_zone_intrusion_still_tagged_but_no_zone_alert(tmp_path):
 
 
 def test_worker_reconnects_after_open_failure():
-    cfg = Settings(camera_fps=25, demo_mode=True)
+    cfg = Settings(camera_fps=25)
     caps = iter([FakeCapture(opened=False), FakeCapture()])
     pipe = StreamPipeline("x", FakeDetector([[0, 0, 0]] * 17), cfg)
     w = CameraWorker("x", "rtsp://cam", pipe, cfg, capture_factory=lambda s: next(caps))
@@ -176,10 +176,8 @@ def test_manager_with_real_video_file(tmp_path):
         cv2.circle(img, (160, 120), 40, (255, 255, 255), -1)
         vw.write(img)
     vw.release()
-    cfg = Settings(camera_fps=20, demo_mode=True)
-    from echo_move.pose.detector import PoseDetector
-
-    mgr = CameraManager(cfg, PoseDetector(cfg), None, sources={"file": str(path)})
+    cfg = Settings(camera_fps=20)
+    mgr = CameraManager(cfg, FakeDetector([]), None, sources={"file": str(path)})
     mgr.start()
     try:
         w = mgr.get("file")

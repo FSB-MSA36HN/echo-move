@@ -37,13 +37,13 @@
 | `pipeline.py` | `StreamPipeline` dùng chung cho camera server và `/ws/pose` |
 | `render.py` | Vẽ skeleton, nhãn, vùng nguy hiểm lên ảnh (MJPEG, ảnh sự kiện), làm mờ mặt |
 | `matlab_bridge.py` | Đọc JSON MATLAB |
-| `scenarios.py` + `data/scenarios.json` | Kịch bản demo; `scripts/export_scenarios.py` sao chép sang web |
+| `scenarios.py` + `data/scenarios.json` | Fixture keypoint cho unit test (không phải chế độ chạy) |
 | `app.py` | `create_app()`: REST + WebSocket + phục vụ thư mục `web/` tại `/` |
 
 ## API
 | Phương thức | Đường dẫn | Mô tả |
 |---|---|---|
-| GET | `/health` | Trạng thái, phiên bản, AI/demo, số camera, DB, kênh thông báo |
+| GET | `/health` | Trạng thái, phiên bản, YOLO, số camera, DB, kênh thông báo |
 | GET | `/matlab_iqa` | JSON MATLAB mới nhất |
 | GET | `/api/cameras` | Danh sách camera: `state` (`online/connecting/reconnecting/stalled/stopped`), fps, số người, IQA |
 | GET | `/api/cameras/{id}/snapshot.jpg` | Ảnh mới nhất đã vẽ skeleton |

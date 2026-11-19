@@ -31,7 +31,7 @@ make install-ai     # thêm YOLO + MediaPipe (tuỳ chọn)
 - Kiểm tra nhanh: mở `http://localhost:8000` → đợi ~2 giây → bấm **Camera** hoặc **Video** → bấm `T` (self-test; `MediaPipe` và `Backend` hiện ⚠/✗ là bình thường khi chưa bật AI/backend).
 
 ## 3. Giao diện web
-Có 2 cách mở: **http://localhost:8000** (backend phục vụ giao diện — khuyến nghị) hoặc mở thẳng `web/index.html` / GitHub Pages (web tự dò backend ở `localhost:8000`). Góc trên: chấm xanh **Backend v22 · AI/DEMO · n cam** khi đã kết nối; nút 🔔/🔕 bật/tắt còi (bấm lần đầu để trình duyệt cho phép âm thanh và hỏi quyền thông báo desktop).
+Có 2 cách mở: **http://localhost:8000** (backend phục vụ giao diện — khuyến nghị) hoặc mở thẳng `web/index.html` / GitHub Pages (web tự dò backend ở `localhost:8000`). Góc trên: chấm xanh **Backend v22 · YOLO · n cam** khi đã kết nối; nút 🔔/🔕 bật/tắt còi (bấm lần đầu để trình duyệt cho phép âm thanh và hỏi quyền thông báo desktop).
 
 Ba tab:
 - **🎥 Giám sát** — nguồn thật (webcam, video file, chế độ Server) + IQA Live trên deck. Desktop: cột phải có Worker 3D + Detect; **mobile ẩn Worker 3D**.
@@ -82,20 +82,18 @@ MATLAB vẫn có thể xuất `output/*_iqa.json` (9 biểu đồ offline) cho p
 
 ## 4. Backend Python
 ```bash
-make run                                   # AI nếu có model, ngược lại demo
-make demo                                  # ép chế độ demo
+make install-ai && make run                # cần YOLO / MediaPipe
 curl http://localhost:8000/health
 ```
 Phản hồi `/health` mẫu:
 ```json
-{"status":"ok","demo_mode":false,"yolo":true,"hands":true,"version":"22.0.0","matlab_dir":".../output","cameras":2,"events_db":true,"notify":["telegram"]}
+{"status":"ok","yolo":true,"hands":true,"version":"22.0.0","matlab_dir":".../output","cameras":2,"events_db":true,"notify":["telegram"]}
 ```
 Cấu hình bằng biến môi trường `ECHO_*` (xem [.env.example](../.env.example)):
 
 | Biến | Mặc định | Ý nghĩa |
 |---|---|---|
 | `ECHO_PORT` | 8000 | Cổng server |
-| `ECHO_DEMO_MODE` | 0 | `1` = không nạp YOLO |
 | `ECHO_SERVER_FPS` | 20 | Giảm xuống 15 nếu máy yếu |
 | `ECHO_MAX_PERSONS` | 5 | Số người tối đa |
 | `ECHO_MATLAB_DIR` | `./output` | Thư mục JSON của MATLAB |
@@ -116,7 +114,7 @@ Cấu hình bằng biến môi trường `ECHO_*` (xem [.env.example](../.env.ex
 | `ECHO_ESCALATE_MIN` | 0 | Sự kiện CRITICAL chưa xác nhận sau N phút thì gửi lại (0 = tắt) |
 | `ECHO_ESCALATE_TELEGRAM_CHAT_ID` | (trống) | Chat của người giám sát nhận tin leo thang (mặc định chat chính) |
 
-Dừng server: `Ctrl+C`. Thiếu YOLO hoặc lỗi nạp model → tự chuyển DEMO (có log cảnh báo).
+Dừng server: `Ctrl+C`. Thiếu YOLO hoặc lỗi nạp model → `/health` báo `"yolo": false` (không còn chế độ demo giả).
 
 ### 4.1 Camera IP (RTSP), webcam USB, file video
 ```bash
@@ -183,7 +181,7 @@ Lưu ý: đây là tối ưu trên **suy giảm nhân tạo có nhãn mức đ�
 
 ## 5. MATLAB
 1. Mở MATLAB, `cd matlab`, mở `run_iqa_engine.m`, Run (F5).
-2. Chọn video; huỷ chọn → chạy dữ liệu tổng hợp. Cấu hình ở [matlab/config.m](../matlab/config.m) (`piqeMode`, `piqeSampleN`, `demoMode`, `outputDir`…).
+2. Chọn video (bắt buộc). Cấu hình ở [matlab/config.m](../matlab/config.m) (`piqeMode`, `piqeSampleN`, `outputDir`…).
 3. Chín biểu đồ: Gốc · Canny · Laplacian · Nhiễu (wavelet nếu có) · Histogram · Cân bằng histogram · Timeline IQA · Otsu · So sánh PIQE fast/full (kèm hệ số tương quan).
 4. Xuất ra `output/`: `<video>_iqa.json` (summary + per-frame), `<video>_iqa.csv`, `<video>_report.png`.
 

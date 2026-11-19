@@ -1,10 +1,10 @@
 // Finds a running ECHO MOVE backend and keeps a live /ws/events connection.
-// Order: ?server=… (remembered) → same origin → localhost:8000 → demo VPS.
+// Order: ?server=… (remembered) → same origin → localhost:8000 → deployed host.
 // Degrades gracefully when backend is offline (source controls still work locally).
 (function () {
   "use strict";
   const C = window.ECHO_CONFIG;
-  const DEMO_VPS = 'https://test.antokr.com';
+  const REMOTE_HOST = 'https://test.antokr.com';
   const handlers = {};
   const B = window.EchoBackend = {
     online: false, base: null, health: null, ws: null,
@@ -24,7 +24,7 @@
     if (C.explicit) c.push(C.apiBase);
     if (/^https?:$/.test(location.protocol)) c.push(location.origin);
     c.push('http://localhost:8000');
-    c.push(DEMO_VPS);
+    c.push(REMOTE_HOST);
     return [...new Set(c)];
   }
 
