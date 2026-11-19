@@ -4,7 +4,7 @@ References:
     Blur      — Pech-Pacheco et al., 2000 (variance of Laplacian)
     Noise     — Immerkaer, 1996 (residual after smoothing)
     Contrast  — Peli, 1990 (RMS contrast)
-    PIQE      — Venkatanath et al., 2015
+    PIQE      — MSCN standard-deviation proxy used live (not block PIQE)
     Exposure  — ISO 18434-1 (clipped pixel ratio)
 """
 
@@ -17,8 +17,7 @@ from dataclasses import asdict, dataclass
 import cv2
 import numpy as np
 
-from ..config import PiqeMode
-from .piqe import mscn, piqe_full
+from .piqe import mscn
 
 log = logging.getLogger(__name__)
 
@@ -26,7 +25,6 @@ log = logging.getLogger(__name__)
 @dataclass
 class IqaResult:
     piqe: float = 0.0
-    piqe_full: float = 0.0
     blur: float = 0.0
     contrast: float = 0.0
     noise: float = 0.0
@@ -34,7 +32,6 @@ class IqaResult:
     overall: float = 0.0
     brightness: float = 0.0
     time_fast_ms: float = 0.0
-    time_full_ms: float = 0.0
     time_total_ms: float = 0.0
 
     def to_dict(self) -> dict[str, float]:
@@ -55,9 +52,18 @@ def contrast_score(gray_f: np.ndarray) -> float:
 
 
 def noise_score(gray_f: np.ndarray) -> float:
-    blurred = np.asarray(cv2.GaussianBlur(gray_f, (5, 5), 0), dtype=np.float64)
-    residual = np.asarray(gray_f - blurred, dtype=np.float64)
-    return max(100.0 - float(np.std(residual)) * 1000.0, 0.0)
+    """Immerkaer-style noise estimate (Laplacian mask), robust to mild structure/blur.
+
+    Using ``std(image − Gauss)`` confuses blur with “less noise” (smooth residual),
+    which made Overall *rise* as blur severity increased. The 3×3 Immerkaer mask
+    isolates high-frequency grain instead.
+    """
+    # gray_f is float [0,1]; work in ~0–255 scale so the coefficient stays comparable
+    g = np.asarray(gray_f, dtype=np.float64) * 255.0
+    kernel = np.array([[1, -2, 1], [-2, 4, -2], [1, -2, 1]], dtype=np.float64)
+    conv = cv2.filter2D(g, -1, kernel)
+    sigma = float(np.mean(np.abs(conv))) * np.sqrt(np.pi / 2.0) / 6.0
+    return max(100.0 - sigma * 4.0, 0.0)
 
 
 def exposure_score(gray_f: np.ndarray) -> float:
@@ -70,33 +76,23 @@ def compute_iqa(
     gray_u8: np.ndarray,
     gray_f: np.ndarray,
     *,
-    mode: PiqeMode = "both",
-    weights: tuple[float, float, float, float, float] = (0.25, 0.25, 0.20, 0.15, 0.15),
-    compute_full: bool = False,
+    weights: tuple[float, float, float, float, float] = (0.05, 0.50, 0.20, 0.15, 0.10),
 ) -> IqaResult:
-    """Compute all metrics for one frame. ``compute_full`` enables the slow block PIQE."""
+    """Compute all live metrics for one frame. PIQE is the MSCN proxy."""
     t0 = time.perf_counter()
     try:
         t = time.perf_counter()
-        fast = mscn_quality(gray_f)
+        piqe = mscn_quality(gray_f)
         time_fast = (time.perf_counter() - t) * 1000
-
-        full, time_full = fast, 0.0
-        if compute_full or mode == "full":
-            t = time.perf_counter()
-            full = piqe_full(gray_f)
-            time_full = (time.perf_counter() - t) * 1000
-
         blur = blur_score(gray_u8)
         contrast = contrast_score(gray_f)
         noise = noise_score(gray_f)
         exposure = exposure_score(gray_f)
-        piqe = full if mode == "full" else fast
         w = weights
         overall = w[0] * piqe + w[1] * blur + w[2] * contrast + w[3] * noise + w[4] * exposure
         return IqaResult(
-            piqe, full, blur, contrast, noise, exposure, overall,
-            float(np.mean(gray_u8)), time_fast, time_full,
+            piqe, blur, contrast, noise, exposure, overall,
+            float(np.mean(gray_u8)), time_fast,
             (time.perf_counter() - t0) * 1000,
         )
     except Exception:

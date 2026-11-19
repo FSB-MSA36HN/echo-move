@@ -92,7 +92,7 @@ curl http://localhost:8000/health
 ```
 Phản hồi `/health` mẫu:
 ```json
-{"status":"ok","demo_mode":false,"yolo":true,"hands":true,"version":"22.0.0","piqe_mode":"both","matlab_dir":".../output","cameras":2,"events_db":true,"notify":["telegram"]}
+{"status":"ok","demo_mode":false,"yolo":true,"hands":true,"version":"22.0.0","matlab_dir":".../output","cameras":2,"events_db":true,"notify":["telegram"]}
 ```
 Cấu hình bằng biến môi trường `ECHO_*` (xem [.env.example](../.env.example)):
 
@@ -102,8 +102,6 @@ Cấu hình bằng biến môi trường `ECHO_*` (xem [.env.example](../.env.ex
 | `ECHO_DEMO_MODE` | 0 | `1` = không nạp YOLO |
 | `ECHO_SERVER_FPS` | 20 | Giảm xuống 15 nếu máy yếu |
 | `ECHO_MAX_PERSONS` | 5 | Số người tối đa |
-| `ECHO_PIQE_MODE` | both | `fast` / `full` / `both` |
-| `ECHO_PIQE_SAMPLE_N` | 30 | Tính PIQE full mỗi N frame |
 | `ECHO_MATLAB_DIR` | `./output` | Thư mục JSON của MATLAB |
 | `ECHO_CAMERAS` | (trống) | Camera server, `tên=nguồn` cách nhau dấu phẩy |
 | `ECHO_CAMERAS_FILE` | (trống) | File JSON danh sách camera |
@@ -182,7 +180,20 @@ Cấu hình lưu từ giao diện được ưu tiên hơn cấu hình trong file
 ### 4.5 Phát hiện đồ bảo hộ (tùy chọn)
 Cần một model YOLO **detection** đã huấn luyện trên dataset PPE, ví dụ Roboflow *Construction Site Safety* hoặc *Hard Hat Workers*, xuất ra `ppe.pt`. Đặt `ECHO_PPE_MODEL=./models/ppe.pt` rồi chạy `make run`; log sẽ in danh sách lớp của model. Hệ thống nhận các tên lớp `Hardhat/helmet`, `NO-Hardhat/head`, `Safety Vest/vest`, `NO-Safety Vest`. Lớp khác (Person, Mask, machinery...) bị bỏ qua. Mỗi model PPE làm tăng thời gian xử lý của mỗi frame, nên có thể giảm `ECHO_CAMERA_FPS` nếu máy yếu.
 
-### 4.6 Đánh giá độ chính xác (`make eval`)
+### 4.6 Hiệu chỉnh trọng số IQA (`make calibrate-iqa`)
+Chứng minh / tìm bộ trọng số `Overall` tốt nhất trên dataset suy giảm có kiểm soát:
+
+```bash
+make calibrate-iqa
+# hoặc kèm ảnh thật (kho / nhà xưởng):
+python scripts/calibrate_iqa.py --clean-dir data/iqa_clean --bases 8 --random 400
+```
+
+Script tự sinh cảnh nhà xưởng + (tuỳ chọn) ảnh trong `data/iqa_clean/`, làm mờ / nhiễu / giảm tương phản / cháy sáng / tối ở 5 mức, rồi tìm trọng số trên simplex. Kết quả: `output/iqa_calib/report.md`. Verdict sẽ là `DEFAULT_OPTIMAL`, `DEFAULT_NEAR_OPTIMAL` hoặc `DEFAULT_SUBOPTIMAL`. Bộ đang dùng đã được ghi cố định trong `Settings.iqa_weights = (0.05, 0.50, 0.20, 0.15, 0.10)`.
+
+Lưu ý: đây là tối ưu trên **suy giảm nhân tạo có nhãn mức độ**, không phải điểm MOS người xem trên toàn bộ ảnh hiện trường.
+
+### 4.7 Đánh giá độ chính xác (`make eval`)
 1. Tải dataset: [UR Fall](http://fenix.ur.edu.pl/~mkepski/ds/uf.html) (các file `fall-XX-cam0.mp4`, `adl-XX-cam0.mp4`) vào `data/urfd/`, hoặc Le2i (giữ nguyên `Videos/` và `Annotation_files/`) vào `data/le2i/`.
 2. Chạy `make install-ai` rồi `make eval DATASET=urfd ROOT=data/urfd` (hoặc `DATASET=le2i`). Với thư mục video tự quay, dùng `DATASET=folder` và thêm `labels.csv` gồm `file,label` (label là `fall` hoặc `adl`).
 3. Kết quả là bảng precision, recall, F1, độ trễ phát hiện và số báo nhầm/giờ của luật v21 và luật đa tín hiệu, ghi ra `output/eval_<dataset>.json`. Lần chạy đầu trích keypoint, khá lâu trên CPU. Các lần sau dùng cache nên chỉ mất vài giây, tiện để chỉnh ngưỡng.

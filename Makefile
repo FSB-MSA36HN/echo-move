@@ -1,5 +1,5 @@
 PY ?= python3
-.PHONY: install install-ai run demo test lint bench eval export-scenarios
+.PHONY: install install-ai run demo test lint bench eval calibrate-iqa export-scenarios
 
 install:        ## backend + dev tools (no AI models)
 	cd backend && $(PY) -m pip install -e ".[dev]"
@@ -17,5 +17,7 @@ bench:
 	$(PY) scripts/benchmark.py
 eval:           ## fall-rule evaluation: make eval DATASET=urfd ROOT=data/urfd
 	$(PY) scripts/evaluate.py $(or $(DATASET),urfd) $(or $(ROOT),data/urfd)
+calibrate-iqa:  ## prove/search IQA Overall weights on controlled degradations
+	$(PY) scripts/calibrate_iqa.py --bases $(or $(BASES),8) --random $(or $(RANDOM),400)
 export-scenarios:
 	$(PY) scripts/export_scenarios.py

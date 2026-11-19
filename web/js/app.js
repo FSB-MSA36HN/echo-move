@@ -39,14 +39,14 @@ const withConf = (pose, c) => pose.map(([x,y],i) => [x, y, Math.round((CORE.incl
 const SAFE_ENV = {hazards:[],overall_level:'SAFE',overall_color:[0,1,0]};
 
 const KB = {
-  an_toan:{ten:'An toàn',kps:withConf(POSE.stand,.95),safety:{level:'SAFE',color:[0,1,0],label:'AN TOÀN',detail:'Bình thường',technique:'NONE'},env:SAFE_ENV,iqa:{piqe:85,piqe_full:85,blur:82,contrast:80,noise:88,exposure:90,overall:85}},
-  nang_dung:{ten:'Nâng đúng',kps:withConf(POSE.lift,.95),safety:{level:'SAFE',color:[0,1,0],label:'NÂNG ĐÚNG',detail:'Gối 119°',technique:'PROPER_LIFT'},env:SAFE_ENV,iqa:{piqe:82,piqe_full:82,blur:80,contrast:78,noise:86,exposure:88,overall:82}},
-  cui_sai:{ten:'Cúi sai',kps:withConf(POSE.bend,.95),safety:{level:'RISK',color:[1,0,0],label:'SAI TƯ THẾ',detail:'Cúi 63°',technique:'IMPROPER'},env:SAFE_ENV,iqa:{piqe:80,piqe_full:80,blur:78,contrast:76,noise:84,exposure:86,overall:80}},
-  nga:{ten:'Ngã',kps:withConf(POSE.fall,.95),safety:{level:'RISK',color:[1,0,0],label:'PHÁT HIỆN NGÃ',detail:'Nguy hiểm',technique:'FALL'},env:SAFE_ENV,iqa:{piqe:75,piqe_full:75,blur:72,contrast:70,noise:80,exposure:82,overall:75}},
-  chay:{ten:'Cháy',kps:withConf(POSE.stand,.95),safety:{level:'SAFE',color:[0,1,0],label:'AN TOÀN',detail:'Bình thường',technique:'NONE'},env:{hazards:[{name:'FIRE',label:'LỬA (12.5%)',advice:'GỌI 114'}],overall_level:'CRITICAL',overall_color:[1,0,0]},iqa:{piqe:55,piqe_full:55,blur:60,contrast:65,noise:55,exposure:60,overall:59}},
-  bui:{ten:'Bụi',kps:withConf(POSE.stand,.6),safety:{level:'SAFE',color:[0,1,0],label:'AN TOÀN',detail:'Bình thường',technique:'NONE'},env:{hazards:[{name:'DUST',label:'BỤI',advice:'Khẩu trang'},{name:'SMOKE',label:'KHÓI',advice:'Sơ tán'}],overall_level:'CRITICAL',overall_color:[1,0,0]},iqa:{piqe:35,piqe_full:35,blur:30,contrast:25,noise:20,exposure:60,overall:36}},
-  toi:{ten:'Tối',kps:withConf(POSE.stand,.5),safety:{level:'SAFE',color:[0,1,0],label:'KHÓ THẤY',detail:'Ảnh tối',technique:'NONE'},env:{hazards:[{name:'DARK',label:'THIẾU SÁNG',advice:'Bật đèn'}],overall_level:'CRITICAL',overall_color:[1,0,0]},iqa:{piqe:30,piqe_full:30,blur:25,contrast:20,noise:60,exposure:15,overall:28}},
-  che_cam:{ten:'Che cam',kps:Array(17).fill([.5,.5,0]),safety:{level:'SAFE',color:[0,1,0],label:'KHÔNG PHÁT HIỆN',detail:'Camera lỗi',technique:'NONE'},env:{hazards:[{name:'DARK',label:'THIẾU SÁNG',advice:'Kiểm tra'},{name:'SMOKE',label:'KHÓI/CHE',advice:'Vệ sinh'}],overall_level:'CRITICAL',overall_color:[1,0,0]},iqa:{piqe:15,piqe_full:15,blur:10,contrast:8,noise:40,exposure:5,overall:14}}
+  an_toan:{ten:'An toàn',kps:withConf(POSE.stand,.95),safety:{level:'SAFE',color:[0,1,0],label:'AN TOÀN',detail:'Bình thường',technique:'NONE'},env:SAFE_ENV,iqa:{piqe:85,blur:82,contrast:80,noise:88,exposure:90,overall:85}},
+  nang_dung:{ten:'Nâng đúng',kps:withConf(POSE.lift,.95),safety:{level:'SAFE',color:[0,1,0],label:'NÂNG ĐÚNG',detail:'Gối 119°',technique:'PROPER_LIFT'},env:SAFE_ENV,iqa:{piqe:82,blur:80,contrast:78,noise:86,exposure:88,overall:82}},
+  cui_sai:{ten:'Cúi sai',kps:withConf(POSE.bend,.95),safety:{level:'RISK',color:[1,0,0],label:'SAI TƯ THẾ',detail:'Cúi 63°',technique:'IMPROPER'},env:SAFE_ENV,iqa:{piqe:80,blur:78,contrast:76,noise:84,exposure:86,overall:80}},
+  nga:{ten:'Ngã',kps:withConf(POSE.fall,.95),safety:{level:'RISK',color:[1,0,0],label:'PHÁT HIỆN NGÃ',detail:'Nguy hiểm',technique:'FALL'},env:SAFE_ENV,iqa:{piqe:75,blur:72,contrast:70,noise:80,exposure:82,overall:75}},
+  chay:{ten:'Cháy',kps:withConf(POSE.stand,.95),safety:{level:'SAFE',color:[0,1,0],label:'AN TOÀN',detail:'Bình thường',technique:'NONE'},env:{hazards:[{name:'FIRE',label:'LỬA (12.5%)',advice:'GỌI 114'}],overall_level:'CRITICAL',overall_color:[1,0,0]},iqa:{piqe:55,blur:60,contrast:65,noise:55,exposure:60,overall:59}},
+  bui:{ten:'Bụi',kps:withConf(POSE.stand,.6),safety:{level:'SAFE',color:[0,1,0],label:'AN TOÀN',detail:'Bình thường',technique:'NONE'},env:{hazards:[{name:'DUST',label:'BỤI',advice:'Khẩu trang'},{name:'SMOKE',label:'KHÓI',advice:'Sơ tán'}],overall_level:'CRITICAL',overall_color:[1,0,0]},iqa:{piqe:35,blur:30,contrast:25,noise:20,exposure:60,overall:36}},
+  toi:{ten:'Tối',kps:withConf(POSE.stand,.5),safety:{level:'SAFE',color:[0,1,0],label:'KHÓ THẤY',detail:'Ảnh tối',technique:'NONE'},env:{hazards:[{name:'DARK',label:'THIẾU SÁNG',advice:'Bật đèn'}],overall_level:'CRITICAL',overall_color:[1,0,0]},iqa:{piqe:30,blur:25,contrast:20,noise:60,exposure:15,overall:28}},
+  che_cam:{ten:'Che cam',kps:Array(17).fill([.5,.5,0]),safety:{level:'SAFE',color:[0,1,0],label:'KHÔNG PHÁT HIỆN',detail:'Camera lỗi',technique:'NONE'},env:{hazards:[{name:'DARK',label:'THIẾU SÁNG',advice:'Kiểm tra'},{name:'SMOKE',label:'KHÓI/CHE',advice:'Vệ sinh'}],overall_level:'CRITICAL',overall_color:[1,0,0]},iqa:{piqe:15,blur:10,contrast:8,noise:40,exposure:5,overall:14}}
 };
 
 const KN = [[0,1],[1,3],[0,2],[2,4],[5,6],[5,7],[7,9],[6,8],[8,10],
@@ -381,11 +381,11 @@ function calcIQA() {
   const dt = (performance.now() - t0);
 
   return {
-    piqe: Math.round(piqe*10)/10, piqe_full: Math.round(piqe*10)/10,
+    piqe: Math.round(piqe*10)/10,
     blur: Math.round(blur*10)/10, contrast: Math.round(contrast*10)/10,
     noise: Math.round(noise*10)/10, exposure: Math.round(exposure*10)/10,
     overall: Math.round(overall*10)/10,
-    time_fast_ms: Math.round(dt*10)/10, time_full_ms: 0,
+    time_fast_ms: Math.round(dt*10)/10,
     time_total_ms: Math.round(dt*10)/10
   };
 }
@@ -555,15 +555,14 @@ function process(data) {
     const q = data.quality;
     $('iqa').innerHTML = `
       <div class="row"><span>PIQE</span><span>${q.piqe}</span></div>
-      ${q.piqe_full ? `<div class="row"><span>Full</span><span>${q.piqe_full}</span></div>` : ''}
       <div class="row"><span>Blur</span><span>${q.blur}</span></div>
       <div class="row"><b>Tổng</b><b style="color:var(--c)">${q.overall}</b></div>`;
 
     S.sess.hist.push({
-      t: Date.now(), piqe: q.piqe, piqe_full: q.piqe_full || 0,
+      t: Date.now(), piqe: q.piqe,
       blur: q.blur, contrast: q.contrast, noise: q.noise,
       exposure: q.exposure, overall: q.overall,
-      time_fast_ms: q.time_fast_ms || 0, time_full_ms: q.time_full_ms || 0,
+      time_fast_ms: q.time_fast_ms || 0,
       frame_ms: data.benchmark?.frame_ms || 0,
       alert: data.env_hazards?.hazards?.[0]?.label || null
     });
@@ -675,31 +674,7 @@ function updateBench(b, q) {
     $('bf').textContent = (b.fps_actual || 0).toFixed(1) + ' FPS';
     $('bm').textContent = (b.avg_frame_ms || 0).toFixed(1) + ' ms';
   }
-  if (q) {
-    $('bpf').textContent = (q.time_fast_ms || 0).toFixed(1) + ' ms';
-    $('bpu').textContent = q.time_full_ms > 0 ? q.time_full_ms.toFixed(1) + ' ms' : 'N/A';
-    const sp = q.time_full_ms > 0 ? (q.time_full_ms / Math.max(q.time_fast_ms, .01)).toFixed(1) : '--';
-    $('bsp').textContent = sp + '×';
-  }
-  const hist = S.sess.hist.slice(-30);
-  const full = hist.map(h => h.piqe_full).filter(v => v > 0);
-  if (full.length > 5) {
-    const fast = hist.map(h => h.piqe).slice(-full.length);
-    $('bcor').textContent = 'r=' + corr(full, fast).toFixed(3);
-  }
-}
-
-function corr(x, y) {
-  if (x.length !== y.length || x.length < 2) return 0;
-  const n = x.length;
-  const mx = x.reduce((a,b)=>a+b,0)/n;
-  const my = y.reduce((a,b)=>a+b,0)/n;
-  let num = 0, dx2 = 0, dy2 = 0;
-  for (let i = 0; i < n; i++) {
-    const dx = x[i]-mx, dy = y[i]-my;
-    num += dx*dy; dx2 += dx*dx; dy2 += dy*dy;
-  }
-  return num / Math.sqrt(dx2*dy2 + 1e-9);
+  if (q) $('bpf').textContent = (q.time_fast_ms || 0).toFixed(1) + ' ms';
 }
 
 // ========== MAIN LOOP ==========
@@ -875,20 +850,17 @@ function drawSess() {
 // ========== REPORT ==========
 function sessionStats() {
   const h = S.sess.hist;
-  if (h.length === 0) return {piqe:0,piqe_full:0,blur:0,contrast:0,noise:0,exposure:0,
-    overall:0,min:0,max:0,std:0,status:'UNKNOWN',avgFrameMs:0,avgFast:0,avgFull:0,
-    speedup:'--',alertCount:0,alerts:{},total:0};
+  if (h.length === 0) return {piqe:0,blur:0,contrast:0,noise:0,exposure:0,
+    overall:0,min:0,max:0,std:0,status:'UNKNOWN',avgFrameMs:0,avgFast:0,
+    alertCount:0,alerts:{},total:0};
   const avg = a => a.reduce((x,y)=>x+y,0)/a.length;
   const ov = h.map(x => x.overall || 0);
   const mo = avg(ov);
   const st = mo >= 80 ? 'SAFE' : mo >= 60 ? 'WARNING' : 'DANGER';
-  const fast = avg(h.map(x => x.time_fast_ms || 0));
-  const full = avg(h.map(x => x.time_full_ms || 0).filter(v => v > 0));
   const alerts = {};
   h.forEach(x => { if (x.alert) alerts[x.alert] = (alerts[x.alert] || 0) + 1; });
   return {
     piqe: avg(h.map(x => x.piqe || 0)),
-    piqe_full: avg(h.map(x => x.piqe_full || 0)),
     blur: avg(h.map(x => x.blur || 0)),
     contrast: avg(h.map(x => x.contrast || 0)),
     noise: avg(h.map(x => x.noise || 0)),
@@ -896,8 +868,7 @@ function sessionStats() {
     overall: mo, min: Math.min(...ov), max: Math.max(...ov),
     std: Math.sqrt(avg(ov.map(x => (x-mo)**2))),
     status: st, avgFrameMs: avg(h.map(x => x.frame_ms || 0)),
-    avgFast: fast, avgFull: full,
-    speedup: fast > 0 && full > 0 ? (full/fast).toFixed(1) : '--',
+    avgFast: avg(h.map(x => x.time_fast_ms || 0)),
     alertCount: Object.values(alerts).reduce((a,b)=>a+b,0),
     alerts, total: h.length
   };
@@ -934,8 +905,7 @@ th{background:#f8fafc;color:#1e40af;}
 <b>Samples:</b> ${s.total} frames</p>
 <h2>1. IQA Metrics</h2>
 <div>
-  <div class="metric"><div class="label">PIQE Fast</div><div class="value">${s.piqe.toFixed(1)}</div></div>
-  <div class="metric"><div class="label">PIQE Full</div><div class="value">${s.piqe_full.toFixed(1)}</div></div>
+  <div class="metric"><div class="label">PIQE</div><div class="value">${s.piqe.toFixed(1)}</div></div>
   <div class="metric"><div class="label">Blur</div><div class="value">${s.blur.toFixed(1)}</div></div>
   <div class="metric"><div class="label">Contrast</div><div class="value">${s.contrast.toFixed(1)}</div></div>
   <div class="metric"><div class="label">Noise</div><div class="value">${s.noise.toFixed(1)}</div></div>
@@ -950,9 +920,7 @@ th{background:#f8fafc;color:#1e40af;}
 <table>
   <tr><th>Metric</th><th>Value</th><th>Note</th></tr>
   <tr><td>Frame time</td><td>${s.avgFrameMs.toFixed(1)} ms</td><td>~${(1000/Math.max(s.avgFrameMs,1)).toFixed(1)} FPS</td></tr>
-  <tr><td>PIQE fast</td><td>${s.avgFast.toFixed(1)} ms</td><td>Realtime</td></tr>
-  <tr><td>PIQE full</td><td>${s.avgFull>0?s.avgFull.toFixed(1)+' ms':'N/A'}</td><td>Sampled 1/30</td></tr>
-  <tr><td>Speedup</td><td><span class="hl">${s.speedup}×</span></td><td>Trade-off</td></tr>
+  <tr><td>PIQE</td><td>${s.avgFast.toFixed(1)} ms</td><td>Realtime</td></tr>
 </table>
 <h2>3. Citations</h2>
 <div class="section"><table>
@@ -1147,7 +1115,7 @@ function bind() {
       video:'demo_video.mp4', frames:450, fps:30,
       piqe:78.3, piqe_full:79.1, blur:81.5, contrast:74.2,
       noise:85.1, exposure:88.7, overall:81.2,
-      status:'SAFE', color:[.14,.50,.32], piqe_mode:'both',
+      status:'SAFE', color:[.14,.50,.32],
       _source_file:'demo.json', _age_seconds:0
     });
     $('jst').textContent = '🎭 Demo'; $('jst').style.color = '#8b5cf6';

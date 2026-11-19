@@ -255,19 +255,52 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
     <table class="tbl mt">
       <tr><th>Chỉ số</th><th>Cách tính</th><th>Nguồn</th></tr>
       <tr><td>Blur</td><td>Phương sai Laplacian</td><td>Pech-Pacheco et al., 2000</td></tr>
-      <tr><td>Noise</td><td>Độ lệch chuẩn của ảnh trừ ảnh lọc Gauss 5×5</td><td>Biến thể của Immerkær, 1996</td></tr>
+      <tr><td>Noise</td><td>σ̂ kiểu Immerkær (mặt nạ Laplacian 3×3)</td><td>Immerkær, 1996</td></tr>
       <tr><td>Contrast</td><td>RMS contrast (độ lệch chuẩn mức xám)</td><td>Peli, 1990</td></tr>
       <tr><td>PIQE</td><td>Khối 16×16 trên MSCN; bản "fast" dùng toàn ảnh</td><td>Venkatanath et al., 2015 (xấp xỉ)</td></tr>
       <tr><td>Exposure</td><td>Tỉ lệ điểm ảnh cháy sáng (&gt; 0.95) và tối (&lt; 0.05)</td><td>Tinh thần ISO 18434-1</td></tr>
     </table>
-    <pre class="code mt"><span class="kw">Overall</span> = <span class="st">0.25</span>·PIQE + <span class="st">0.25</span>·Blur + <span class="st">0.20</span>·Contrast + <span class="st">0.15</span>·Noise + <span class="st">0.15</span>·Exposure
-<span class="cm"># Overall &lt; 40 kéo dài 5 s  →</span> <span class="bad">CAMERA WARNING</span></pre>
+    <pre class="code mt"><span class="kw">Overall</span> = <span class="st">0.05</span>·PIQE + <span class="st">0.50</span>·Blur + <span class="st">0.20</span>·Contrast + <span class="st">0.15</span>·Noise + <span class="st">0.10</span>·Exposure
+<span class="cm"># Overall &lt; 40 kéo dài 5 s  →</span> <span class="bad">CAMERA WARNING</span>
+<span class="cm"># Trọng số sau make calibrate-iqa (slide kế)</span></pre>
     <div class="stripe-b"></div>
     <div class="footer"><span>iqa · 5 metrics</span><span>ECHO MOVE</span></div>
-    <aside class="notes">Trung thực: PIQE ở đây là bản xấp xỉ, trọng số là giá trị thực nghiệm. PIQE full chỉ tính mỗi 30 frame để giữ realtime.</aside>
+    <aside class="notes">Trọng số đã được tìm bằng thực nghiệm trên 275 ảnh suy giảm có kiểm soát — xem slide tiếp theo.</aside>
   </section>
 
-  <!-- 7. POSTURE -->
+  <!-- 7. IQA WEIGHT CALIBRATION -->
+  <section class="slide" data-title="Hiệu chỉnh trọng số IQA">
+    <div class="stripe"></div>
+    <div class="chrome"><span class="tag green">Thực nghiệm · make calibrate-iqa</span><span class="page"></span></div>
+    <div class="kicker">Không đoán trọng số — đo rồi chọn</div>
+    <h2 class="h2">Tìm trọng số bằng <span class="hl-red">275 ảnh có nhãn</span></h2>
+    <div class="grid2 mt">
+      <div class="checks">
+        <div class="check ok"><div class="box">1</div><div class="txt">Sinh cảnh nhà xưởng + 3 ảnh kho Unsplash</div></div>
+        <div class="check ok"><div class="box">2</div><div class="txt">Suy giảm có kiểm soát <span>— blur · noise · contrast · exposure · mixed, severity 0–4</span></div></div>
+        <div class="check ok"><div class="box">3</div><div class="txt">Tìm trên simplex <span>— 800 bộ trọng số Dirichlet + baselines</span></div></div>
+        <div class="check ok"><div class="box">4</div><div class="txt">Mục tiêu vận hành <span>— F1 của ngưỡng Overall &lt; 40, giữ ảnh sạch ≥ 95%</span></div></div>
+      </div>
+      <div>
+        <table class="tbl">
+          <tr><th>Bộ trọng số</th><th>F1</th><th>Bắt sev≥3</th><th>Ảnh sạch</th></tr>
+          <tr><td>Cũ 0.25/0.25/…</td><td>0.46</td><td>33%</td><td>100%</td></tr>
+          <tr><td><b>Mới 0.05/0.50/…</b></td><td><b>0.69</b></td><td><b>62%</b></td><td>100%</td></tr>
+          <tr><td>Best tìm được</td><td>0.72</td><td>67%</td><td>100%</td></tr>
+        </table>
+        <div class="alert green mt">
+          <h3>Verdict: DEFAULT_NEAR_OPTIMAL</h3>
+          <p>ΔF1 = 0.026 so với best → chấp nhận. Ghi cố định vào <code>Settings.iqa_weights</code>.</p>
+        </div>
+      </div>
+    </div>
+    <p class="sub mt" style="font-size:26px">Blur nặng hơn PIQE vì PIQE-fast có thể <b>tăng</b> khi ảnh mờ (std MSCN giảm) — nếu để PIQE = 0.25 thì Overall không giảm khi camera mất nét.</p>
+    <div class="stripe-b"></div>
+    <div class="footer"><span>iqa · weight calibration</span><span>ECHO MOVE</span></div>
+    <aside class="notes">Nhấn mạnh: đây là tối ưu trên dataset suy giảm có kiểm soát, khớp ngưỡng CAMERA của hệ thống — trung thực nói chưa phải MOS người xem trên ảnh hiện trường.</aside>
+  </section>
+
+  <!-- 8. POSTURE -->
   <section class="slide" data-title="Phân loại tư thế">
     <div class="stripe"></div>
     <div class="chrome"><span class="tag amber">Tư thế</span><span class="page"></span></div>
@@ -500,16 +533,18 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
         <div class="check ok"><div class="box">1</div><div class="txt">Trích keypoint một lần <span>— cache trong output/eval_cache</span></div></div>
         <div class="check ok"><div class="box">2</div><div class="txt">Phát lại qua toàn bộ luật <span>— so sánh luật v21 và đa tín hiệu</span></div></div>
         <div class="check ok"><div class="box">3</div><div class="txt">Precision · Recall · F1 <span>— cộng độ trễ phát hiện và báo nhầm / giờ</span></div></div>
-        <div class="check wip"><div class="box">!</div><div class="txt">Kết quả trên UR Fall / Le2i <span>— chạy make eval khi có GPU</span></div></div>
+        <div class="check ok"><div class="box">✓</div><div class="txt">Trọng số IQA <span>— đã chạy make calibrate-iqa, F1 0.46 → 0.69</span></div></div>
+        <div class="check wip"><div class="box">!</div><div class="txt">UR Fall / Le2i <span>— chạy make eval khi có GPU để lấy precision/recall</span></div></div>
       </div>
       <div>
-        <pre class="code" style="font-size:24px"><span class="kw">make</span> eval DATASET=<span class="st">urfd</span> ROOT=<span class="st">data/urfd</span>
+        <pre class="code" style="font-size:24px"><span class="kw">make</span> calibrate-iqa
+<span class="kw">make</span> eval DATASET=<span class="st">urfd</span> ROOT=<span class="st">data/urfd</span>
 <span class="kw">make</span> eval DATASET=<span class="st">le2i</span> ROOT=<span class="st">data/le2i</span>
 <span class="cm"># video tự quay + labels.csv</span>
 <span class="kw">make</span> eval DATASET=<span class="st">folder</span> ROOT=<span class="st">data/xuong</span></pre>
         <div class="alert amber mt">
           <h3>Trung thực khi báo cáo</h3>
-          <p>Số liệu IQA và độ chính xác đều phải lấy từ <code>make bench</code> / <code>make eval</code> trên dữ liệu của nhóm.</p>
+          <p>IQA đã đo bằng <code>calibrate-iqa</code>. Độ chính xác ngã lấy từ <code>make eval</code> trên dữ liệu của nhóm.</p>
         </div>
       </div>
     </div>

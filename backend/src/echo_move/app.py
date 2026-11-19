@@ -114,7 +114,7 @@ def create_app(cfg: Settings | None = None) -> FastAPI:
         det: PoseDetector = st.detector
         return {"status": "ok", "demo_mode": not det.available, "yolo": det.available,
                 "hands": det.hands is not None, "version": __version__,
-                "piqe_mode": cfg.piqe_mode, "matlab_dir": str(cfg.matlab_dir.resolve()),
+                "matlab_dir": str(cfg.matlab_dir.resolve()),
                 "cameras": len(st.cameras.workers), "events_db": st.store is not None,
                 "notify": st.notifier.channels()}
 

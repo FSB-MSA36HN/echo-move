@@ -5,9 +5,6 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal, cast
-
-PiqeMode = Literal["fast", "full", "both"]
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -98,11 +95,10 @@ class Settings:
     )
     ppe_confirm_s: float = field(default_factory=lambda: float(_env("PPE_CONFIRM_S", "5")))
 
-    # Image quality assessment
-    piqe_mode: PiqeMode = field(default_factory=lambda: cast(PiqeMode, _env("PIQE_MODE", "both")))
-    piqe_sample_every: int = field(default_factory=lambda: int(_env("PIQE_SAMPLE_N", "30")))
-    # blur, noise, contrast, piqe, exposure → see docs/ALGORITHMS.md
-    iqa_weights: tuple[float, float, float, float, float] = (0.25, 0.25, 0.20, 0.15, 0.15)
+    # Image quality assessment. Live PIQE is the MSCN proxy; block PIQE is offline only
+    # (`make bench`, `calibrate-iqa --full-piqe`). Order: PIQE, Blur, Contrast, Noise, Exposure.
+    # Weights fixed after ``make calibrate-iqa`` (F1 @ Overall<40, keep_clean≥0.95).
+    iqa_weights: tuple[float, float, float, float, float] = (0.05, 0.50, 0.20, 0.15, 0.10)
     low_quality_threshold: float = 40.0
 
     # Server-side cameras: "name=rtsp://...,dock=0,demo=/path/video.mp4" or a JSON file

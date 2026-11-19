@@ -5,15 +5,25 @@ Mọi điểm IQA nằm trong 0–100 (cao = tốt). `gray` là ảnh xám trong
 | Metric | Công thức (cài đặt) | Nguồn |
 |---|---|---|
 | Blur | `min(Var(Laplacian(gray_u8)) / 10, 100)` | Pech-Pacheco et al., 2000 |
-| Noise | `max(100 − 1000·std(gray − Gaussian5×5(gray)), 0)` | biến thể của Immerkær, 1996 |
+| Noise | `max(100 − 4·σ̂, 0)` với σ̂ kiểu Immerkær (mặt nạ Laplacian 3×3 trên ảnh ×255) | Immerkær, 1996 |
 | Contrast | `min(400·std(gray), 100)` (RMS contrast) | Peli, 1990 |
 | PIQE (full) | chia khối 16×16 trên MSCN, bỏ khối phẳng (var<0.1), khối var>0.5 trọng số 2, `100 − 180·điểm_trung_bình` | Venkatanath et al., 2015 (xấp xỉ) |
-| "PIQE fast" | `100 − 100·std(MSCN)` toàn ảnh | **không phải PIQE gốc**; proxy nhanh dựa trên thống kê MSCN |
+| "PIQE fast" | `100 − 100·std(MSCN)` toàn ảnh | **không phải PIQE gốc**; proxy nhanh — lưu ý: có thể tăng khi ảnh mờ |
 | Exposure | `max(100 − 1000·(tỉ lệ >0.95 + tỉ lệ <0.05), 0)` | ISO 18434-1 (tinh thần) |
 
-**Overall** = `0.25·PIQE + 0.25·Blur + 0.20·Contrast + 0.15·Noise + 0.15·Exposure`. Trọng số và hệ số (10, 400, 1000, 180) là giá trị thực nghiệm, chưa được hiệu chỉnh trên dữ liệu nhà xưởng.
+**Overall** = `0.05·PIQE + 0.50·Blur + 0.20·Contrast + 0.15·Noise + 0.10·Exposure` (mặc định sau hiệu chỉnh). Hệ số scale (10, 400, 4, 180) là thực nghiệm.
 
-> Lưu ý trung thực khi báo cáo: PIQE ở đây là bản xấp xỉ đơn giản hoá, không so với cài đặt chuẩn của MATLAB (`piqe`). Pech-Pacheco/Immerkær/Peli được dùng ngoài miền gốc; ngưỡng cần kiểm chứng trên ảnh thực tế. Chạy `make bench` để đo tốc độ và tương quan fast↔full trên dữ liệu của bạn — đừng trích số liệu mẫu cũ trong tài liệu .docx (ví dụ "22×", "r=0.85") nếu chưa tự đo.
+Trọng số được **tìm kiếm và kiểm chứng** bằng `make calibrate-iqa`:
+1. Sinh cảnh nhà xưởng + (tuỳ chọn) ảnh thật trong `data/iqa_clean/`.
+2. Áp suy giảm có kiểm soát (blur / noise / contrast / exposure / mixed, severity 0–4).
+3. Tìm trọng số trên simplex với mục tiêu vận hành: F1 của ngưỡng `Overall < 40` để bắt severity ≥ 3, ràng buộc `keep_clean ≥ 0.95` (không báo nhầm ảnh sạch).
+4. Báo cáo: `output/iqa_calib/report.md`. Trọng số tốt được ghi cố định vào `Settings.iqa_weights`.
+
+Blur được trọng số cao vì PIQE-fast có thể *tăng* khi ảnh mờ (std MSCN giảm) — nếu PIQE nặng bằng Blur thì Overall không giảm khi camera mất nét.
+
+Pipeline realtime chỉ đưa PIQE fast vào Overall. PIQE full (khối 16×16) không chạy trên camera; dùng `make bench` để đo tương quan fast↔full và `calibrate-iqa --full-piqe` khi muốn hiệu chỉnh bằng điểm khối.
+
+> Lưu ý trung thực: PIQE là bản xấp xỉ; tối ưu là trên dataset suy giảm có kiểm soát (không phải MOS người xem trên toàn bộ ảnh hiện trường). Chạy lại `make calibrate-iqa` khi đổi camera/miền.
 
 ## Phân loại tư thế theo từng frame (COCO-17, toạ độ chuẩn hoá)
 - Trước khi tính góc, `x` được nhân với tỉ lệ khung hình `W/H` (toạ độ chuẩn hoá làm méo góc: khung 16:9 lệch góc lưng tới ~40 %).

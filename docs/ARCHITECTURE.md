@@ -86,7 +86,7 @@ Server → client (rút gọn):
                           "signals": {"lying": false, "head_low": false, "collapsed": false}},
                "zones": [{"name": "Máy ép", "dwell_s": 1}],
                "ppe": {"helmet": true, "vest": false}}],
-  "hands": [], "quality": {"piqe": 0, "piqe_full": 0, "blur": 0, "contrast": 0, "noise": 0, "exposure": 0, "overall": 0, "time_fast_ms": 0, "time_full_ms": 0},
+  "hands": [], "quality": {"piqe": 0, "blur": 0, "contrast": 0, "noise": 0, "exposure": 0, "overall": 0, "time_fast_ms": 0, "time_total_ms": 0},
   "env_hazards": {"hazards": [], "overall_level": "SAFE", "overall_color": [0,1,0]},
   "alerts": [],
   "frame": {"w": 640, "h": 480},

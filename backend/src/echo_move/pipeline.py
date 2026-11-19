@@ -113,9 +113,7 @@ class StreamPipeline:
         self._ppe(frame, persons)
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         iqa = compute_iqa(
-            gray, gray.astype(np.float64) / 255.0, mode=self.cfg.piqe_mode,
-            weights=self.cfg.iqa_weights,
-            compute_full=self.frames % self.cfg.piqe_sample_every == 0,
+            gray, gray.astype(np.float64) / 255.0, weights=self.cfg.iqa_weights,
         ).to_dict()
         alerts = self.engine.update(persons, iqa, t)
         events = [self._publish(a, frame, persons) for a in alerts]

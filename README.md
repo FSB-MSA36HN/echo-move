@@ -70,6 +70,7 @@ data/       video mẫu (không commit)
 make test     # pytest (tracker, alert engine, SQLite, notifier, camera worker, API)
 make lint     # ruff + mypy
 make bench    # đo tốc độ & tương quan PIQE fast vs full (số liệu thật)
+make calibrate-iqa   # chứng minh / tìm trọng số Overall IQA trên ảnh suy giảm có kiểm soát
 make eval DATASET=urfd ROOT=data/urfd   # precision/recall/F1 + độ trễ trên dataset ngã (cần AI)
 ```
 CI (GitHub Actions) chạy lint + test mỗi lần push. Biến môi trường cấu hình: xem [.env.example](.env.example).

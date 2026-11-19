@@ -32,8 +32,8 @@ def test_uniform_image_has_zero_contrast():
 
 
 def test_scores_within_range():
-    r = compute_iqa(*_prep(_textured()), compute_full=True)
-    for v in (r.piqe, r.piqe_full, r.blur, r.contrast, r.noise, r.exposure, r.overall):
+    r = compute_iqa(*_prep(_textured()))
+    for v in (r.piqe, r.blur, r.contrast, r.noise, r.exposure, r.overall):
         assert 0 <= v <= 100
 
 
