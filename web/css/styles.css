@@ -155,9 +155,11 @@ body {
   gap: var(--gap); min-height: var(--ops-h); height: var(--ops-h); overflow: hidden;
 }
 .rail {
-  display: grid; grid-template-rows: minmax(200px, 42%) minmax(0, 1fr);
+  display: grid; grid-template-rows: minmax(360px, 72%) minmax(120px, 28%);
   gap: var(--gap); min-height: 0;
 }
+.rail > .view3d { min-height: 0; }
+.rail > .metrics-stack { min-height: 0; overflow: auto; }
 .deck {
   display: flex; flex-direction: column; gap: var(--gap);
 }
@@ -297,7 +299,6 @@ body.panel-zoom-open::before {
   color: var(--muted); margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid var(--border);
 }
 .metric-card.warn-card h4 { color: var(--warn); }
-.metric-card.matlab-card h4 { color: var(--matlab); }
 .metric-body { font-family: var(--mono); font-size: var(--fs-sm); line-height: 1.5; }
 .metric-body.det { font-size: var(--fs-lg); font-weight: 600; color: var(--accent); }
 .row { display: flex; justify-content: space-between; gap: 8px; margin: 2px 0; }
@@ -491,6 +492,8 @@ body.panel-zoom-open::before {
 }
 @media (max-width: 900px) {
   .ops, .rail { grid-template-columns: 1fr; grid-template-rows: none; height: auto; min-height: 0; }
+  .panel.view3d { display: none !important; }
+  .rail { grid-template-rows: 1fr; }
   .wall .kv { min-height: 260px; aspect-ratio: 4/3; }
   #R { height: min(55vw, 360px); }
   .hdr { flex-wrap: wrap; height: auto; padding: 10px 12px; }

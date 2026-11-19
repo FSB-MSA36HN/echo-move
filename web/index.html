@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=38">
+<link rel="stylesheet" href="css/styles.css?v=41">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
@@ -57,15 +57,6 @@
       <button class="b sm" id="bBen">Bench</button>
       <button class="b sm" id="bTst">Self-test</button>
       <button class="b sm" id="bLog">Log</button>
-    </div>
-    <div class="tools-row">
-      <span class="tools-label">MATLAB</span>
-      <button class="b sm on" id="bMAuto">Auto ON</button>
-      <button class="b sm" id="bJson">Load JSON</button>
-      <button class="b sm" id="bDemo">Demo</button>
-      <button class="b sm" id="bClr">Clear</button>
-      <input id="jfile" type="file" accept=".json" hidden>
-      <span id="jst" class="tools-meta">Đang tìm backend…</span>
     </div>
     <div class="tools-row">
       <span class="tools-label">WebSocket</span>
@@ -118,13 +109,9 @@
           <h3>Detect</h3>
           <div class="panel-hd-actions"></div>
         </div>
-        <div class="metric-card">
+        <div class="metric-card span2">
           <h4>Phát hiện</h4>
           <div id="tt" class="metric-body det">--</div>
-        </div>
-        <div class="metric-card matlab-card">
-          <h4>MATLAB IQA</h4>
-          <div id="iqaM" class="metric-body">Chưa có</div>
         </div>
         <div class="metric-card span2">
           <h4>Session · Overall</h4>
@@ -246,13 +233,13 @@
 <div id="toasts" aria-live="assertive"></div>
 <div id="imgv" hidden><img alt="Ảnh sự kiện"><div class="cap"></div></div>
 
-<script src="js/config.js?v=38"></script>
-<script src="js/backend.js?v=38"></script>
-<script src="js/alerts.js?v=38"></script>
-<script src="js/zoom.js?v=38"></script>
-<script src="js/human3d.js?v=38"></script>
-<script src="js/app.js?v=38"></script>
-<script src="js/cameras.js?v=38"></script>
-<script src="js/events.js?v=38"></script>
+<script src="js/config.js?v=41"></script>
+<script src="js/backend.js?v=41"></script>
+<script src="js/alerts.js?v=41"></script>
+<script src="js/zoom.js?v=41"></script>
+<script src="js/human3d.js?v=41"></script>
+<script src="js/app.js?v=41"></script>
+<script src="js/cameras.js?v=41"></script>
+<script src="js/events.js?v=41"></script>
 </body>
 </html>

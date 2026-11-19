@@ -118,6 +118,50 @@ def visible_count(kps: list[list[float]], vis: float) -> int:
     return sum(1 for k in kps if k[2] > vis)
 
 
+def _seg_len(kps: list[list[float]], a: int, b: int, vis: float) -> float | None:
+    if kps[a][2] <= vis or kps[b][2] <= vis:
+        return None
+    return math.hypot(kps[a][0] - kps[b][0], kps[a][1] - kps[b][1])
+
+
+def legs_look_complete(kps: list[list[float]], vis: float) -> tuple[bool, str]:
+    """Reject YOLO/MediaPipe hallucinated legs on a truncated (no-legs) crop.
+
+    Requires full left + right knee→ankle chains and hip→ankle length comparable
+    to torso (shoulder→hip). Short stub legs near a bottom crop are PARTIAL;
+    lying / foreshortened FALL poses keep normal Euclidean leg length so they pass.
+    """
+    left = kps[L_KNEE][2] > vis and kps[L_ANKLE][2] > vis
+    right = kps[R_KNEE][2] > vis and kps[R_ANKLE][2] > vis
+    if not (left and right):
+        return False, "Thiếu chân"
+    if kps[L_HIP][2] <= vis or kps[R_HIP][2] <= vis:
+        return False, "Thiếu hông"
+    torso_lens = [
+        d for d in (
+            _seg_len(kps, L_SHOULDER, L_HIP, vis),
+            _seg_len(kps, R_SHOULDER, R_HIP, vis),
+        ) if d is not None
+    ]
+    leg_lens = [
+        d for d in (
+            _seg_len(kps, L_HIP, L_ANKLE, vis),
+            _seg_len(kps, R_HIP, R_ANKLE, vis),
+        ) if d is not None
+    ]
+    if not torso_lens or not leg_lens:
+        return False, "Thiếu chân"
+    torso = sum(torso_lens) / len(torso_lens)
+    leg = sum(leg_lens) / len(leg_lens)
+    # Full body: leg ≈ 1.0–1.6× torso. Truncated+hallucinated: often < 0.7×.
+    if torso > 1e-4 and leg < 0.75 * torso:
+        return False, "Thiếu chân (cắt dưới)"
+    box = body_bbox(kps, vis)
+    if box is not None and box[3] > 1.0 - EDGE_MARGIN and leg < 0.95 * torso:
+        return False, "Cắt mép khung hình"
+    return True, ""
+
+
 def is_partial_body(kps: list[list[float]], vis: float) -> tuple[bool, str]:
     """True when only part of the person is visible — posture rules must not run."""
     if not kps or len(kps) < 17:
@@ -136,15 +180,16 @@ def is_partial_body(kps: list[list[float]], vis: float) -> tuple[bool, str]:
     arms = sum(1 for i in ARM if kps[i][2] > vis)
     if arms < 2:
         return True, "Thiếu tay"
-    legs = sum(1 for i in LEG if kps[i][2] > vis)
-    if legs < 3:
-        return True, "Thiếu chân"
+    ok_legs, why = legs_look_complete(kps, vis)
+    if not ok_legs:
+        return True, why
     box = body_bbox(kps, vis)
     if box is None:
         return True, "Không đủ điểm"
     x0, y0, x1, y1 = box
     at_edge = (x0 < EDGE_MARGIN or y0 < EDGE_MARGIN
                or x1 > 1.0 - EDGE_MARGIN or y1 > 1.0 - EDGE_MARGIN)
+    legs = sum(1 for i in LEG if kps[i][2] > vis)
     if at_edge and legs < 4:
         return True, "Cắt mép khung hình"
     return False, ""

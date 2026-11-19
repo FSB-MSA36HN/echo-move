@@ -5,7 +5,7 @@ Approved: wall + side rail, no tabs, drop Citations, add System metrics.
 ## Layout
 - Header (sticky): brand, live status pills, source controls (Camera + device picker + flip front/rear), mute, tools toggle
 - Workspace (page scroll):
-  - Main ops: video wall (left) | 3D + Detect/MATLAB/Session (right)
+  - Main ops: video wall (left) | 3D + Detect/Session (right); Worker 3D hidden on mobile; no MATLAB IQA card
   - Deck panels (vertical stack):
     - Event stats (filters + KPI cards)
     - Event hourly chart (0–23h)

@@ -34,7 +34,7 @@ make install-ai     # thêm YOLO + MediaPipe (tuỳ chọn)
 Có 2 cách mở: **http://localhost:8000** (backend phục vụ giao diện — khuyến nghị) hoặc mở thẳng `web/index.html` / GitHub Pages (web tự dò backend ở `localhost:8000`). Góc trên: chấm xanh **Backend v22 · AI/DEMO · n cam** khi đã kết nối; nút 🔔/🔕 bật/tắt còi (bấm lần đầu để trình duyệt cho phép âm thanh và hỏi quyền thông báo desktop).
 
 Ba tab:
-- **🎥 Giám sát** — nguồn thật (webcam, video file, chế độ Server) + IQA đủ 5 chỉ số + cảnh báo theo metric. Cột phải: công nhân 3D mặc đồ bảo hộ trong nhà xưởng, dải phản quang và vòng sàn đổi màu theo mức an toàn (xanh / cam / đỏ), đèn cảnh báo xoay khi nguy hiểm.
+- **🎥 Giám sát** — nguồn thật (webcam, video file, chế độ Server) + IQA Live trên deck. Desktop: cột phải có Worker 3D + Detect; **mobile ẩn Worker 3D**.
 - **📡 Camera** — lưới camera server (MJPEG có vẽ skeleton), trạng thái (Đang chạy / Mất tín hiệu — thử lại / Khựng hình), FPS, số người, IQA. Bấm một camera để người 3D mô phỏng người đầu tiên của camera đó; bấm lại để thôi. Nút ⚙ mở trình vẽ vùng nguy hiểm và bật/tắt luật (mục 4.4).
 - **📋 Sự kiện** — lịch sử cảnh báo đã xác nhận: lọc theo loại / thời gian / chưa xử lý, thống kê và biểu đồ theo giờ, ảnh chụp (bấm để phóng to), **▶ Clip**, nút **Xác nhận** (đã xử lý), **Báo nhầm**, **⬇ CSV**. Số đỏ trên tab = số sự kiện chưa xử lý trong 24 giờ.
 
@@ -75,11 +75,10 @@ IQA chỉ hiện trên panel UI; backend **không** còn event CAMERA / PARTIAL.
 | `R` | Reset về chờ nguồn |
 | `T` | Self-test |
 
-Các nút khác: **Log** (xuất nhật ký JSON), **📂 Nạp** (nạp JSON từ MATLAB), **🎭 Demo** (JSON demo), **✕** (xoá JSON).
+Các nút khác: **Log** (xuất nhật ký JSON), **Report**, **Bench**, **Self-test**.
 
-### 3.4 Kết nối MATLAB → web
-1. **Tự động (mặc định, nút 🔄 Tự động: BẬT)**: khi backend đang chạy, web hỏi `/matlab_iqa` mỗi 2 giây; backend đọc file `output/*_iqa.json` mới nhất nên MATLAB chạy xong là web tự hiện, không cần chọn file. Chưa có backend thì dòng trạng thái báo "chờ backend".
-2. Thủ công (khi không chạy backend): **📂 Nạp** → chọn JSON; trên Chrome/Edge trang theo dõi file và cập nhật mỗi giây. Nạp tay, **🎭 Demo** hoặc **✕** sẽ tắt chế độ tự động; bấm 🔄 để bật lại.
+### 3.4 MATLAB offline (tùy chọn)
+MATLAB vẫn có thể xuất `output/*_iqa.json` (9 biểu đồ offline) cho pipeline đồ án. UI web **không còn** panel/tools MATLAB IQA — IQA realtime chỉ qua **IQA Live**.
 
 ## 4. Backend Python
 ```bash
@@ -222,7 +221,7 @@ Chạy test: `runtests('matlab/tests')`.
 | Người 3D hiện dạng khối đơn giản | Không tải được mô hình GLTF/WebGL → fallback; kiểm tra Console |
 | MATLAB `Undefined function` | Thiếu Image Processing Toolbox (đã có fallback cho phần lớn hàm) |
 | MATLAB chậm | `cfg.piqeMode='fast'`, `cfg.piqeSampleN=60` |
-| JSON MATLAB không hiện | Kiểm tra `cfg.outputDir` trùng `ECHO_MATLAB_DIR` |
+| JSON MATLAB (offline) | Chỉ dùng trong MATLAB/`output/`; UI không còn panel MATLAB IQA |
 
 Khi báo lỗi, kèm: dòng đỏ trong Console, phiên bản Chrome (`chrome://version`), `python --version`, hệ điều hành.
 

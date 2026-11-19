@@ -39,6 +39,18 @@ def test_missing_legs_is_partial():
     assert classify_posture(no_legs, CFG, ASPECT)["technique"] == "PARTIAL"
 
 
+def test_hallucinated_short_legs_is_partial():
+    # YOLO often invents knees/ankles near the crop bottom on a no-legs frame.
+    sc = [list(p) for p in load_scenarios()["standing"]["kps"]]
+    hip_y = (sc[11][1] + sc[12][1]) / 2
+    for i, y in ((13, hip_y + 0.04), (14, hip_y + 0.04),
+                 (15, hip_y + 0.08), (16, hip_y + 0.08)):
+        sc[i][0], sc[i][1], sc[i][2] = sc[11][0] if i % 2 else sc[12][0], y, 0.9
+    out = classify_posture(sc, CFG, ASPECT)
+    assert out["technique"] == "PARTIAL"
+    assert "chân" in out["detail"].lower() or "cắt" in out["detail"].lower()
+
+
 def test_fall_needs_wide_body_not_just_tilted_spine():
     # Same fallen pose squeezed horizontally (tall, narrow box) is not a fall.
     fall = load_scenarios()["fall"]["kps"]

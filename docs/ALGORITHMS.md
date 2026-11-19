@@ -33,7 +33,7 @@ Năm kỹ thuật / sự kiện: **PARTIAL**, **FALL**, **SQUAT**, **STOOP**, **
 - `knee` = trung bình góc hông–gối–cổ chân hai bên (180° nếu thiếu điểm).
 - `bbox_ratio` = rộng / cao của khung bao các keypoint nhìn thấy.
 - Thứ tự luật:
-  1. **PARTIAL** — chỉ một phần của người: thiếu mặt / &lt; 10 joint / thiếu vai–hông / thiếu tay hoặc chân / cắt mép. Không alert; chỉ bbox.
+  1. **PARTIAL** — chỉ một phần của người: thiếu mặt / &lt; 10 joint / thiếu vai–hông / thiếu tay / chân không đủ (cần 2 chuỗi gối→mắt cá + chiều dài chân ≥ 0.75× thân; chống YOLO bịa chân khi cắt dưới) / cắt mép. Không alert; chỉ bbox.
   2. **FALL** — ngã đa tín hiệu (xem dưới).
   3. **SQUAT** — `knee < 140°` và `spine < 45°` (ngồi xổm).
   4. **STOOP** — `spine > 60°` (cúi khom).

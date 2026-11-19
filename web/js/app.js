@@ -146,6 +146,32 @@ function jointAngle(p1, p2, p3) {
   return Math.acos(c) * 180 / Math.PI;
 }
 
+function _segLen(kps, a, b) {
+  if (kps[a][2] <= VIS || kps[b][2] <= VIS) return null;
+  const dx = kps[a][0] - kps[b][0], dy = kps[a][1] - kps[b][1];
+  return Math.hypot(dx, dy);
+}
+
+function legsLookComplete(kps0) {
+  // Full L+R knee→ankle; reject short hallucinated legs on a truncated crop.
+  const left = kps0[13][2] > VIS && kps0[15][2] > VIS;
+  const right = kps0[14][2] > VIS && kps0[16][2] > VIS;
+  if (!(left && right)) return {ok: false, detail: 'Thiếu chân'};
+  if (kps0[11][2] <= VIS || kps0[12][2] <= VIS) return {ok: false, detail: 'Thiếu hông'};
+  const tors = [_segLen(kps0,5,11), _segLen(kps0,6,12)].filter(v => v != null);
+  const legs = [_segLen(kps0,11,15), _segLen(kps0,12,16)].filter(v => v != null);
+  if (!tors.length || !legs.length) return {ok: false, detail: 'Thiếu chân'};
+  const torso = tors.reduce((a,b)=>a+b,0) / tors.length;
+  const leg = legs.reduce((a,b)=>a+b,0) / legs.length;
+  if (torso > 1e-4 && leg < 0.75 * torso)
+    return {ok: false, detail: 'Thiếu chân (cắt dưới)'};
+  const vis = kps0.filter(k => k[2] > VIS);
+  const y1 = Math.max(...vis.map(k => k[1]));
+  if (y1 > 0.97 && leg < 0.95 * torso)
+    return {ok: false, detail: 'Cắt mép khung hình'};
+  return {ok: true, detail: ''};
+}
+
 function isPartialBody(kps0) {
   if (!kps0 || kps0.length < 17)
     return {partial: true, detail: 'Không đủ skeleton'};
@@ -158,12 +184,13 @@ function isPartialBody(kps0) {
     return {partial: true, detail: 'Thiếu vai/hông'};
   const arms = [7,8,9,10].filter(i => kps0[i][2] > VIS).length;
   if (arms < 2) return {partial: true, detail: 'Thiếu tay'};
-  const legs = [13,14,15,16].filter(i => kps0[i][2] > VIS).length;
-  if (legs < 3) return {partial: true, detail: 'Thiếu chân'};
+  const lg = legsLookComplete(kps0);
+  if (!lg.ok) return {partial: true, detail: lg.detail};
   const vis = kps0.filter(k => k[2] > VIS);
   const x0 = Math.min(...vis.map(k => k[0])), x1 = Math.max(...vis.map(k => k[0]));
   const y0 = Math.min(...vis.map(k => k[1])), y1 = Math.max(...vis.map(k => k[1]));
   const atEdge = x0 < .03 || y0 < .03 || x1 > .97 || y1 > .97;
+  const legs = [13,14,15,16].filter(i => kps0[i][2] > VIS).length;
   if (atEdge && legs < 4)
     return {partial: true, detail: 'Cắt mép khung hình'};
   return {partial: false, detail: ''};
@@ -512,33 +539,26 @@ function draw2D(ds) {
 
 // ========== MATLAB BRIDGE ==========
 function procMatlabIQA(m) {
-  if (!m) { $('iqaM').innerHTML = '<span style="color:#64748b;">Chưa có</span>'; return; }
-  const ov = m.overall || 0;
-  const st = m.status || 'UNKNOWN';
-  const col = st==='SAFE'?'#00ff88':st==='WARNING'?'#f59e0b':st==='DANGER'?'#ef4444':st==='ANALYZING'?'#00d4ff':'#94a3b8';
-  const prog = m.progress != null ? Math.round(m.progress*100) : null;
-  const age = m._age_seconds != null ? `${m._age_seconds}s` : '';
-  let h = `<div class="row"><span style="color:#f59e0b;">🎬</span><span style="font-size:9px;">${(m.video||'?').substring(0,16)}</span></div>`;
-  h += `<div class="row"><span>PIQE</span><span>${(m.piqe||0).toFixed(1)}</span></div>`;
-  if (m.piqe_full) h += `<div class="row"><span>Full</span><span>${m.piqe_full.toFixed(1)}</span></div>`;
-  h += `<div class="row"><b>Tổng</b><b style="color:${col}">${ov.toFixed(1)}</b></div>`;
-  h += `<div class="row"><span>Status</span><b style="color:${col}">${st}</b></div>`;
-  if (prog != null) h += `<div style="margin-top:3px;background:#1e293b;border-radius:2px;height:3px;"><div style="width:${prog}%;height:100%;background:${col};border-radius:2px;"></div></div><div style="font-size:8px;text-align:right;color:#64748b;">${prog}% · ${age}</div>`;
-  $('iqaM').innerHTML = h;
-  S.mIQA = m;
+  // Panel UI removed — keep state for optional Report / tools only.
+  S.mIQA = m && m.available !== false ? m : null;
 }
 
 // Auto mode: the backend reads the newest output/*_iqa.json written by MATLAB, so the web
 // picks up new results without choosing a file. Manual load / demo switch auto off.
 function setMatlabStatus(text, color) {
-  $('jst').textContent = text;
-  $('jst').style.color = color;
+  const el = $('jst');
+  if (!el) return;
+  el.textContent = text;
+  el.style.color = color;
 }
 
 function setMatlabAuto(on) {
   S.mAuto = on;
-  $('bMAuto').classList.toggle('on', on);
-  $('bMAuto').textContent = on ? 'Auto ON' : 'Auto OFF';
+  const btn = $('bMAuto');
+  if (btn) {
+    btn.classList.toggle('on', on);
+    btn.textContent = on ? 'Auto ON' : 'Auto OFF';
+  }
   if (on) {
     S.mFile = null;
     if (S.mTimer) { clearInterval(S.mTimer); S.mTimer = null; }
@@ -1345,12 +1365,16 @@ function bind() {
   $('bRep').onclick = taoReport;
   $('bBen').onclick = toggleBench;
 
-  $('bMAuto').onclick = () => setMatlabAuto(!S.mAuto);
-  setMatlabAuto(true);
-  setInterval(autoMatlab, 2000);
-  if (window.EchoBackend) EchoBackend.on('status', () => autoMatlab());
-  $('bJson').onclick = pickJSON;
-  $('bDemo').onclick = () => {
+  // MATLAB tools UI removed — keep quiet optional poll for Report if JSON exists.
+  S.mAuto = false;
+  if ($('bMAuto')) {
+    $('bMAuto').onclick = () => setMatlabAuto(!S.mAuto);
+    setMatlabAuto(true);
+    setInterval(autoMatlab, 2000);
+    if (window.EchoBackend) EchoBackend.on('status', () => autoMatlab());
+  }
+  if ($('bJson')) $('bJson').onclick = pickJSON;
+  if ($('bDemo')) $('bDemo').onclick = () => {
     setMatlabAuto(false);
     procMatlabIQA({
       video:'demo_video.mp4', frames:450, fps:30,
@@ -1359,16 +1383,16 @@ function bind() {
       status:'SAFE', color:[.14,.50,.32],
       _source_file:'demo.json', _age_seconds:0
     });
-    $('jst').textContent = '🎭 Demo'; $('jst').style.color = '#8b5cf6';
+    setMatlabStatus('Demo', '#8b5cf6');
   };
-  $('bClr').onclick = () => {
+  if ($('bClr')) $('bClr').onclick = () => {
     setMatlabAuto(false);
     S.mIQA = null; S.mFile = null;
     if (S.mTimer) { clearInterval(S.mTimer); S.mTimer = null; }
     procMatlabIQA(null);
-    $('jst').textContent = 'Đã xóa'; $('jst').style.color = '#94a3b8';
+    setMatlabStatus('Đã xóa', '#94a3b8');
   };
-  $('jfile').onchange = e => { if (e.target.files[0]) loadJSON(e.target.files[0]); };
+  if ($('jfile')) $('jfile').onchange = e => { if (e.target.files[0]) loadJSON(e.target.files[0]); };
 
   document.addEventListener('keydown', e => {
     if (e.target.tagName === 'INPUT') return;
@@ -1423,7 +1447,6 @@ async function selfTest() {
     ['AI button', () => typeof $('bAI').onclick === 'function'],
     ['Cam button', () => typeof $('bCam').onclick === 'function'],
     ['Vid button', () => typeof $('bVid').onclick === 'function'],
-    ['MATLAB button', () => typeof $('bJson').onclick === 'function'],
     ['Report button', () => typeof $('bRep').onclick === 'function'],
     ['Bench button', () => typeof $('bBen').onclick === 'function'],
     ['Cảnh báo (còi/toast)', () => !!window.EchoAlerts],
