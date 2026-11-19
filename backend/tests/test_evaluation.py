@@ -22,7 +22,7 @@ CFG = replace(Settings(), mandown_s=5.0)
 def clip(final, stand_s=3.0, after_s=4.0, fps=10, fall_s=0.6):
     """Stand, then move to ``final`` over ``fall_s`` (a real fall is not instantaneous)."""
     sc = load_scenarios()
-    stand = sc["an_toan"]["kps"]
+    stand = sc["standing"]["kps"]
     frames = [(i / fps, [stand]) for i in range(int(stand_s * fps))]
     steps = max(1, int(fall_s * fps))
     for i in range(int(after_s * fps)):
@@ -52,7 +52,7 @@ def test_discover_urfd_and_le2i(tmp_path):
 
 
 def test_replay_detects_fall_and_scores_latency():
-    ex = clip(load_scenarios()["nga"]["kps"])
+    ex = clip(load_scenarios()["fall"]["kps"])
     alerts = replay(ex, CFG)
     falls = [a for a in alerts if a[0] == "FALL"]
     assert falls
@@ -61,10 +61,10 @@ def test_replay_detects_fall_and_scores_latency():
 
 
 def test_multisignal_beats_legacy_on_fall_towards_camera():
-    stand = load_scenarios()["an_toan"]["kps"]
+    stand = load_scenarios()["standing"]["kps"]
     towards = [[x, 0.95 - (y - 0.12) * 0.3, c] for x, y, c in stand]
     cases = [VideoCase("pos", True), VideoCase("adl", False)]
-    exs = {"pos": clip(towards), "adl": clip(load_scenarios()["nang_dung"]["kps"])}
+    exs = {"pos": clip(towards), "adl": clip(load_scenarios()["squat"]["kps"])}
     table = {name: evaluate(cases, exs, c)[0] for name, c in variants(CFG).items()}
     assert table["multi-signal"]["recall"] == 1.0 and table["legacy"]["recall"] == 0.0
     assert table["multi-signal"]["fp_videos"] == 0
@@ -77,7 +77,7 @@ def test_summary_counts_false_alarms(tmp_path):
     s = summarize([neg, pos])
     assert s["fp_videos"] == 1 and s["fn"] == 1 and s["false_alarms"] == 2
     assert s["false_alarms_per_hour_adl"] == 1.0 and s["precision"] == 0.0
-    ex = clip(load_scenarios()["nga"]["kps"], 0.2, 0.2)
+    ex = clip(load_scenarios()["fall"]["kps"], 0.2, 0.2)
     save_extraction(ex, tmp_path / "c.json")
     back = load_extraction(tmp_path / "c.json")
     assert back.frames[0][0] == ex.frames[0][0] and back.aspect == ex.aspect

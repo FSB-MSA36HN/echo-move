@@ -5,7 +5,7 @@ from echo_move.pipeline import StreamPipeline
 from echo_move.pose.ppe import PPEDetection, assign_ppe, normalize_label, regions
 from echo_move.scenarios import load_scenarios
 
-STAND = load_scenarios()["an_toan"]["kps"]
+STAND = load_scenarios()["standing"]["kps"]
 VIS = 0.25
 
 

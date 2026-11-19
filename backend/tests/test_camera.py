@@ -78,7 +78,7 @@ def test_source_helpers():
 def test_worker_processes_frames_and_raises_alerts(tmp_path):
     cfg = Settings(camera_fps=25, fall_confirm_s=0.3, alert_cooldown_s=60, demo_mode=True)
     store = EventStore(tmp_path)
-    pipe = StreamPipeline("kho", FakeDetector(load_scenarios()["nga"]["kps"]), cfg,
+    pipe = StreamPipeline("kho", FakeDetector(load_scenarios()["fall"]["kps"]), cfg,
                           AlertHub(store))
     w = CameraWorker("kho", "rtsp://cam", pipe, cfg, capture_factory=lambda s: FakeCapture())
     w.start()
@@ -98,7 +98,7 @@ def test_worker_records_event_clip(tmp_path):
     cfg = Settings(camera_fps=20, fall_confirm_s=0.3, alert_cooldown_s=60, demo_mode=True,
                    clip_pre_s=0.5, clip_post_s=0.5)
     store = EventStore(tmp_path)
-    pipe = StreamPipeline("kho", FakeDetector(load_scenarios()["nga"]["kps"]), cfg,
+    pipe = StreamPipeline("kho", FakeDetector(load_scenarios()["fall"]["kps"]), cfg,
                           AlertHub(store))
     w = CameraWorker("kho", "rtsp://cam", pipe, cfg, capture_factory=lambda s: FakeCapture())
     w.start()
@@ -143,13 +143,13 @@ def test_zone_geometry_and_parsing(tmp_path):
 def test_zone_intrusion_still_tagged_but_no_zone_alert(tmp_path):
     cfg = Settings(demo_mode=True, alert_cooldown_s=60)
     store = EventStore(tmp_path)
-    stand = load_scenarios()["an_toan"]["kps"]  # ankles at y≈0.87
+    stand = load_scenarios()["standing"]["kps"]  # ankles at y≈0.87
     pipe = StreamPipeline("kho", FakeDetector(stand), cfg, AlertHub(store))
-    pipe.configure(parse_options({"zones": [{"name": "Máy dập", "dwell_s": 0.5,
+    pipe.configure(parse_options({"zones": [{"name": "Press", "dwell_s": 0.5,
                                              "points": [[0, 0.7], [1, 0.7], [1, 1], [0, 1]]}],
                                   "disabled_rules": ["STANDING"]}))
     out = [pipe.process(FRAME, i * 0.1) for i in range(10)]
-    assert out[0]["persons"][0]["zones"][0]["name"] == "Máy dập"
+    assert out[0]["persons"][0]["zones"][0]["name"] == "Press"
     events = [a for o in out for a in o["alerts"]]
     assert all(e["type"] != "ZONE" for e in events)
 

@@ -4,7 +4,7 @@ Configured in ``ECHO_CAMERAS_FILE`` (or edited from the web UI, saved to
 ``<data_dir>/camera_config.json``)::
 
     [{"id": "kho", "source": "rtsp://...",
-      "zones": [{"name": "Máy dập", "points": [[0.1, 0.6], [0.4, 0.6], [0.4, 1], [0.1, 1]],
+      "zones": [{"name": "Press machine", "points": [[0.1, 0.6], [0.4, 0.6], [0.4, 1], [0.1, 1]],
                  "dwell_s": 1}],
       "disabled_rules": ["STOOP"]}]
 
@@ -77,7 +77,7 @@ def parse_options(data: dict[str, Any] | None, default_dwell: float = 1.0) -> Ca
             raise ValueError(f"zone {i}: needs at least 3 points")
         if not all(-0.01 <= c <= 1.01 for pt in pts for c in pt):
             raise ValueError(f"zone {i}: points must be normalised to 0..1")
-        zones.append(Zone(str(z.get("name") or f"Vùng {i + 1}")[:40], pts,
+        zones.append(Zone(str(z.get("name") or f"Zone {i + 1}")[:40], pts,
                           float(z.get("dwell_s", default_dwell))))
     rules = [str(r).upper() for r in data.get("disabled_rules") or []]
     return CameraOptions(zones, rules)

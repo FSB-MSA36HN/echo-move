@@ -1,5 +1,5 @@
 {
- "an_toan": {
+ "standing": {
   "kps": [
    [
     0.5,
@@ -96,7 +96,7 @@
    ],
    "label": "ĐỨNG",
    "detail": "Bình thường",
-   "technique": "STANDING"
+   "technique": "ĐỨNG"
   },
   "env": {
    "hazards": [],
@@ -116,7 +116,7 @@
    "overall": 85
   }
  },
- "nang_dung": {
+ "squat": {
   "kps": [
    [
     0.5,
@@ -213,7 +213,7 @@
    ],
    "label": "NGỒI XỔM",
    "detail": "Gối 119°",
-   "technique": "SQUAT"
+   "technique": "NGỒI XỔM"
   },
   "env": {
    "hazards": [],
@@ -233,7 +233,7 @@
    "overall": 82
   }
  },
- "cui_sai": {
+ "stoop": {
   "kps": [
    [
     0.73,
@@ -330,7 +330,7 @@
    ],
    "label": "CÚI KHOM",
    "detail": "Cúi 63°",
-   "technique": "STOOP"
+   "technique": "CÚI KHOM"
   },
   "env": {
    "hazards": [],
@@ -350,7 +350,7 @@
    "overall": 80
   }
  },
- "nga": {
+ "fall": {
   "kps": [
    [
     0.77,
@@ -467,7 +467,7 @@
    "overall": 75
   }
  },
- "chay": {
+ "fire": {
   "kps": [
    [
     0.5,
@@ -564,7 +564,7 @@
    ],
    "label": "ĐỨNG",
    "detail": "Bình thường",
-   "technique": "STANDING"
+   "technique": "ĐỨNG"
   },
   "env": {
    "hazards": [
@@ -590,7 +590,7 @@
    "overall": 59
   }
  },
- "bui": {
+ "dust": {
   "kps": [
    [
     0.5,
@@ -687,17 +687,17 @@
    ],
    "label": "ĐỨNG",
    "detail": "Bình thường",
-   "technique": "STANDING"
+   "technique": "ĐỨNG"
   },
   "env": {
    "hazards": [
     {
-     "name": "DUST",
+     "name": "BỤI",
      "label": "BỤI",
      "advice": "Khẩu trang"
     },
     {
-     "name": "SMOKE",
+     "name": "KHÓI",
      "label": "KHÓI",
      "advice": "Sơ tán"
     }
@@ -718,7 +718,7 @@
    "overall": 36
   }
  },
- "toi": {
+ "dark": {
   "kps": [
    [
     0.5,
@@ -815,7 +815,7 @@
    ],
    "label": "KHÓ THẤY",
    "detail": "Ảnh tối",
-   "technique": "STANDING"
+   "technique": "ĐỨNG"
   },
   "env": {
    "hazards": [
@@ -841,7 +841,7 @@
    "overall": 28
   }
  },
- "che_cam": {
+ "blocked": {
   "kps": [
    [
     0.5,
@@ -938,7 +938,7 @@
    ],
    "label": "KHÔNG PHÁT HIỆN",
    "detail": "Camera lỗi",
-   "technique": "STANDING"
+   "technique": "ĐỨNG"
   },
   "env": {
    "hazards": [
@@ -948,7 +948,7 @@
      "advice": "Kiểm tra"
     },
     {
-     "name": "SMOKE",
+     "name": "KHÓI",
      "label": "KHÓI/CHE",
      "advice": "Vệ sinh"
     }

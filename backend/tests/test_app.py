@@ -128,13 +128,13 @@ def test_camera_config_roundtrip(tmp_path, monkeypatch):
     monkeypatch.setenv("ECHO_DEMO_MODE", "1")
     monkeypatch.setenv("ECHO_DATA_DIR", str(tmp_path))
     monkeypatch.setenv("ECHO_CAMERAS", f"kho={tmp_path / 'missing.mp4'}")
-    zone = {"name": "Máy dập", "points": [[0, 0.5], [0.5, 0.5], [0.5, 1]], "dwell_s": 2}
+    zone = {"name": "Press", "points": [[0, 0.5], [0.5, 0.5], [0.5, 1]], "dwell_s": 2}
     with TestClient(create_app(Settings())) as c:
         assert c.get("/api/cameras/kho/config").json()["zones"] == []
         r = c.put("/api/cameras/kho/config", json={"zones": [zone], "disabled_rules": ["stoop"]})
         assert r.status_code == 200 and r.json()["disabled_rules"] == ["STOOP"]
         cam = c.get("/api/cameras").json()[0]
-        assert cam["zones"][0]["name"] == "Máy dập" and cam["disabled_rules"] == ["STOOP"]
+        assert cam["zones"][0]["name"] == "Press" and cam["disabled_rules"] == ["STOOP"]
         bad = {"zones": [{"points": [[0, 0], [2, 2], [0, 1]]}]}
         assert c.put("/api/cameras/kho/config", json=bad).status_code == 422
         assert c.put("/api/cameras/kho/config",
@@ -175,4 +175,4 @@ def test_quality_warnings_are_per_metric_not_invented_hazards():
     for w in blurry["warnings"] + noisy["warnings"] + dark["warnings"] + glare["warnings"]:
         assert w["code"] not in {"FIRE", "DUST", "SMOKE"}
     # Fixture scenarios still load for pose unit tests.
-    assert "nga" in load_scenarios()
+    assert "fall" in load_scenarios()

@@ -11,16 +11,16 @@ window.onerror = (msg, url, line, col, err) => {
 };
 
 const S = {
-  che_do:'idle',
-  khung:0, lan_ve:0, fps_dem:0, fps:0, moc_fps:0,
-  safety:'SAFE', ws:null, dang_gui:false, lan_gui:0,
-  nhat_ky:[], stream:null, url:null,
+  mode:'idle',
+  frame:0, lastDraw:0, fpsCount:0, fps:0, fpsMark:0,
+  safety:'SAFE', ws:null, sending:false, lastSend:0,
+  log:[], stream:null, url:null,
   three:false, lib:false, ctx2d:null,
   dbg:{video:'-', err:null},
   ready:false,
   pose:null, pose_ready:false, pose_loading:false,
   ai_on:false, last_det:0, last_vt:-1,
-  det_fps:0, det_dem:0, det_moc:0,
+  det_fps:0, detCount:0, detMark:0,
   mIQA:null, mFile:null, mMtime:0, mTimer:null, mAuto:true,
   bench:{on:false}, cmp:{on:false, pct:50},
   sess:{on:false, hist:[]},
@@ -136,7 +136,7 @@ function mp2coco(lms) {
   });
 }
 
-function goc(p1, p2, p3) {
+function jointAngle(p1, p2, p3) {
   const v1x = p1[0]-p2[0], v1y = p1[1]-p2[1];
   const v2x = p3[0]-p2[0], v2y = p3[1]-p2[1];
   const m1 = Math.hypot(v1x, v1y) + 1e-6;
@@ -158,9 +158,9 @@ function classify(kps0, aspect) {
   const vy = (kps[5][1]+kps[6][1])/2, hy = (kps[11][1]+kps[12][1])/2;
   const vx = (kps[5][0]+kps[6][0])/2, hx = (kps[11][0]+kps[12][0])/2;
   const sp = Math.atan2(Math.abs(vx-hx), Math.abs(vy-hy)+1e-6) * 180 / Math.PI;
-  let goi = 180;
+  let knee = 180;
   if ([11,12,13,14,15,16].every(i => kps[i][2] > VIS))
-    goi = (goc(kps[11],kps[13],kps[15]) + goc(kps[12],kps[14],kps[16])) / 2;
+    knee = (jointAngle(kps[11],kps[13],kps[15]) + jointAngle(kps[12],kps[14],kps[16])) / 2;
   const vis = kps.filter(k => k[2] > VIS);
   const x0 = Math.min(...vis.map(k => k[0])), x1 = Math.max(...vis.map(k => k[0]));
   const y0 = Math.min(...vis.map(k => k[1])), y1 = Math.max(...vis.map(k => k[1]));
@@ -173,12 +173,12 @@ function classify(kps0, aspect) {
   const head = [0,1,2,3,4].filter(i => kps[i][2] > VIS);
   const headY = head.length ? head.reduce((s, i) => s + kps[i][1], 0) / head.length : null;
   const headLow = headY === null ? null : hy - headY < .15 * Math.max(bh, 1e-6);
-  const extra = {spine_deg: sp, knee_deg: goi, reba: reba(kps, sp, goi), height: bh, hip_y: hy,
+  const extra = {spine_deg: sp, knee_deg: knee, reba: reba(kps, sp, knee), height: bh, hip_y: hy,
                  signals: {lying, head_low: headLow, collapsed: false}};
   const r = (o) => Object.assign(o, extra);
   if (isFall(lying, headLow, false))
     return r({level:'RISK',color:[1,0,0],label:'PHÁT HIỆN NGÃ',detail: lying ? `Thân ${sp.toFixed(0)}° · nằm ngang` : 'Đầu thấp ngang hông',technique:'FALL'});
-  if (goi < 140 && sp < 45) return r({level:'SAFE',color:[0,1,0],label:'NGỒI XỔM',detail:`Gối ${goi.toFixed(0)}° · Lưng ${sp.toFixed(0)}°`,technique:'SQUAT'});
+  if (knee < 140 && sp < 45) return r({level:'SAFE',color:[0,1,0],label:'NGỒI XỔM',detail:`Gối ${knee.toFixed(0)}° · Lưng ${sp.toFixed(0)}°`,technique:'SQUAT'});
   if (sp > 60) return r({level:'RISK',color:[1,0,0],label:'CÚI KHOM',detail:`Cúi ${sp.toFixed(0)}°`,technique:'STOOP'});
   return r({level:'SAFE',color:[0,1,0],label:'ĐỨNG',detail:'Bình thường',technique:'STANDING'});
 }
@@ -200,7 +200,7 @@ function vecAngle(a, b) {
   const c = (a[0]*b[0] + a[1]*b[1]) / ((Math.hypot(a[0], a[1]) + 1e-6) * (Math.hypot(b[0], b[1]) + 1e-6));
   return Math.acos(Math.max(-1, Math.min(1, c))) * 180 / Math.PI;
 }
-function reba(k, sp, goi) {
+function reba(k, sp, knee) {
   const trunk = sp <= 5 ? 1 : sp <= 20 ? 2 : sp <= 60 ? 3 : 4;
   const sh = [(k[5][0]+k[6][0])/2, (k[5][1]+k[6][1])/2], hp = [(k[11][0]+k[12][0])/2, (k[11][1]+k[12][1])/2];
   const up = [sh[0]-hp[0], sh[1]-hp[1]], down = [-up[0], -up[1]];
@@ -210,13 +210,13 @@ function reba(k, sp, goi) {
     const hx = head.reduce((s, i) => s + k[i][0], 0) / head.length, hy2 = head.reduce((s, i) => s + k[i][1], 0) / head.length;
     if (vecAngle(up, [hx - sh[0], hy2 - sh[1]]) > 20) neck = 2;
   }
-  const flex = 180 - goi, legs = 1 + (flex > 60 ? 2 : flex >= 30 ? 1 : 0);
+  const flex = 180 - knee, legs = 1 + (flex > 60 ? 2 : flex >= 30 ? 1 : 0);
   let upper = 1, lower = 1;
   [[5,7,9],[6,8,10]].forEach(([s, e, w]) => {
     if (k[s][2] <= VIS || k[e][2] <= VIS) return;
     const a = vecAngle(down, [k[e][0]-k[s][0], k[e][1]-k[s][1]]);
     upper = Math.max(upper, a <= 20 ? 1 : a <= 45 ? 2 : a <= 90 ? 3 : 4);
-    if (k[w][2] > VIS) { const f = 180 - goc(k[s], k[e], k[w]); lower = Math.max(lower, f >= 60 && f <= 100 ? 1 : 2); }
+    if (k[w][2] > VIS) { const f = 180 - jointAngle(k[s], k[e], k[w]); lower = Math.max(lower, f >= 60 && f <= 100 ? 1 : 2); }
   });
   const A = REBA_A[trunk-1][neck-1][legs-1], B = REBA_B[upper-1][lower-1][0];
   return REBA_C[Math.min(A,12)-1][Math.min(B,12)-1];
@@ -253,8 +253,8 @@ function detect() {
   S.last_det = now;
   if (v.currentTime === S.last_vt) return;
   S.last_vt = v.currentTime;
-  S.det_dem++;
-  if (now - S.det_moc > 1000) { S.det_fps = S.det_dem; S.det_dem = 0; S.det_moc = now; }
+  S.detCount++;
+  if (now - S.detMark > 1000) { S.det_fps = S.detCount; S.detCount = 0; S.detMark = now; }
   try {
     const r = S.pose.detectForVideo(v, now);
     if (r.landmarks && r.landmarks.length > 0) {
@@ -416,7 +416,7 @@ function warningList(env) {
 }
 
 function showIdle() {
-  S.che_do = 'idle';
+  S.mode = 'idle';
   if ($('stt')) $('stt').textContent = 'Chọn Camera / Video / Server';
   const el = $('mode');
   if (el) { el.textContent = 'CHỜ NGUỒN'; el.className = 'chip muted'; }
@@ -632,15 +632,15 @@ function process(data) {
   setSysIqa(data.quality, data.env_hazards);
   alertsFor(data);
 
-  S.nhat_ky.push({t:Date.now(), mode:S.che_do, ...data});
-  if (S.nhat_ky.length > 3000) S.nhat_ky.shift();
+  S.log.push({t:Date.now(), mode:S.mode, ...data});
+  if (S.log.length > 3000) S.log.shift();
 }
 
 // Server payloads carry alerts already confirmed by the backend; everything computed in the
 // browser (scenarios, presets, MediaPipe) goes through the same temporal rules locally.
 function alertsFor(data) {
   if (!window.EchoAlerts) return;
-  if (S.che_do === 'server') { (data.alerts || []).forEach(a => EchoAlerts.raise(a, true)); return; }
+  if (S.mode === 'server') { (data.alerts || []).forEach(a => EchoAlerts.raise(a, true)); return; }
   if (!data._real) return;
   EchoAlerts.observe('browser', data.persons || [], data.quality, {
     source: 'browser',
@@ -713,12 +713,12 @@ function updateSystemPanel() {
     set('sysCams', '--');
     set('sysNotify', '--');
   }
-  set('sysSrc', S.che_do || 'idle');
+  set('sysSrc', S.mode || 'idle');
   set('sysFps', S.fps ? String(S.fps) : '--');
   set('sysAi', S.ai_on && S.pose_ready ? String(S.det_fps) : (S.ai_on ? '…' : 'off'));
   const live = $('liveDot');
   if (live) {
-    const on = S.che_do === 'video' || S.che_do === 'server' || !!S.ext;
+    const on = S.mode === 'video' || S.mode === 'server' || !!S.ext;
     live.textContent = on ? 'LIVE' : 'STANDBY';
     live.className = 'live ' + (on ? 'on' : 'off');
   }
@@ -757,14 +757,14 @@ function loop(now) {
   try {
     if (S.three) render3D();
     if (S.ext) { updDebug(); return; }
-    if (S.che_do === 'video' && S.ai_on && S.pose_ready) detect();
-    const fps = S.che_do === 'video' ? FPS_VID : FPS_SRV;
-    if (now - S.lan_ve < 1000/fps) return;
-    S.lan_ve = now;
-    S.fps_dem++;
-    if (now - S.moc_fps > 1000) { S.fps = S.fps_dem; S.fps_dem = 0; S.moc_fps = now; }
-    if (S.che_do === 'video') procVideo();
-    else if (S.che_do === 'server') procServer(now);
+    if (S.mode === 'video' && S.ai_on && S.pose_ready) detect();
+    const fps = S.mode === 'video' ? FPS_VID : FPS_SRV;
+    if (now - S.lastDraw < 1000/fps) return;
+    S.lastDraw = now;
+    S.fpsCount++;
+    if (now - S.fpsMark > 1000) { S.fps = S.fpsCount; S.fpsCount = 0; S.fpsMark = now; }
+    if (S.mode === 'video') procVideo();
+    else if (S.mode === 'server') procServer(now);
     updDebug();
   } catch (e) { S.dbg.err = e.message; }
 }
@@ -776,7 +776,7 @@ function procVideo() {
   if (S.ai_on && S.pose_ready) return;  // detect() already called process()
   const q = calcIQA();
   if (!q) return;
-  S.khung++;
+  S.frame++;
   process({
     detected: false, persons: [],
     hands: [], quality:q, env_hazards:iqaWarnings(q), _real:true
@@ -784,12 +784,12 @@ function procVideo() {
 }
 
 function procServer(now) {
-  if (!S.ws || S.ws.readyState !== 1 || S.dang_gui) return;
-  if (now - S.lan_gui < 1000/FPS_SRV) return;
-  S.lan_gui = now;
+  if (!S.ws || S.ws.readyState !== 1 || S.sending) return;
+  if (now - S.lastSend < 1000/FPS_SRV) return;
+  S.lastSend = now;
   const v = $('v');
   if (!v.videoWidth || !v.videoHeight) return;
-  S.dang_gui = true;
+  S.sending = true;
   const c = document.createElement('canvas');
   c.width = v.videoWidth; c.height = v.videoHeight;
   c.getContext('2d').drawImage(v, 0, 0);
@@ -798,7 +798,7 @@ function procServer(now) {
       image: c.toDataURL('image/jpeg', .55),
       timestamp: v.currentTime || performance.now()/1000
     }));
-  } catch (e) { S.dang_gui = false; }
+  } catch (e) { S.sending = false; }
 }
 
 function updDebug() {
@@ -808,7 +808,7 @@ function updDebug() {
   const t = S.three ? '3D' : '2D';
   const ai = S.ai_on && S.pose_ready ? `AI:${S.det_fps}fps` : 'AI:OFF';
   const src = S.mIQA ? 'MATLAB' : 'Live';
-  d.textContent = `[${S.che_do.toUpperCase()}] ${t} | FPS:${S.fps} | ${ai} | IQA:${src} | Video:${S.dbg.video} | ${S.ext ? 'Cam:' + S.ext + ' | ' : ''}An toàn:${S.safety} | Log:${S.nhat_ky.length}` + (S.dbg.err ? ` | LỖI:${S.dbg.err}` : '');
+  d.textContent = `[${S.mode.toUpperCase()}] ${t} | FPS:${S.fps} | ${ai} | IQA:${src} | Video:${S.dbg.video} | ${S.ext ? 'Cam:' + S.ext + ' | ' : ''}An toàn:${S.safety} | Log:${S.log.length}` + (S.dbg.err ? ` | LỖI:${S.dbg.err}` : '');
   updateSystemPanel();
   const b = $('badge');
   if (S.pose_loading) { b.textContent = '⏳ AI...'; b.style.background = '#0ea5e9'; b.style.display = 'block'; }
@@ -925,7 +925,7 @@ th{background:#f8fafc;color:#1e40af;}
 <h1>📊 ECHO MOVE v22.0 — IQA Report</h1>
 <p><b>Video:</b> ${S.dbg.video}<br>
 <b>Thời gian:</b> ${now.toLocaleString('vi-VN')}<br>
-<b>Mode:</b> ${S.che_do.toUpperCase()} | <b>AI:</b> ${S.ai_on ? 'ON' : 'OFF'}<br>
+<b>Mode:</b> ${S.mode.toUpperCase()} | <b>AI:</b> ${S.ai_on ? 'ON' : 'OFF'}<br>
 <b>Samples:</b> ${s.total} frames</p>
 <h2>1. IQA Metrics</h2>
 <div>
@@ -1045,7 +1045,7 @@ function bind() {
       const v = $('v');
       v.srcObject = S.stream; v.muted = true;
       await v.play();
-      S.ready = true; S.che_do = 'video'; S.khung = 0;
+      S.ready = true; S.mode = 'video'; S.frame = 0;
       S.dbg.video = 'camera live';
       $('stt').textContent = S.ai_on ? 'Camera + AI' : 'Camera (AI off)';
       $('mode').textContent = 'CAMERA'; $('mode').className = 'chip';
@@ -1061,7 +1061,7 @@ function bind() {
     v.src = S.url; v.muted = true; v.loop = true;
     v.onloadedmetadata = () => {
       v.play().then(() => {
-        S.ready = true; S.che_do = 'video'; S.khung = 0;
+        S.ready = true; S.mode = 'video'; S.frame = 0;
         S.dbg.video = `${v.videoWidth}x${v.videoHeight}`;
         $('stt').textContent = S.ai_on ? 'Video + AI' : 'Video (AI off)';
         $('mode').textContent = 'VIDEO'; $('mode').className = 'chip';
@@ -1073,7 +1073,7 @@ function bind() {
   $('bSrv').onclick = () => {
     if (S.ws) { try { S.ws.close(); } catch(e){} S.ws = null; return; }
     cleanup();
-    S.che_do = 'server';
+    S.mode = 'server';
     try { S.ws = new WebSocket($('wsurl').value); }
     catch (e) { $('stt').textContent = 'URL sai'; showIdle(); return; }
     S.ws.onopen = () => {
@@ -1086,14 +1086,14 @@ function bind() {
       S.ws = null;
       $('bSrv').textContent = 'Server';
       $('bSrv').style.background = '#334155';
-      if (S.che_do === 'server') {
+      if (S.mode === 'server') {
         showIdle();
         $('stt').textContent = 'Mất kết nối';
       }
     };
     S.ws.onerror = () => { $('stt').textContent = 'Lỗi Python'; };
     S.ws.onmessage = e => {
-      S.dang_gui = false;
+      S.sending = false;
       try {
         const d = JSON.parse(e.data);
         if (d.skip) return;
@@ -1104,7 +1104,7 @@ function bind() {
   };
 
   $('bLog').onclick = () => {
-    const b = new Blob([JSON.stringify(S.nhat_ky, null, 2)], {type:'application/json'});
+    const b = new Blob([JSON.stringify(S.log, null, 2)], {type:'application/json'});
     const u = URL.createObjectURL(b);
     const a = document.createElement('a');
     a.href = u; a.download = `echo_log_${Date.now()}.json`; a.click();

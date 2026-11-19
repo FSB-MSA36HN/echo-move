@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ECHO MOVE — Thuyết trình · Hệ thống cảnh báo an toàn lao động</title>
-<meta name="description" content="Slide thuyết trình ECHO MOVE v22: nhận diện tư thế, phát hiện ngã đa tín hiệu, đánh giá chất lượng ảnh và cảnh báo an toàn lao động theo thời gian thực.">
+<meta name="description" content="ECHO MOVE: 5 sự kiện tư thế (FALL·STANDING·SQUAT·STOOP·PARTIAL), YOLOv8-Pose, ngã đa tín hiệu, IQA panel, SOC dashboard.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -228,15 +228,15 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
     <div class="flow mt">
       <div class="chip b">1 · YOLOv8-Pose<small>17 keypoint COCO, chuẩn hoá 0–1</small></div><span class="arrow">→</span>
       <div class="chip b">2 · Tracker<small>ID ổn định + One-Euro</small></div><span class="arrow">→</span>
-      <div class="chip a">3 · Phân loại tư thế<small>góc lưng, gối, REBA</small></div><span class="arrow">→</span>
-      <div class="chip a">4 · FallAnalyzer<small>chiều cao lúc đứng</small></div>
+      <div class="chip a">3 · classify_posture<small>PARTIAL → FALL → SQUAT → STOOP → STANDING</small></div><span class="arrow">→</span>
+      <div class="chip a">4 · FallAnalyzer<small>chiều cao đứng / track</small></div>
     </div>
     <div class="flow" style="margin-top:22px">
       <span class="arrow">→</span>
-      <div class="chip a">5 · 5 sự kiện tư thế<small>FALL · STANDING · SQUAT · STOOP · PARTIAL</small></div><span class="arrow">→</span>
-      <div class="chip g">6 · IQA<small>panel UI, không tạo event</small></div><span class="arrow">→</span>
-      <div class="chip r">7 · AlertEngine<small>xác nhận theo thời gian</small></div><span class="arrow">→</span>
-      <div class="chip r">8 · AlertHub<small>lưu → gửi → đẩy realtime</small></div>
+      <div class="chip a">5 · Overlay<small>vùng / PPE (không tạo event)</small></div><span class="arrow">→</span>
+      <div class="chip g">6 · IQA<small>5 metric → panel UI</small></div><span class="arrow">→</span>
+      <div class="chip r">7 · AlertEngine<small>5 loại · confirm + cooldown</small></div><span class="arrow">→</span>
+      <div class="chip r">8 · AlertHub<small>SQLite · Telegram · /ws/events</small></div>
     </div>
     <div class="grid2 mt2">
       <div class="alert green"><h3>Model dùng chung, có khoá</h3><p>Ultralytics không thread-safe nên mọi camera chia sẻ <b>một</b> model; tracking tách riêng theo từng camera.</p></div>
@@ -312,11 +312,12 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
 <span class="kw">spine</span> = atan2(|x_vai − x_hông|, |y_vai − y_hông|)
 <span class="kw">knee</span>  = góc hông–gối–cổ chân
 
-<span class="kw">if</span> partial_body(YOLO conf)     → <span class="bad">PARTIAL</span>
-<span class="kw">if</span> fall_multisignal (≥ 2/3)    → <span class="bad">FALL</span>
+<span class="kw">if</span> is_partial_body(...)         → <span class="bad">PARTIAL</span>
+<span class="kw">if</span> fall ≥ 2/3 signals           → <span class="bad">FALL</span>
 <span class="kw">if</span> knee &lt; <span class="st">140°</span> <span class="kw">and</span> spine &lt; <span class="st">45°</span> → <span class="st">SQUAT</span>
 <span class="kw">if</span> spine &gt; <span class="st">60°</span>                 → <span class="bad">STOOP</span>
-<span class="kw">else</span>                           → <span class="st">STANDING</span></pre>
+<span class="kw">else</span>                           → <span class="st">STANDING</span>
+<span class="cm"># label UI: ĐỨNG · NGỒI XỔM · CÚI KHOM · …</span></pre>
       </div>
       <div class="checks">
         <div class="check ok"><div class="box">✓</div><div class="txt">PARTIAL = thiếu core joints / &lt; 8 điểm / cắt mép <span>— không còn “cúi nhẹ”</span></div></div>
@@ -351,7 +352,7 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
     </div>
     <div class="alert mt">
       <h3>FALL = ≥ 2 tín hiệu, hoặc nằm ngang mà không thấy đầu</h3>
-      <p>Ngồi xổm hay nâng đồ (gối gập) không bị tính là ngã dù chiều cao giảm. <code>ECHO_FALL_MULTISIGNAL=0</code> quay về luật v21.</p>
+      <p>SQUAT (gối gập, lưng thẳng) không bị nâng thành FALL dù chiều cao giảm. <code>ECHO_FALL_MULTISIGNAL=0</code> chỉ dùng tín hiệu nằm ngang.</p>
     </div>
     <div class="stripe-b"></div>
     <div class="footer"><span>fall · multi-signal</span><span>ECHO MOVE</span></div>
@@ -392,7 +393,7 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
     </div>
     <div class="alert mt">
       <h3>Đã bỏ MANDOWN · RECOVERED · POSTURE · ERGO · ZONE · PPE · CAMERA · OFFLINE</h3>
-      <p>IQA vẫn hiện trên panel; vùng/PPE có thể vẽ overlay nhưng không tạo event.</p>
+      <p>UI tiếng Việt (Ngã / Đứng / Ngồi xổm / Cúi khom / Một phần). Code dùng identifier English. IQA = panel only.</p>
     </div>
     <div class="stripe-b"></div>
     <div class="footer"><span>events · taxonomy</span><span>ECHO MOVE</span></div>
@@ -453,7 +454,7 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
         <div class="check ok"><div class="box">▶</div><div class="txt">Clip 5 s trước + 5 s sau <span>— xem lại trên web, gửi qua Telegram</span></div></div>
         <div class="check ok"><div class="box">⏫</div><div class="txt">Leo thang <span>— CRITICAL chưa xử lý sau N phút gửi tới quản đốc</span></div></div>
         <div class="check ok"><div class="box">✉</div><div class="txt">Telegram · Zalo OA · webhook <span>— chạy nền, thử lại</span></div></div>
-        <div class="check ok"><div class="box">📡</div><div class="txt">Cảnh báo mất tín hiệu <span>— tự kết nối lại, báo một lần mỗi sự cố</span></div></div>
+        <div class="check ok"><div class="box">📡</div><div class="txt">Camera mất tín hiệu <span>— tự kết nối lại; trạng thái trên card (không event OFFLINE)</span></div></div>
       </div>
       <div class="checks">
         <div class="check ok"><div class="box">✗</div><div class="txt">Nút "Báo nhầm" <span>— thống kê tỉ lệ báo nhầm để chỉnh ngưỡng</span></div></div>
@@ -485,7 +486,7 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
 <span class="kw">export</span> ECHO_TELEGRAM_TOKEN=<span class="st">…</span></pre>
       <div>
         <div class="grid2">
-          <div class="card t-green" style="text-align:center"><div class="big-num grn">67</div><p>test tự động (pytest)</p></div>
+          <div class="card t-green" style="text-align:center"><div class="big-num grn">70</div><p>test tự động (pytest)</p></div>
           <div class="card t-blue" style="text-align:center"><div class="big-num blu">5</div><p>chỉ số IQA + Overall</p></div>
         </div>
         <div class="alert green mt">
@@ -538,8 +539,8 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
     <div class="grid2 mt">
       <div class="checks">
         <div class="check ok"><div class="box">1</div><div class="txt">MATLAB chạy IQA <span>— 9 biểu đồ, JSON tự nạp sang web</span></div></div>
-        <div class="check ok"><div class="box">2</div><div class="txt">Tab Camera <span>— MJPEG có skeleton, người 3D theo camera</span></div></div>
-        <div class="check ok"><div class="box">3</div><div class="txt">IQA Live đủ chỉ số <span>— Blur/Noise/… + badge cảnh báo theo metric</span></div></div>
+        <div class="check ok"><div class="box">2</div><div class="txt">SOC · rail Cameras <span>— MJPEG skeleton, chọn cam → người 3D</span></div></div>
+        <div class="check ok"><div class="box">3</div><div class="txt">Panel IQA Live <span>— Blur/Noise/… + badge theo metric (không event)</span></div></div>
         <div class="check ok"><div class="box">4</div><div class="txt">Cúi khom trước webcam <span>— STOOP sau 3 s, Telegram nhận ảnh</span></div></div>
       </div>
       <div class="checks">
@@ -586,7 +587,7 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
         <div class="card t-red"><div class="lbl">Pose</div><p>YOLOv8-Pose · MediaPipe</p></div>
         <div class="card t-amber"><div class="lbl">IQA</div><p>Pech-Pacheco · Immerkær · Peli · PIQE</p></div>
         <div class="card t-blue"><div class="lbl">Tracking</div><p>SORT · ByteTrack · One-Euro</p></div>
-        <div class="card t-green"><div class="lbl">Ergonomics · Data</div><p>REBA · UR Fall · Le2i</p></div>
+        <div class="card t-green"><div class="lbl">Events · Eval</div><p>5 posture · UR Fall · Le2i</p></div>
       </div>
     </div>
     <div class="stripe-b"></div>

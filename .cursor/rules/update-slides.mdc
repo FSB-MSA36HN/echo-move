@@ -1,0 +1,28 @@
+---
+description: Always update presentation slides when product/code behavior changes
+alwaysApply: true
+---
+
+# Update slides with every code change
+
+Whenever you change product behavior, algorithms, event taxonomy, UI structure, APIs, thresholds, or demo flow in this repo, you **must also update** `web/presentation/index.html` in the same turn so slides stay accurate.
+
+## What to sync
+
+- Event types and alert levels (currently only: FALL, STANDING, SQUAT, STOOP, PARTIAL)
+- Classifier / fall / PARTIAL rules and confirm timings
+- Pipeline steps and architecture (SOC dashboard, not old 3-tab UI)
+- IQA: panel badges only — no CAMERA / OFFLINE events
+- Deploy/test counts, demo checklist, removed features (MANDOWN, RECOVERED, POSTURE, ERGO, ZONE, PPE, CAMERA, OFFLINE)
+
+## Conventions
+
+- Slides stay in Vietnamese for the audience.
+- Code identifiers stay English; do not put Vietnamese into variable/key names in slides' code samples when showing identifiers.
+- Do not leave outdated names (IMPROPER, PROPER_LIFT, NONE, MANDOWN, “3 tab Giám sát”, etc.).
+
+## Checklist before finishing
+
+1. Grep slides for removed event/UI names.
+2. Align numbers (pytest count, confirm seconds) with code/tests.
+3. Mention slide update briefly in the final reply to the user.
