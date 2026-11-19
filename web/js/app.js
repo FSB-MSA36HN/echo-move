@@ -173,7 +173,7 @@ function isPartialBody(kps0) {
 function classify(kps0, aspect) {
   const gate = isPartialBody(kps0);
   if (gate.partial)
-    return {level:'WARNING',color:[1,.65,0],label:'MỘT PHẦN CỦA NGƯỜI',detail:gate.detail,technique:'PARTIAL'};
+    return {level:'WARNING',color:[1,.92,.15],label:'MỘT PHẦN CỦA NGƯỜI',detail:gate.detail,technique:'PARTIAL'};
   const kps = kps0.map(k => [k[0]*(aspect||1), k[1], k[2]]);
   const vy = (kps[5][1]+kps[6][1])/2, hy = (kps[11][1]+kps[12][1])/2;
   const vx = (kps[5][0]+kps[6][0])/2, hx = (kps[11][0]+kps[12][0])/2;
@@ -474,13 +474,14 @@ function draw2D(ds) {
     if (!kp || kp.length < 17) return;
     const tech = (p.safety && p.safety.technique) || '';
     const partial = tech === 'PARTIAL';
-    const mau = partial ? '#f59e0b' : CL[i % CL.length];
+    const pid = (p.id != null ? p.id : i + 1);
+    const mau = partial ? '#facc15' : CL[i % CL.length];
     const box = personBBox(p, W, H);
     if (box) {
       const pad = 8;
       ctx.strokeStyle = mau; ctx.lineWidth = partial ? 3 : 2;
       ctx.strokeRect(box[0]-pad, box[1]-pad, (box[2]-box[0])+pad*2, (box[3]-box[1])+pad*2);
-      const label = partial ? `P${i+1} MỘT PHẦN` : `P${i+1}`;
+      const label = partial ? `P${pid} - Chỉ hiển thị một phần người` : `P${pid}`;
       ctx.font = 'bold 12px IBM Plex Sans, sans-serif';
       const tw = ctx.measureText(label).width;
       const lx = box[0]-pad, ly = Math.max(16, box[1]-pad - 4);

@@ -42,6 +42,7 @@ EDGE_MARGIN = 0.03
 
 GREEN: list[float] = [0, 1, 0]
 ORANGE: list[float] = [1, 0.65, 0]
+YELLOW: list[float] = [1, 0.92, 0.15]
 RED: list[float] = [1, 0, 0]
 
 TABLE_A = [
@@ -193,7 +194,7 @@ def classify_posture(
     vis = cfg.visibility_threshold
     partial, why = is_partial_body(kps, vis)
     if partial:
-        return _result("WARNING", ORANGE, "MỘT PHẦN CỦA NGƯỜI", why or "Partial person", "PARTIAL")
+        return _result("WARNING", YELLOW, "MỘT PHẦN CỦA NGƯỜI", why or "Partial person", "PARTIAL")
 
     pts = [[k[0] * aspect, k[1], k[2]] for k in kps]
 

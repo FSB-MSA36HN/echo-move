@@ -53,8 +53,12 @@ def annotate(frame: np.ndarray, persons: list[dict[str, Any]], *, title: str = "
     for p in persons:
         safety = p.get("safety") or {}
         tech = safety.get("technique", "NONE")
-        color = BGR.get(safety.get("level", "SAFE"), BGR["SAFE"])
+        # PARTIAL: yellow traffic-style bbox (OpenCV BGR).
+        color = ((0, 255, 255) if tech == PARTIAL_TECH
+                 else BGR.get(safety.get("level", "SAFE"), BGR["SAFE"]))
         thick = 3 if highlight is None or p.get("id") == highlight else 1
+        if tech == PARTIAL_TECH:
+            thick = max(thick, 2)
         kps = p["keypoints"]
         pts = [(int(k[0] * w), int(k[1] * h), k[2]) for k in kps]
         # Incomplete person: traffic-style bbox only (no misleading skeleton).
@@ -75,16 +79,20 @@ def annotate(frame: np.ndarray, persons: list[dict[str, Any]], *, title: str = "
             x1, y1, x2, y2 = (int(box[0] * w) - 10, int(box[1] * h) - 10,
                               int(box[2] * w) + 10, int(box[3] * h) + 10)
             cv2.rectangle(out, (x1, y1), (x2, y2), color, thick)
-            label = f"#{p.get('id')} {LABELS.get(tech, '')}"
+            pid = p.get("id")
             if tech == PARTIAL_TECH:
-                label = f"#{p.get('id')} MỘT PHẦN"
+                # Hershey fonts are ASCII-only — strip Vietnamese diacritics.
+                label = ascii_text(f"P{pid} - Chi hien thi mot phan nguoi")
+            else:
+                label = f"#{pid} {LABELS.get(tech, '')}"
             missing = [k for k, v in (p.get("ppe") or {}).items() if v is False]
             if missing:
                 label += " NO-" + "/".join(m.upper() for m in missing)
             (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
             cv2.rectangle(out, (x1, y1 - th - 8), (x1 + tw + 8, y1), color, -1)
+            ink = (0, 0, 0) if tech == PARTIAL_TECH else (255, 255, 255)
             cv2.putText(out, label, (x1 + 4, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
-                        (255, 255, 255), 1, cv2.LINE_AA)
+                        ink, 1, cv2.LINE_AA)
     stamp = time.strftime("%Y-%m-%d %H:%M:%S")
     text = f"{title}  {stamp}" if title else stamp
     cv2.rectangle(out, (0, 0), (w, 24), (0, 0, 0), -1)

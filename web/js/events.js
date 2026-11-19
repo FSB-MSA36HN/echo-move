@@ -6,7 +6,7 @@
   const PAGE = 30;
   const E = {active: false, offset: 0, total: 0, unack: 0, reloadTimer: null};
   const TYPE_COLOR = {FALL: '#ef4444', STANDING: '#22c55e', SQUAT: '#38bdf8', STOOP: '#f59e0b',
-                      PARTIAL: '#a78bfa'};
+                      PARTIAL: '#facc15'};
 
   function params(extra) {
     const p = new URLSearchParams();
@@ -78,7 +78,6 @@
       cell('Đứng', by.STANDING || 0, TYPE_COLOR.STANDING) +
       cell('Ngồi xổm', by.SQUAT || 0, TYPE_COLOR.SQUAT) +
       cell('Cúi khom', by.STOOP || 0, TYPE_COLOR.STOOP) +
-      cell('Một phần người', by.PARTIAL || 0, TYPE_COLOR.PARTIAL) +
       cell('Báo nhầm', s.total ? `${fa} (${Math.round(100 * fa / s.total)}%)` : 0, '#94a3b8');
     chart(s.by_hour || []);
   }
