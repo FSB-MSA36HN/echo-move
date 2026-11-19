@@ -229,7 +229,7 @@ body.practice-mode .hint{bottom:52px}
       <div class="check ok"><div class="box">✓</div><div class="txt">Nhiều người, nhiều camera <span>— tracking ID ổn định, mỗi camera một pipeline</span></div></div>
       <div class="check ok"><div class="box">✓</div><div class="txt">4 cảnh báo tư thế + PARTIAL bbox <span>— FALL · STANDING · SQUAT · STOOP</span></div></div>
       <div class="check ok"><div class="box">✓</div><div class="txt">Có bằng chứng và truy vết <span>— ảnh, clip 10 s, nhật ký SQLite, xuất CSV</span></div></div>
-      <div class="check ok"><div class="box">✓</div><div class="txt">IQA trung thực trên panel <span>— 5 chỉ số + badge theo metric (không tạo event CAMERA)</span></div></div>
+      <div class="check ok"><div class="box">✓</div><div class="txt">IQA trung thực trên panel <span>— 5 chỉ số + badge theo metric</span></div></div>
     </div>
     <div class="stripe-b"></div>
     <div class="footer"><span>goals · requirements</span><span>ECHO MOVE</span></div>
@@ -252,7 +252,7 @@ body.practice-mode .hint{bottom:52px}
       </div>
       <div class="col" style="border-color:var(--blue)">
         <h4>Web · Three.js</h4><div class="role blu">Giao diện</div>
-        <ul><li>Live · Worker 3D lớn + Detect · Events · IQA · Cameras</li><li>Worker 3D ẩn trên mobile; không còn MATLAB IQA trên UI</li><li>Zoom fullscreen từng section (⛶)</li><li>Webcam: chọn cam / ↻ trước·sau</li></ul>
+        <ul><li>Worker 3D</li><li>Detect · Events</li><li>IQA</li><li>Cameras</li></ul>
       </div>
     </div>
     <div class="links"><span>MATLAB → <b>*_iqa.json</b> → Python</span><span>Python ⇄ <b>/ws/pose · /ws/events · MJPEG</b> ⇄ Web</span></div>
@@ -269,9 +269,9 @@ body.practice-mode .hint{bottom:52px}
     <h2 class="h2" style="font-size:64px;margin-bottom:8px">Luồng <span class="red">một frame</span></h2>
     <div class="pipe">
       <div class="step b"><div class="n">1</div><h4>YOLOv8-Pose</h4><p>detect_raw → 17 KP COCO + bbox (+ hands tùy chọn)</p></div>
-      <div class="step b"><div class="n">2</div><h4>Tracker</h4><p>ID ổn định · One-Euro · ghép theo box/tâm</p></div>
+      <div class="step b"><div class="n">2</div><h4>Tracker</h4><p>Frame này ↔ frame trước: cùng người thì giữ ID (#1, #2…); làm mượt khớp cho đỡ rung</p></div>
       <div class="step a"><div class="n">3</div><h4>classify + Fall</h4><p>PARTIAL → FALL → SQUAT → STOOP → STANDING; FallAnalyzer theo track</p></div>
-      <div class="step g"><div class="n">4</div><h4>IQA</h4><p>5 metric + Overall → badge panel (không event)</p></div>
+      <div class="step g"><div class="n">4</div><h4>IQA</h4><p>5 metric + Overall → badge trên panel</p></div>
       <div class="step r"><div class="n">5</div><h4>AlertEngine</h4><p>Confirm thời gian · cooldown · STANDING log-only</p></div>
       <div class="step r"><div class="n">6</div><h4>AlertHub</h4><p>SQLite + ảnh/clip · Telegram · /ws/events</p></div>
     </div>
@@ -303,7 +303,7 @@ body.practice-mode .hint{bottom:52px}
       <div class="lbl">Công thức Overall</div>
       <p style="font-family:var(--mono);font-size:24px;color:var(--ink);margin:6px 0 0;line-height:1.5">
         Overall = <b>0.05</b>·PIQE + <b>0.50</b>·Blur + <b>0.20</b>·Contrast + <b>0.15</b>·Noise + <b>0.10</b>·Exposure<br>
-        <span style="font-size:20px;color:var(--ink2)">Overall &lt; 40 → badge trên panel IQA · không tạo event · trọng số: slide kế</span>
+        <span style="font-size:20px;color:var(--ink2)">Overall &lt; 40 → hiện badge cảnh báo trên panel IQA</span>
       </p>
     </div>
     <div class="stripe-b"></div>
@@ -337,10 +337,9 @@ body.practice-mode .hint{bottom:52px}
         </div>
       </div>
     </div>
-    <p class="sub mt" style="font-size:26px">Blur nặng hơn PIQE vì điểm MSCN có thể <b>tăng</b> khi ảnh mờ (std giảm) — nếu để PIQE = 0.25 thì Overall không giảm khi camera mất nét.</p>
     <div class="stripe-b"></div>
     <div class="footer"><span>iqa · weight calibration</span><span>ECHO MOVE</span></div>
-    <aside class="notes">Nhấn mạnh: tối ưu trên dataset suy giảm có kiểm soát — trung thực nói chưa phải MOS người xem trên ảnh hiện trường. IQA không còn tạo event CAMERA.</aside>
+    <aside class="notes">Nhấn mạnh: tối ưu trên dataset suy giảm có kiểm soát — trung thực nói chưa phải MOS người xem trên ảnh hiện trường. IQA chỉ báo trên panel.</aside>
   </section>
 
   <!-- 8. POSTURE -->
@@ -477,7 +476,7 @@ body.practice-mode .hint{bottom:52px}
         <div class="check ok"><div class="box">1</div><div class="txt">Ghép hai tầng <span>— detection mạnh (≥ 0.5) trước, detection yếu (bị che) chỉ nối tiếp track cũ</span></div></div>
         <div class="check ok"><div class="box">2</div><div class="txt">Dự đoán vận tốc <span>— IoU với khung dự đoán, người đi nhanh vẫn giữ ID</span></div></div>
         <div class="check ok"><div class="box">3</div><div class="txt">Ghép theo tâm có giới hạn <span>— đứng → nằm đột ngột (IoU = 0) vẫn cùng ID</span></div></div>
-        <div class="check ok"><div class="box">4</div><div class="txt">One-Euro riêng từng người <span>— giảm rung, mất dấu &gt; 1.5 s thì xoá track</span></div></div>
+        <div class="check ok"><div class="box">4</div><div class="txt">Làm mượt khớp (One-Euro) <span>— xương đỡ nhảy lung tung; mất người &gt; 1.5 s thì xoá ID</span></div></div>
       </div>
       <div class="alert amber" style="align-self:start">
         <h3>Vì sao không dùng model.track?</h3>
@@ -552,7 +551,7 @@ body.practice-mode .hint{bottom:52px}
     <div class="grid2 mt">
       <div class="checks">
         <div class="check ok"><div class="box">1</div><div class="txt">Deck Cameras <span>— MJPEG, chọn cam → Worker 3D</span></div></div>
-        <div class="check ok"><div class="box">2</div><div class="txt">IQA Live | Cảnh báo IQA <span>— badge trên panel, không event CAMERA</span></div></div>
+        <div class="check ok"><div class="box">2</div><div class="txt">IQA Live | Cảnh báo IQA <span>— badge trên panel</span></div></div>
         <div class="check ok"><div class="box">3</div><div class="txt">Video / Ảnh curated <span>— <code>data/test_videos/curated/</code> · <code>data/test_images/</code> (nhiều CN / ngã)</span></div></div>
         <div class="check ok"><div class="box">4</div><div class="txt">Cúi khom trước webcam <span>— STOOP sau 3 s, Telegram nhận ảnh</span></div></div>
       </div>
@@ -654,23 +653,23 @@ body.practice-mode .hint{bottom:52px}
       'Ba, nhiều người nhiều camera — mỗi camera một pipeline, ID ổn định. ' +
       'Bốn, đủ bốn loại tư thế cộng PARTIAL bbox. ' +
       'Năm, có bằng chứng: ảnh, clip khoảng mười giây, nhật ký SQLite, xuất CSV. ' +
-      'Sáu, IQA trung thực trên panel, không tạo event CAMERA ảo. ' +
+      'Sáu, IQA trung thực trên panel. ' +
       'Tiếp theo em trình bày kiến trúc để đạt các tiêu chí này.',
 
     'Kiến trúc 3 tầng':
       '[Người 1 kết · ~1 phút] Hệ thống chia ba tầng, mỗi tầng một việc. ' +
       'MATLAB làm phân tích offline: IQA trên video, biểu đồ Canny Laplacian histogram, xuất JSON CSV PNG. ' +
       'Python FastAPI là bộ não realtime: nhận camera RTSP USB hoặc file, YOLO-Pose, tracker, luật tư thế, xác nhận theo thời gian, lưu SQLite, gửi Telegram. ' +
-      'Web Three.js là giao diện giám sát: live feed, Worker 3D, Events, IQA, Cameras. ' +
+      'Web Three.js là giao diện giám sát: Worker 3D, Detect Events, IQA, Cameras. ' +
       'Luồng dữ liệu: MATLAB ra file JSON cho Python; Python nối WebSocket và MJPEG với giao diện. ' +
       'Em xin chuyển sang phần pipeline từng frame — do bạn … trình bày.',
 
     'Pipeline mỗi frame':
       '[Người 2 · mở ~1 phút] Cảm ơn. Em sẽ đi theo đúng luồng một frame trong StreamPipeline. ' +
       'Bước một: YOLOv8-Pose lấy mười bảy keypoint COCO và bbox. ' +
-      'Bước hai: Tracker gán ID ổn định, làm mượt One-Euro. ' +
+      'Bước hai: Tracker — so khung người frame này với frame trước, cùng một người thì giữ nguyên ID số; rồi làm mượt điểm khớp cho xương trên màn hình đỡ rung. ' +
       'Bước ba: classify_posture và FallAnalyzer — thứ tự PARTIAL, FALL, SQUAT, STOOP, STANDING. ' +
-      'Bước bốn: IQA năm metric hiện badge trên panel, không tạo event. ' +
+      'Bước bốn: IQA năm metric hiện badge trên panel. ' +
       'Bước năm: AlertEngine xác nhận theo thời gian và cooldown. ' +
       'Bước sáu: AlertHub ghi SQLite, gửi Telegram, đẩy /ws/events. ' +
       'Lưu ý: một model YOLO dùng chung có khoá; mỗi camera một tracker và engine riêng. Suy luận chạy executor, không chặn event loop.',
@@ -678,7 +677,7 @@ body.practice-mode .hint{bottom:52px}
     'Đánh giá chất lượng ảnh':
       '[Người 2 · ~1 phút] Trước khi tin tư thế, phải hỏi camera có đủ tốt không. Camera mờ, chói, tối thì AI cũng sai. ' +
       'Nhóm dùng năm chỉ số: Blur — phương sai Laplacian; Noise — ước lượng Immerkær với mặt nạ Laplacian 3×3; Contrast — RMS; PIQE — proxy MSCN realtime; Exposure — tỉ lệ pixel cháy sáng và tối. ' +
-      'Overall là tổ hợp có trọng số. Dưới bốn mươi thì hiện badge cảnh báo trên panel IQA — nhấn mạnh: không tạo sự kiện CAMERA. ' +
+      'Overall là tổ hợp có trọng số. Dưới bốn mươi thì hiện badge cảnh báo trên panel IQA. ' +
       'Vậy trọng số lấy từ đâu? Sang slide hiệu chỉnh.',
 
     'Hiệu chỉnh trọng số IQA':
@@ -714,7 +713,7 @@ body.practice-mode .hint{bottom:52px}
 
     'Tracking nhiều người':
       '[Người 3 · ~45s] Nhiều người cùng khung hình: tracker kiểu ByteTrack ghép detection mạnh rồi yếu, dự đoán vận tốc, giữ ID khi người ngã đột ngột. ' +
-      'One-Euro làm mượt. Mỗi người một chuỗi sự kiện riêng — không lẫn cảnh báo giữa P1 và P2.',
+      'Điểm khớp được làm mượt để xương không nhảy. Mỗi người một chuỗi sự kiện riêng — không lẫn cảnh báo giữa P1 và P2.',
 
     'Vận hành thực tế':
       '[Người 3 · ~1 phút] Phát hiện mới là một nửa — nửa còn lại là quy trình. ' +
