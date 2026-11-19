@@ -46,7 +46,7 @@ def test_brief_dropout_does_not_reset_episode():
     frames = ([([person("FALL")], None)] * 8 + [([person("STANDING")], None)] * 2
               + [([person("FALL")], None)] * 8)
     alerts, _ = run(eng, frames)
-    assert [a.type for a in alerts] == ["FALL"]
+    assert [a.type for a in alerts if a.type == "FALL"] == ["FALL"]
 
 
 def test_long_recovery_resets_episode():
@@ -54,16 +54,16 @@ def test_long_recovery_resets_episode():
     frames = ([([person("FALL")], None)] * 12 + [([person("STANDING")], None)] * 10
               + [([person("FALL")], None)] * 12)
     alerts, _ = run(eng, frames)
-    assert alerts == []
+    assert [a for a in alerts if a.type == "FALL"] == []
 
 
 def test_cooldown_suppresses_repeats_then_allows():
     eng = AlertEngine(cfg(alert_cooldown_s=10), "cam")
     fall, ok = ([person("FALL")], None), ([person("STANDING")], None)
     a1, t = run(eng, [fall] * 20 + [ok] * 10 + [fall] * 20)
-    assert len(a1) == 1
+    assert len([a for a in a1 if a.type == "FALL"]) == 1
     a2, _ = run(eng, [ok] * 10 + [fall] * 20, t0=t + 10)
-    assert len(a2) == 1
+    assert len([a for a in a2 if a.type == "FALL"]) == 1
 
 
 def test_rapid_hip_drop_halves_fall_confirmation():
@@ -71,8 +71,9 @@ def test_rapid_hip_drop_halves_fall_confirmation():
     frames = [([person("STANDING", hip_y=0.45)], None)] * 3
     frames += [([person("FALL", hip_y=0.85)], None)] * 9
     alerts, _ = run(eng, frames)
-    assert [a.type for a in alerts] == ["FALL"]
-    assert alerts[0].detail == "Ngã đột ngột" and alerts[0].data["rapid_drop"] is True
+    falls = [a for a in alerts if a.type == "FALL"]
+    assert [a.type for a in falls] == ["FALL"]
+    assert falls[0].detail == "Ngã đột ngột" and falls[0].data["rapid_drop"] is True
 
 
 def test_stoop_squat_partial_standing_alerts():
@@ -82,12 +83,26 @@ def test_stoop_squat_partial_standing_alerts():
     eng = AlertEngine(cfg(), "cam")
     alerts, _ = run(eng, [([person("SQUAT")], None)] * 35)
     assert [a.type for a in alerts] == ["SQUAT"]
+    # STANDING / PARTIAL: confirm_s=0 → fire on first frame (still cooldown-limited).
     eng = AlertEngine(cfg(), "cam")
-    alerts, _ = run(eng, [([person("PARTIAL")], None)] * 55)
+    alerts, _ = run(eng, [([person("PARTIAL")], None)] * 3)
     assert [a.type for a in alerts] == ["PARTIAL"]
     eng = AlertEngine(cfg(), "cam")
-    alerts, _ = run(eng, [([person("STANDING")], None)] * 35)
+    alerts, _ = run(eng, [([person("STANDING")], None)] * 3)
     assert [a.type for a in alerts] == ["STANDING"] and alerts[0].level == "INFO"
+
+
+def test_log_only_events_skip_image_and_auto_ack(tmp_path):
+    from echo_move.alerts.hub import AlertHub
+
+    store = EventStore(tmp_path)
+    hub = AlertHub(store=store, notifier=None)
+    standing = hub.publish(Alert("STANDING", "INFO", "kho", "Đứng", "", 1, 1000.0), b"\xff\xd8x")
+    fall = hub.publish(Alert("FALL", "CRITICAL", "kho", "Ngã", "", 1, 2000.0), b"\xff\xd8x")
+    assert standing["has_image"] is False and standing["acknowledged"] is True
+    assert fall["has_image"] is True and fall["acknowledged"] is False
+    assert store.image_path(standing["id"]) is None
+    assert store.image_path(fall["id"]) is not None
 
 
 def test_iqa_does_not_raise_camera_events():

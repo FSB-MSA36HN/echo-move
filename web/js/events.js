@@ -23,9 +23,9 @@
     $('evChart').style.display = 'none';
     $('evMore').innerHTML = '';
     $('evList').innerHTML = `<div class="hint"><b>Chưa kết nối backend.</b><br>
-      Nhật ký sự kiện (SQLite + ảnh chụp) được lưu trên server. Chạy <code>make run</code>
-      hoặc <code>docker compose up</code>; khi đó cảnh báo xác nhận từ camera server, chế độ
-      Server và AI trên trình duyệt đều được ghi lại tại đây.<br>
+      Mở <code>http://51.222.86.7:18080</code> hoặc dùng
+      <code>?server=http://51.222.86.7:18080</code>. Local: <code>make run</code> →
+      <code>http://localhost:8000</code>.<br>
       <button class="b" id="evRetry">↻ Thử kết nối lại</button></div>`;
     $('evRetry').onclick = () => EchoBackend.connect().then(load);
   }

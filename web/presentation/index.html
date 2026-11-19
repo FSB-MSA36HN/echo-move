@@ -151,7 +151,7 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
       </div>
     </div>
     <div class="stripe-b"></div>
-    <div class="footer"><span>Nhóm FSB · MSA36HN · Môn Xử lý ảnh</span><span>2026</span></div>
+    <div class="footer"><span>Nhóm FSB · MSA39HN · Môn Xử lý ảnh</span><span>2026</span></div>
     <aside class="notes">Mở đầu: giới thiệu nhóm và đề tài. Nhấn mạnh hệ thống chạy được ngoài thực tế (camera RTSP thật), không chỉ demo.</aside>
   </section>
 
@@ -210,7 +210,7 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
       </div>
       <div class="col" style="border-color:var(--blue)">
         <h4>Web · Three.js</h4><div class="role blu">Giao diện</div>
-        <ul><li>SOC dashboard: live · 3D/IQA · Cameras/Events/System</li><li>Công nhân 3D mặc đồ bảo hộ</li><li>Còi, toast, thông báo desktop</li><li>Nguồn thật: Webcam · Video · Server</li></ul>
+        <ul><li>SOC dashboard: live · 3D/IQA · Cameras/Events/System</li><li>Zoom fullscreen từng section (⛶)</li><li>Công nhân 3D · còi · toast</li><li>Nguồn: Webcam (HTTPS/localhost) · Video · Server/Cameras</li></ul>
       </div>
     </div>
     <div class="links"><span>MATLAB → <b>*_iqa.json</b> → Python</span><span>Python ⇄ <b>/ws/pose · /ws/events · MJPEG</b> ⇄ Web</span></div>
@@ -369,11 +369,11 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
       <tr><th>Loại</th><th>Điều kiện mỗi frame</th><th>Phải kéo dài</th><th>Mức</th></tr>
       <tr><td>FALL</td><td>technique = FALL</td><td>1.5 s (0.75 s nếu hông rơi nhanh)</td><td><span class="lv c">CRITICAL</span></td></tr>
       <tr><td>STOOP</td><td>technique = STOOP (cúi khom)</td><td>3 s</td><td><span class="lv w">WARNING</span></td></tr>
-      <tr><td>PARTIAL</td><td>YOLO chỉ thấy một phần cơ thể</td><td>5 s</td><td><span class="lv w">WARNING</span></td></tr>
       <tr><td>SQUAT</td><td>technique = SQUAT (ngồi xổm)</td><td>3 s</td><td><span class="lv i">INFO</span></td></tr>
-      <tr><td>STANDING</td><td>technique = STANDING</td><td>3 s</td><td><span class="lv i">INFO</span></td></tr>
+      <tr><td>STANDING</td><td>log-only (không ảnh)</td><td>0 s (ngay)</td><td><span class="lv i">INFO</span></td></tr>
+      <tr><td>PARTIAL</td><td>log-only (không ảnh)</td><td>0 s (ngay)</td><td><span class="lv w">WARNING</span></td></tr>
     </table>
-    <p class="sub mt" style="font-size:28px">Chỉ 5 event · mất dấu &lt; 0.5 s không reset · mỗi (loại, người) một lần · cooldown 30 s.</p>
+    <p class="sub mt" style="font-size:28px">FALL/SQUAT/STOOP = xử lý đầy đủ · STANDING/PARTIAL = chỉ lưu DB · cooldown 30 s.</p>
     <div class="stripe-b"></div>
     <div class="footer"><span>alerts · temporal confirmation</span><span>ECHO MOVE</span></div>
   </section>
@@ -392,8 +392,9 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
       <div class="card t-amber"><div class="lbl">WARNING</div><h4>PARTIAL</h4><p>YOLO chỉ thấy một phần cơ thể ≥ 5 s.</p></div>
     </div>
     <div class="alert mt">
-      <h3>Đã bỏ MANDOWN · RECOVERED · POSTURE · ERGO · ZONE · PPE · CAMERA · OFFLINE</h3>
-      <p>UI tiếng Việt (Ngã / Đứng / Ngồi xổm / Cúi khom / Một phần). Code dùng identifier English. IQA = panel only.</p>
+      <h3>Xử lý khác nhau theo loại</h3>
+      <p><b>FALL · SQUAT · STOOP</b>: confirm + ảnh + (clip/Telegram).
+         <b>STANDING · PARTIAL</b>: ghi nhật ký ngay, không confirm, không ảnh, tự đánh dấu đã xử lý.</p>
     </div>
     <div class="stripe-b"></div>
     <div class="footer"><span>events · taxonomy</span><span>ECHO MOVE</span></div>

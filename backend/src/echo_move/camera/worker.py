@@ -17,7 +17,6 @@ from typing import Any
 import cv2
 import numpy as np
 
-from ..alerts.engine import Alert
 from ..config import Settings
 from ..pipeline import StreamPipeline, resize_max_width
 from ..render import annotate, blur_faces, encode_jpeg
@@ -216,8 +215,10 @@ class CameraWorker:
             self._clip_buf.popleft()
         for pc in self._pending_clips:
             pc.frames.append((t, jpeg))
+        from ..alerts.engine import ACTION_TYPES
+
         for ev in alerts:
-            if ev.get("id") is not None:
+            if ev.get("id") is not None and ev.get("type") in ACTION_TYPES:
                 self._pending_clips.append(
                     _PendingClip(ev, list(self._clip_buf), t + self.cfg.clip_post_s))
         done = [pc for pc in self._pending_clips if t >= pc.until]

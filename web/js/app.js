@@ -1036,7 +1036,52 @@ function bind() {
     }
   };
 
-  $('bCam').onclick = async () => {
+  function sourceNotice(title, detail, modeLabel) {
+    if ($('stt')) $('stt').textContent = title;
+    if ($('mode') && modeLabel) {
+      $('mode').textContent = modeLabel;
+      $('mode').className = 'chip muted';
+    }
+    const kt = $('kt');
+    if (kt && detail) {
+      kt.style.display = 'block';
+      kt.style.color = '#fbbf24';
+      kt.style.borderColor = '#fbbf24';
+      kt.innerHTML = `${title}<br><span style="font-size:9px;font-weight:normal">${detail}</span>`;
+      clearTimeout(sourceNotice._t);
+      sourceNotice._t = setTimeout(() => {
+        if (kt.style.color === 'rgb(251, 191, 36)') kt.style.display = 'none';
+      }, 7000);
+    }
+    const box = $('toasts');
+    if (box) {
+      const el = document.createElement('div');
+      el.className = 'toast warn';
+      el.innerHTML = `<b>Camera</b> · ${title}<div class="d">${detail || ''}</div>`;
+      box.appendChild(el);
+      setTimeout(() => el.remove(), 8000);
+    }
+  }
+
+  function webcamAvailable() {
+    return !!(window.isSecureContext && navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function');
+  }
+
+  const bCam = $('bCam');
+  if (bCam && !webcamAvailable()) {
+    bCam.title = 'Webcam cần HTTPS hoặc localhost. Trên HTTP (VPS) hãy dùng Video hoặc panel Cameras.';
+  }
+
+  if (bCam) bCam.onclick = async () => {
+    if (!webcamAvailable()) {
+      sourceNotice(
+        'Webcam bị chặn trên HTTP',
+        'Trình duyệt chỉ cho phép camera trên HTTPS / localhost. Dùng nút Video, hoặc chọn camera trong panel Cameras (RTSP/USB server).',
+        'NO WEBCAM'
+      );
+      if (window.EchoTabs) EchoTabs.show('cam');
+      return;
+    }
     try {
       cleanup();
       S.stream = await navigator.mediaDevices.getUserMedia({
@@ -1049,7 +1094,13 @@ function bind() {
       S.dbg.video = 'camera live';
       $('stt').textContent = S.ai_on ? 'Camera + AI' : 'Camera (AI off)';
       $('mode').textContent = 'CAMERA'; $('mode').className = 'chip';
-    } catch (e) { $('stt').textContent = 'Lỗi: ' + e.message; }
+    } catch (e) {
+      const denied = e && (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError');
+      const msg = denied
+        ? 'Bạn đã từ chối quyền camera — hãy cho phép trong trình duyệt rồi thử lại.'
+        : ('Lỗi webcam: ' + (e.message || e.name || e));
+      sourceNotice(msg, 'Hoặc dùng Video / panel Cameras.', 'NO WEBCAM');
+    }
   };
 
   $('bVid').onclick = () => $('file').click();

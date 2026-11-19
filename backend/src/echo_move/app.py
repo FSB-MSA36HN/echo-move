@@ -224,10 +224,13 @@ def create_app(cfg: Settings | None = None) -> FastAPI:
 
     @app.post("/api/events", status_code=201)
     async def create_event(request: Request, body: EventIn) -> dict[str, Any]:
+        from .alerts.engine import ACTION_TYPES
+
         store_or_503(request)
         level, message = MESSAGES[body.type]
         jpeg = None
-        if body.image:
+        # Ignore client images for STANDING / PARTIAL (log-only).
+        if body.image and body.type in ACTION_TYPES:
             try:
                 jpeg = base64.b64decode(body.image.split(",", 1)[-1], validate=False)
             except ValueError:

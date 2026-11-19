@@ -3,7 +3,9 @@
 // are reported to the backend event log when one is connected.
 (function () {
   "use strict";
-  const RULES = {fallS: 1.5, postureS: 3, partialS: 5, cooldownS: 30, graceS: 0.5};
+  const RULES = {fallS: 1.5, postureS: 3, cooldownS: 30, graceS: 0.5};
+  // FALL / SQUAT / STOOP: confirm + snapshot. STANDING / PARTIAL: log only (confirm 0, no image).
+  const ACTION = {FALL: 1, SQUAT: 1, STOOP: 1};
   const MESSAGES = {
     FALL: ['CRITICAL', 'Phát hiện công nhân bị ngã'],
     STANDING: ['INFO', 'Công nhân đang đứng'],
@@ -52,9 +54,9 @@
         out.push({type: 'STOOP', track_id: id, detail: s.detail || ''});
       if (this.check('SQUAT|' + id, tech === 'SQUAT', t, RULES.postureS))
         out.push({type: 'SQUAT', track_id: id, detail: s.detail || ''});
-      if (this.check('PARTIAL|' + id, tech === 'PARTIAL', t, RULES.partialS))
+      if (this.check('PARTIAL|' + id, tech === 'PARTIAL', t, 0))
         out.push({type: 'PARTIAL', track_id: id, detail: s.detail || ''});
-      if (this.check('STANDING|' + id, tech === 'STANDING', t, RULES.postureS))
+      if (this.check('STANDING|' + id, tech === 'STANDING', t, 0))
         out.push({type: 'STANDING', track_id: id, detail: s.detail || ''});
     });
     return out;
@@ -133,16 +135,19 @@
 
   function raise(a, fromServer) {
     const lvl = (MESSAGES[a.type] || ['WARNING', a.message || a.type])[0];
+    const action = !!ACTION[a.type];
     const full = {
       type: a.type, level: lvl, message: a.message || MESSAGES[a.type][1],
       detail: a.detail || '', track_id: a.track_id ?? null, t: a.t || Date.now() / 1000,
       source: a.source || 'browser',
     };
     recent.push(full); if (recent.length > 50) recent.shift();
-    siren(lvl); toast(full); notify(full);
+    // Log-only (STANDING / PARTIAL): save quietly — no siren / desktop notify.
+    if (action) { siren(lvl); toast(full); notify(full); }
+    else toast(full);
     if (!fromServer && window.EchoBackend && EchoBackend.online) {
       const body = {type: full.type, detail: full.detail, source: full.source,
-                    track_id: full.track_id, image: a.image || null};
+                    track_id: full.track_id, image: action ? (a.image || null) : null};
       EchoBackend.json('/api/events', {method: 'POST', headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(body)}).catch(() => {});
     }
@@ -156,7 +161,7 @@
       const alerts = engine.update(persons, quality, t);
       alerts.forEach(a => {
         a.source = (opts && opts.source) || source;
-        if (opts && opts.report && opts.snapshot) {
+        if (ACTION[a.type] && opts && opts.report && opts.snapshot) {
           try { a.image = opts.snapshot(); } catch (e) {}
         }
         if (opts && opts.report === false) return;

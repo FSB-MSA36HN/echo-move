@@ -12,7 +12,7 @@ from typing import Any
 
 from ..notify import Notifier
 from ..storage import EventStore
-from .engine import Alert
+from .engine import ACTION_TYPES, LOG_ONLY_TYPES, Alert
 
 log = logging.getLogger(__name__)
 
@@ -32,14 +32,21 @@ class AlertHub:
         self._subs.pop(q, None)
 
     def publish(self, alert: Alert, jpeg: bytes | None = None) -> dict[str, Any]:
+        log_only = alert.type in LOG_ONLY_TYPES
+        if log_only:
+            jpeg = None  # STANDING / PARTIAL: DB row only, no snapshot
         try:
             event = self.store.add(alert, jpeg) if self.store else alert.to_dict()
+            if log_only and self.store is not None and event.get("id") is not None:
+                self.store.acknowledge(int(event["id"]))
+                event["acknowledged"] = True
         except Exception:
             log.exception("failed to store event")
             event = alert.to_dict()
         log.warning("ALERT %s [%s] %s track=%s %s", alert.type, alert.source, alert.message,
                     alert.track_id, alert.detail)
-        if self.notifier:
+        # Notify / clip only for action events (FALL · SQUAT · STOOP).
+        if self.notifier and alert.type in ACTION_TYPES:
             self.notifier.send(event, jpeg)
         self._broadcast(event)
         return event
@@ -47,6 +54,8 @@ class AlertHub:
     def attach_clip(self, event: dict[str, Any], frames: list[bytes], fps: float) -> None:
         """Save the pre/post-event clip of a stored event and send it as a follow-up."""
         if self.store is None or event.get("id") is None:
+            return
+        if event.get("type") not in ACTION_TYPES:
             return
         try:
             mp4 = self.store.save_clip(int(event["id"]), frames, fps)

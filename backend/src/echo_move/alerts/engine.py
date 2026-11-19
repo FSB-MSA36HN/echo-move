@@ -1,12 +1,13 @@
 """Temporal alert confirmation for the five posture events.
 
-Per-frame classification is noisy, so an alert fires only when a technique persists:
+Action events (snapshot + notify + optional clip) need a sustained pose:
 
-* FALL      — ``technique == FALL`` for ``fall_confirm_s`` (halved after a rapid hip drop);
-* STOOP     — deep bend for ``posture_confirm_s``;
-* SQUAT     — squat for ``posture_confirm_s``;
-* PARTIAL   — incomplete body (YOLO keypoints) for ``quality_confirm_s``;
-* STANDING  — upright for ``posture_confirm_s``, with normal cooldown to limit spam.
+* FALL   — ``fall_confirm_s`` (halved after a rapid hip drop);
+* STOOP / SQUAT — ``posture_confirm_s``.
+
+Log-only events fire immediately (confirm 0) and skip image/clip/notify:
+
+* STANDING / PARTIAL — cooldown still applies to avoid spam.
 
 Short dropouts (< ``GRACE_S``) do not reset an episode. Each (type, track) pair fires at
 most once per ``alert_cooldown_s``.
@@ -30,6 +31,9 @@ MESSAGES = {
     "PARTIAL": ("WARNING", "Chỉ nhận diện một phần cơ thể"),
 }
 ALERT_TYPES = tuple(MESSAGES)
+# Full handling (confirm + snapshot + notify/clip). Everything else is log-only.
+ACTION_TYPES = frozenset({"FALL", "SQUAT", "STOOP"})
+LOG_ONLY_TYPES = frozenset({"STANDING", "PARTIAL"})
 LYING = "FALL"
 
 
@@ -160,10 +164,11 @@ class AlertEngine:
             if self._check(("SQUAT", tid), tech == "SQUAT", t, cfg.posture_confirm_s):
                 out.append(self._alert("SQUAT", t, tid, safety.get("detail", ""),
                                        **_metrics(safety)))
-            if self._check(("PARTIAL", tid), tech == "PARTIAL", t, cfg.quality_confirm_s):
+            # STANDING / PARTIAL: log immediately (confirm_s=0), still cooldown-limited.
+            if self._check(("PARTIAL", tid), tech == "PARTIAL", t, 0.0):
                 out.append(self._alert("PARTIAL", t, tid, safety.get("detail", ""),
                                        **_metrics(safety)))
-            if self._check(("STANDING", tid), tech == "STANDING", t, cfg.posture_confirm_s):
+            if self._check(("STANDING", tid), tech == "STANDING", t, 0.0):
                 out.append(self._alert("STANDING", t, tid, safety.get("detail", ""),
                                        **_metrics(safety)))
         for tid, last in list(self._seen.items()):

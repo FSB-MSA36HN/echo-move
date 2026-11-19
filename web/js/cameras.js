@@ -15,8 +15,10 @@
   function offline() {
     box().innerHTML = `<div class="hint">
       <b>Chưa kết nối backend.</b><br>
-      Camera RTSP / USB do server Python đọc và phân tích. Chạy <code>make run</code>
-      (hoặc <code>docker compose up</code>) rồi mở giao diện tại <code>http://localhost:8000</code>.
+      Mở UI trực tiếp từ server (khuyến nghị):
+      <code>http://51.222.86.7:18080</code>
+      hoặc thêm <code>?server=http://51.222.86.7:18080</code> nếu đang xem GitHub Pages / file local.
+      Local: <code>make run</code> rồi <code>http://localhost:8000</code>.
       <br><button class="b" id="camRetry">↻ Thử kết nối lại</button></div>`;
     $('camRetry').onclick = () => EchoBackend.connect().then(render);
   }

@@ -1,9 +1,10 @@
 // Finds a running ECHO MOVE backend and keeps a live /ws/events connection.
-// Order: ?server=… (remembered) → same origin (backend serving the UI) → localhost:8000.
+// Order: ?server=… (remembered) → same origin → localhost:8000 → demo VPS.
 // Degrades gracefully when backend is offline (source controls still work locally).
 (function () {
   "use strict";
   const C = window.ECHO_CONFIG;
+  const DEMO_VPS = 'http://51.222.86.7:18080';
   const handlers = {};
   const B = window.EchoBackend = {
     online: false, base: null, health: null, ws: null,
@@ -23,6 +24,7 @@
     if (C.explicit) c.push(C.apiBase);
     if (/^https?:$/.test(location.protocol)) c.push(location.origin);
     c.push('http://localhost:8000');
+    c.push(DEMO_VPS);
     return [...new Set(c)];
   }
 
@@ -48,7 +50,7 @@
     } else {
       el.className = 'pill off';
       el.textContent = 'Backend offline';
-      el.title = 'Chạy `make run` hoặc `docker compose up` rồi tải lại trang';
+      el.title = 'Mở UI qua backend (vd http://51.222.86.7:18080) hoặc ?server=… rồi tải lại';
     }
   }
 

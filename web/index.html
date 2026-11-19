@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=24">
+<link rel="stylesheet" href="css/styles.css?v=27">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
@@ -79,7 +79,9 @@
     <section class="wall panel" aria-label="Video wall">
       <div class="panel-hd">
         <h3>Live feed</h3>
-        <span id="mode" class="chip">CHỜ NGUỒN</span>
+        <div class="panel-hd-actions">
+          <span id="mode" class="chip">CHỜ NGUỒN</span>
+        </div>
       </div>
       <div class="kv">
         <video id="v" playsinline muted loop></video>
@@ -105,7 +107,9 @@
       <section class="panel view3d" aria-label="Mô phỏng 3D">
         <div class="panel-hd">
           <h3>Worker 3D</h3>
-          <span id="c3dLabel" class="chip muted">Đứng yên</span>
+          <div class="panel-hd-actions">
+            <span id="c3dLabel" class="chip muted">Đứng yên</span>
+          </div>
         </div>
         <div id="R">
           <div id="c3d"></div>
@@ -113,6 +117,10 @@
       </section>
 
       <section class="panel metrics-stack">
+        <div class="panel-hd">
+          <h3>Metrics</h3>
+          <div class="panel-hd-actions"></div>
+        </div>
         <div class="metric-card">
           <h4>IQA Live</h4>
           <div id="iqa" class="metric-body">--</div>
@@ -141,7 +149,9 @@
     <section class="panel" id="panel-cam" aria-label="Camera server">
       <div class="panel-hd">
         <h3>Cameras</h3>
-        <span class="chip muted">Server streams</span>
+        <div class="panel-hd-actions">
+          <span class="chip muted">Server streams</span>
+        </div>
       </div>
       <div id="camBox" class="panel-scroll"></div>
     </section>
@@ -149,25 +159,27 @@
     <section class="panel" id="panel-events" aria-label="Sự kiện">
       <div class="panel-hd">
         <h3>Events</h3>
-        <div class="evbar">
-          <select id="evType" aria-label="Loại">
-            <option value="">Tất cả</option>
-            <option value="FALL">Ngã</option>
-            <option value="STANDING">Đứng</option>
-            <option value="SQUAT">Ngồi xổm</option>
-            <option value="STOOP">Cúi khom</option>
-            <option value="PARTIAL">Một phần cơ thể</option>
-          </select>
-          <select id="evHours" aria-label="Thời gian">
-            <option value="1">1 giờ</option>
-            <option value="24" selected>24 giờ</option>
-            <option value="168">7 ngày</option>
-            <option value="720">30 ngày</option>
-            <option value="">Tất cả</option>
-          </select>
-          <label class="chk"><input type="checkbox" id="evUnack"> Chưa xử lý</label>
-          <button class="b sm" id="evRef">↻</button>
-          <a class="b sm" id="evCsv" href="#" download>CSV</a>
+        <div class="panel-hd-actions">
+          <div class="evbar">
+            <select id="evType" aria-label="Loại">
+              <option value="">Tất cả</option>
+              <option value="FALL">Ngã</option>
+              <option value="STANDING">Đứng</option>
+              <option value="SQUAT">Ngồi xổm</option>
+              <option value="STOOP">Cúi khom</option>
+              <option value="PARTIAL">Một phần cơ thể</option>
+            </select>
+            <select id="evHours" aria-label="Thời gian">
+              <option value="1">1 giờ</option>
+              <option value="24" selected>24 giờ</option>
+              <option value="168">7 ngày</option>
+              <option value="720">30 ngày</option>
+              <option value="">Tất cả</option>
+            </select>
+            <label class="chk"><input type="checkbox" id="evUnack"> Chưa xử lý</label>
+            <button class="b sm" id="evRef">↻</button>
+            <a class="b sm" id="evCsv" href="#" download>CSV</a>
+          </div>
         </div>
       </div>
       <div id="evStats" class="stats"></div>
@@ -179,7 +191,9 @@
     <section class="panel" id="panel-sys" aria-label="Hệ thống">
       <div class="panel-hd">
         <h3>System</h3>
-        <span id="sysClock" class="chip muted">--:--:--</span>
+        <div class="panel-hd-actions">
+          <span id="sysClock" class="chip muted">--:--:--</span>
+        </div>
       </div>
       <div id="sys" class="sys-grid">
         <div class="sys-item"><span class="k">Backend</span><span class="v" id="sysBe">--</span></div>
@@ -201,12 +215,13 @@
 <div id="toasts" aria-live="assertive"></div>
 <div id="imgv" hidden><img alt="Ảnh sự kiện"><div class="cap"></div></div>
 
-<script src="js/config.js?v=23"></script>
-<script src="js/backend.js?v=23"></script>
-<script src="js/alerts.js?v=23"></script>
-<script src="js/human3d.js?v=23"></script>
-<script src="js/app.js?v=23"></script>
-<script src="js/cameras.js?v=23"></script>
-<script src="js/events.js?v=23"></script>
+<script src="js/config.js?v=27"></script>
+<script src="js/backend.js?v=27"></script>
+<script src="js/alerts.js?v=27"></script>
+<script src="js/zoom.js?v=27"></script>
+<script src="js/human3d.js?v=27"></script>
+<script src="js/app.js?v=27"></script>
+<script src="js/cameras.js?v=27"></script>
+<script src="js/events.js?v=27"></script>
 </body>
 </html>

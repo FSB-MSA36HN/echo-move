@@ -149,6 +149,30 @@ body {
   font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
   text-transform: uppercase; color: var(--muted);
 }
+.panel-hd-actions {
+  display: flex; align-items: center; justify-content: flex-end; gap: 6px;
+  flex-wrap: wrap; min-width: 0;
+}
+.zoom-btn {
+  font-size: 12px; line-height: 1; min-width: 28px; padding: 3px 7px;
+  color: var(--muted); border-color: var(--border);
+}
+.zoom-btn:hover { color: var(--accent); border-color: rgba(45,212,191,.35); }
+.panel.panel-zoom {
+  position: fixed; inset: 10px; z-index: 900;
+  width: auto !important; height: auto !important;
+  max-width: none; max-height: none;
+  border-radius: 10px;
+  box-shadow: 0 0 0 1px var(--border), 0 24px 80px rgba(0,0,0,.55);
+  background: var(--panel);
+}
+body.panel-zoom-open { overflow: hidden; }
+body.panel-zoom-open::before {
+  content: ""; position: fixed; inset: 0; z-index: 890;
+  background: rgba(5, 8, 15, .72); pointer-events: none;
+}
+.panel.panel-zoom .panel-scroll,
+.panel.panel-zoom.metrics-stack { overflow: auto; }
 .chip {
   font-family: var(--mono); font-size: 9px; font-weight: 600;
   padding: 2px 7px; border-radius: 4px; background: var(--accent-dim);
@@ -216,8 +240,19 @@ body {
 #c3dLabel { max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .metrics-stack {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 6px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 0 0 6px;
   overflow: auto; border: none; background: transparent;
+  align-content: start;
+}
+.metrics-stack > .panel-hd {
+  grid-column: 1 / -1; margin: 0; border-radius: 0;
+  background: var(--panel); border: 1px solid var(--border); border-bottom: 1px solid var(--border);
+}
+.metrics-stack > .metric-card { margin: 0 6px; }
+.metrics-stack > .metric-card.span2 { margin: 0 6px; }
+.panel.panel-zoom.metrics-stack {
+  display: grid; background: var(--bg, #0b1220); border: 1px solid var(--border);
+  padding-bottom: 10px;
 }
 .metric-card {
   background: var(--panel); border: 1px solid var(--border); border-radius: 6px;

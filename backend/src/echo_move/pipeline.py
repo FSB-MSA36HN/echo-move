@@ -180,10 +180,13 @@ class StreamPipeline:
 
     def _publish(self, alert: Any, frame: np.ndarray | None,
                  persons: list[dict[str, Any]]) -> dict[str, Any]:
+        from .alerts.engine import ACTION_TYPES
+
         if self.hub is None:
             return dict(alert.to_dict())
         jpeg = None
-        if frame is not None:
+        # Snapshots only for FALL / SQUAT / STOOP.
+        if frame is not None and alert.type in ACTION_TYPES:
             if self.cfg.blur_faces:
                 frame = blur_faces(frame, persons, self.cfg.visibility_threshold)
             img = annotate(frame, persons, title=f"{self.source} - {alert.type}",

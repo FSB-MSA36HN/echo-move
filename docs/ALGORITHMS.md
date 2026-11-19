@@ -67,13 +67,13 @@ Phân loại từng frame nhiễu (che khuất, mờ chuyển động, ngồi x�
 
 | Loại | Điều kiện mỗi frame | Phải kéo dài | Mức |
 |---|---|---|---|
-| FALL | `technique = FALL` | `ECHO_FALL_CONFIRM_S` = 1.5 s (0.75 s nếu hông rơi nhanh) | CRITICAL |
-| STOOP | `technique = STOOP` (cúi khom, spine > 60°) | `ECHO_POSTURE_CONFIRM_S` = 3 s | WARNING |
-| SQUAT | `technique = SQUAT` (ngồi xổm) | `ECHO_POSTURE_CONFIRM_S` = 3 s | INFO |
-| STANDING | `technique = STANDING` | `ECHO_POSTURE_CONFIRM_S` = 3 s | INFO |
-| PARTIAL | YOLO chỉ thấy một phần cơ thể (thiếu core joints / cắt mép) | `ECHO_QUALITY_CONFIRM_S` = 5 s | WARNING |
+| FALL | `technique = FALL` | `ECHO_FALL_CONFIRM_S` = 1.5 s (0.75 s nếu hông rơi nhanh) | CRITICAL · ảnh + clip |
+| STOOP | `technique = STOOP` | `ECHO_POSTURE_CONFIRM_S` = 3 s | WARNING · ảnh + clip |
+| SQUAT | `technique = SQUAT` | `ECHO_POSTURE_CONFIRM_S` = 3 s | INFO · ảnh + clip |
+| STANDING | `technique = STANDING` | **0 s** (ghi ngay) | INFO · log-only, không ảnh, tự ack |
+| PARTIAL | YOLO partial body | **0 s** (ghi ngay) | WARNING · log-only, không ảnh, tự ack |
 
-`PARTIAL` dùng conf keypoints YOLOv8-Pose (vai+hông, ≥ 8 joint thấy, hoặc bbox sát mép + thiếu chân) — không phải cúi nhẹ.
+`PARTIAL` dùng conf keypoints YOLOv8-Pose (vai+hông, ≥ 8 joint, hoặc bbox sát mép + thiếu chân).
 
 - Mỗi (loại, track ID) là một "episode": mất điều kiện < 0.5 s không reset (chịu được vài frame lỗi); một episode chỉ phát 1 lần.
 - **Hông rơi nhanh**: trong 1.5 s gần nhất, `y_hông` tăng hơn 25 % chiều cao khung người lớn nhất → khả năng ngã thật cao, nên rút ngắn thời gian xác nhận một nửa.
