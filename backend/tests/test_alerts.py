@@ -189,19 +189,17 @@ def test_notifier_retries_then_counts_failure(monkeypatch):
     assert n.failed == 1
 
 
-def test_notifier_video_zalo_and_escalation_chat():
+def test_notifier_video_and_escalation_chat():
     opener = FakeOpener()
     n = Notifier(Settings(telegram_token="T", telegram_chat_id="42", escalate_chat_id="99",
-                          zalo_token="Z", zalo_user_id="u1", webhook_url=""), opener=opener)
-    assert n.channels() == ["telegram", "zalo"]
+                          webhook_url=""), opener=opener)
+    assert n.channels() == ["telegram"]
     event = {"id": 7, "type": "FALL", "level": "CRITICAL", "message": "Ngã", "source": "kho",
              "ts": 0, "escalation": True}
     n.deliver(event, None)
-    tg, zalo = opener.requests
+    assert len(opener.requests) == 1
+    tg = opener.requests[0]
     assert json.loads(tg.data)["chat_id"] == "99" and "LEO THANG" in json.loads(tg.data)["text"]
-    assert zalo.full_url.startswith("https://openapi.zalo.me/")
-    assert zalo.get_header("Access_token") == "Z"
-    assert json.loads(zalo.data)["recipient"]["user_id"] == "u1"
     n._telegram_video({"id": 7, "message": "Ngã", "source": "kho"}, b"mp4data")
     vid = opener.requests[-1]
     assert vid.full_url.endswith("/sendVideo") and b"video/mp4" in vid.data

@@ -1,6 +1,6 @@
 # ECHO MOVE — Worker Safety Warning System
 
-Hệ thống cảnh báo an toàn lao động (đồ án môn **Xử lý ảnh**): nhận diện **5 sự kiện tư thế** — **Ngã (FALL)**, **Đứng (STANDING)**, **Ngồi xổm (SQUAT)**, **Cúi khom (STOOP)**, **Một phần cơ thể (PARTIAL)** — bằng YOLOv8-Pose (COCO-17) + tracking nhiều người, kèm **IQA** trên dashboard. Đọc **camera IP (RTSP) / USB / file**, **xác nhận theo thời gian**, nhật ký + clip, Telegram/Zalo/webhook, **SOC dashboard** và người 3D.
+Hệ thống cảnh báo an toàn lao động (đồ án môn **Xử lý ảnh**): nhận diện **5 sự kiện tư thế** — **Ngã (FALL)**, **Đứng (STANDING)**, **Ngồi xổm (SQUAT)**, **Cúi khom (STOOP)**, **Một phần cơ thể (PARTIAL)** — bằng YOLOv8-Pose (COCO-17) + tracking nhiều người, kèm **IQA** trên dashboard. Đọc **camera IP (RTSP) / USB / file**, **xác nhận theo thời gian**, nhật ký + clip, Telegram/webhook, **SOC dashboard** và người 3D.
 
 Luật ngã **đa tín hiệu** (nằm ngang / đầu thấp / sụp người). PARTIAL dựa conf keypoints YOLO (thiếu core joints hoặc cắt mép). Clip 5 s trước+sau, leo thang CRITICAL, làm mờ mặt, Báo nhầm, retention, `make eval` trên UR Fall / Le2i.
 
@@ -48,7 +48,7 @@ MATLAB: mở `matlab/run_iqa_engine.m`, bấm Run. Kết quả ghi vào `output/
 ## Cấu trúc thư mục
 ```
 backend/    package Python `echo_move`: camera/, pose/ (detector, tracker, classifier, fall, ppe),
-            alerts/ (engine, hub), storage/ (SQLite + clip), notify/ (Telegram, Zalo, webhook),
+            alerts/ (engine, hub), storage/ (SQLite + clip), notify/ (Telegram, webhook),
             zones.py, maintenance.py, evaluation.py, pipeline.py, app.py; tests/
 matlab/     run_iqa_engine.m, config.m, +iqa/ (hàm metric), tests/
 web/        index.html, css/, js/ (app, human3d, backend, alerts, cameras, events),

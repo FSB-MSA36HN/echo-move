@@ -1,4 +1,4 @@
-"""Outbound alert notifications (Telegram bot, Zalo OA, generic JSON webhook).
+"""Outbound alert notifications (Telegram bot, generic JSON webhook).
 
 Runs on a background thread with a bounded queue: a slow or unreachable endpoint can never
 stall video processing. Disabled channels (no token / URL) are simply skipped.
@@ -23,7 +23,6 @@ from ..config import Settings
 log = logging.getLogger(__name__)
 
 Opener = Callable[[urllib.request.Request, float], Any]
-ZALO_URL = "https://openapi.zalo.me/v3.0/oa/message/cs"
 
 
 def _default_open(req: urllib.request.Request, timeout: float) -> Any:
@@ -66,7 +65,6 @@ class _Item:
 class Notifier:
     def __init__(self, cfg: Settings, opener: Opener | None = None, timeout: float = 10.0):
         self.telegram = bool(cfg.telegram_token and cfg.telegram_chat_id)
-        self.zalo = bool(cfg.zalo_token and cfg.zalo_user_id)
         self.webhook = bool(cfg.webhook_url)
         self._cfg = cfg
         self._open = opener or _default_open
@@ -78,11 +76,10 @@ class Notifier:
 
     @property
     def enabled(self) -> bool:
-        return self.telegram or self.zalo or self.webhook
+        return self.telegram or self.webhook
 
     def channels(self) -> list[str]:
-        return [n for n, on in (("telegram", self.telegram), ("zalo", self.zalo),
-                                ("webhook", self.webhook)) if on]
+        return [n for n, on in (("telegram", self.telegram), ("webhook", self.webhook)) if on]
 
     def start(self) -> None:
         if self.enabled and self._thread is None:
@@ -128,8 +125,6 @@ class Notifier:
         """Synchronously send one event on every enabled channel (used by the worker)."""
         if self.telegram:
             self._try("telegram", lambda: self._telegram(event, jpeg))
-        if self.zalo:
-            self._try("zalo", lambda: self._zalo(event))
         if self.webhook:
             self._try("webhook", lambda: self._webhook(event))
 
@@ -173,20 +168,6 @@ class Notifier:
         req = urllib.request.Request(f"{base}/sendVideo", data=body,
                                      headers={"Content-Type": ctype})
         self._open(req, max(self._timeout, 30.0))
-
-    def _zalo(self, event: dict[str, Any]) -> None:
-        data = json.dumps({"recipient": {"user_id": self._cfg.zalo_user_id},
-                           "message": {"text": format_message(event)[:2000]}},
-                          ensure_ascii=False).encode()
-        req = urllib.request.Request(ZALO_URL, data=data, headers={
-            "Content-Type": "application/json", "access_token": self._cfg.zalo_token})
-        resp = self._open(req, self._timeout)
-        try:
-            body = json.loads(resp) if resp else {}
-        except (TypeError, ValueError):
-            body = {}
-        if isinstance(body, dict) and body.get("error", 0) not in (0, None):
-            raise RuntimeError(f"Zalo error {body.get('error')}: {body.get('message')}")
 
     def _webhook(self, event: dict[str, Any]) -> None:
         data = json.dumps({"event": event, "text": format_message(event)},

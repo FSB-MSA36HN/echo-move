@@ -12,7 +12,7 @@
    4. Vùng nguy hiểm và PPE (nếu có model).
    5. IQA.
    6. `AlertEngine` (xác nhận theo thời gian, cooldown, luật bị tắt theo camera).
-3. **`AlertHub`**: cảnh báo đã xác nhận → `EventStore` (SQLite `echo.db` + ảnh `snapshots/`, mặt đã làm mờ) → `Notifier` (Telegram/Zalo/webhook, luồng nền, hàng đợi có giới hạn, thử lại 3 lần) → đẩy realtime tới mọi client `/ws/events`. Camera server giữ ring buffer JPEG. Sau mỗi sự kiện, nó ghi thêm `ECHO_CLIP_POST_S` giây rồi gọi `AlertHub.attach_clip`, hàm này lưu `clips/<id>.mjpg` và `.mp4`, gửi `sendVideo`, rồi đẩy `{"update": "clip"}`.
+3. **`AlertHub`**: cảnh báo đã xác nhận → `EventStore` (SQLite `echo.db` + ảnh `snapshots/`, mặt đã làm mờ) → `Notifier` (Telegram/webhook, luồng nền, hàng đợi có giới hạn, thử lại 3 lần) → đẩy realtime tới mọi client `/ws/events`. Camera server giữ ring buffer JPEG. Sau mỗi sự kiện, nó ghi thêm `ECHO_CLIP_POST_S` giây rồi gọi `AlertHub.attach_clip`, hàm này lưu `clips/<id>.mjpg` và `.mp4`, gửi `sendVideo`, rồi đẩy `{"update": "clip"}`.
 4. **`Maintenance`** chạy mỗi 60 s: xoá dữ liệu cũ hơn `ECHO_RETENTION_DAYS` (mỗi giờ) và gửi lại sự kiện CRITICAL chưa xác nhận sau `ECHO_ESCALATE_MIN` phút. Camera mất tín hiệu chỉ cập nhật trạng thái UI (không còn event OFFLINE).
 5. **Web**: SOC dashboard (live feed + 3D/IQA, rail Cameras | Events | System). Còi WebAudio + thông báo desktop khi có cảnh báo.
 
@@ -31,7 +31,7 @@
 | `alerts/engine.py` | Xác nhận FALL / STANDING / SQUAT / STOOP theo thời gian, cooldown (PARTIAL không emit) |
 | `alerts/hub.py` | Lưu → thông báo → phát realtime (thread-safe), gắn clip |
 | `storage/db.py` | `EventStore` SQLite (WAL, tự migrate cột mới) + ảnh JPEG + clip, thống kê, CSV, leo thang, xoá dữ liệu cũ |
-| `notify/` | Telegram `sendPhoto`/`sendMessage`/`sendVideo`, Zalo OA, webhook JSON |
+| `notify/` | Telegram `sendPhoto`/`sendMessage`/`sendVideo`, webhook JSON |
 | `maintenance.py` | Tác vụ nền: retention + leo thang |
 | `evaluation.py` | Trích keypoint (cache) + phát lại luật + precision/recall/độ trễ |
 | `camera/worker.py`, `camera/manager.py` | Đọc RTSP/USB/file, kết nối lại, che mật khẩu trong log/API, ring buffer clip, trạng thái mất tín hiệu (UI) |

@@ -12,7 +12,7 @@
   - Cảnh báo OFFLINE khi camera mất tín hiệu > 30 s, mỗi lần mất chỉ báo một lần.
   - `ECHO_RETENTION_DAYS` tự xoá sự kiện, ảnh và clip cũ.
   - `ECHO_ESCALATE_MIN` gửi lại sự kiện CRITICAL chưa xác nhận tới `ECHO_ESCALATE_TELEGRAM_CHAT_ID`.
-  - Thêm kênh Zalo OA.
+  - Thông báo Telegram (+ webhook); kênh Zalo OA đã gỡ.
   - Làm mờ mặt trong ảnh chụp và clip (`ECHO_BLUR_FACES`).
   - Nút **Báo nhầm**; tỉ lệ báo nhầm hiển thị trong thống kê.
 - **Đánh giá**: `make eval` chạy trên UR Fall, Le2i hoặc một thư mục video có nhãn. Keypoint được cache để chạy lại nhanh. Xuất precision/recall/F1 và độ trễ phát hiện, so sánh luật v21 với luật đa tín hiệu.

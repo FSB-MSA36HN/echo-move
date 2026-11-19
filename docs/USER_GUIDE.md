@@ -113,7 +113,6 @@ Cấu hình bằng biến môi trường `ECHO_*` (xem [.env.example](../.env.ex
 | `ECHO_EVENT_CLIPS` | 1 | Ghi clip 5 s trước + 5 s sau sự kiện của camera server |
 | `ECHO_BLUR_FACES` | 1 | Làm mờ vùng đầu trong ảnh chụp và clip lưu lại |
 | `ECHO_RETENTION_DAYS` | 0 | Tự xoá sự kiện, ảnh, clip cũ hơn N ngày (0 = giữ mãi) |
-| `ECHO_ZALO_OA_TOKEN`, `ECHO_ZALO_USER_ID` | (trống) | Bật thông báo Zalo OA |
 | `ECHO_ESCALATE_MIN` | 0 | Sự kiện CRITICAL chưa xác nhận sau N phút thì gửi lại (0 = tắt) |
 | `ECHO_ESCALATE_TELEGRAM_CHAT_ID` | (trống) | Chat của người giám sát nhận tin leo thang (mặc định chat chính) |
 
@@ -140,11 +139,9 @@ Hoặc file JSON (`ECHO_CAMERAS_FILE=cameras.json`): `{"kho": "rtsp://...", "con
 2. Thêm bot vào nhóm (hoặc nhắn riêng cho bot), mở `https://api.telegram.org/bot<TOKEN>/getUpdates` để lấy `chat.id` (nhóm có dạng `-100...`).
 3. `export ECHO_TELEGRAM_TOKEN=... ECHO_TELEGRAM_CHAT_ID=...` rồi chạy lại server; `/health` sẽ có `"notify": ["telegram"]`.
 
-Mỗi cảnh báo gửi 1 tin kèm ảnh có vẽ skeleton. Webhook (`ECHO_WEBHOOK_URL`) nhận POST JSON `{"event": {...}, "text": "..."}` — dùng cho Slack/Teams/Zalo qua dịch vụ trung gian, hoặc hệ thống riêng. Gửi chạy nền, thử lại 3 lần; lỗi mạng không làm chậm xử lý video.
+Mỗi cảnh báo gửi 1 tin kèm ảnh có vẽ skeleton. Webhook (`ECHO_WEBHOOK_URL`) nhận POST JSON `{"event": {...}, "text": "..."}` — dùng cho Slack/Teams hoặc hệ thống riêng. Gửi chạy nền, thử lại 3 lần; lỗi mạng không làm chậm xử lý video.
 
-**Zalo OA**: tạo Official Account tại oa.zalo.me, lấy *access token* (API → Official Account API) và `user_id` của người nhận, tức là người đã quan tâm OA. Đặt `ECHO_ZALO_OA_TOKEN` và `ECHO_ZALO_USER_ID`. Tin gửi đi là tin tư vấn dạng văn bản. Token Zalo hết hạn định kỳ nên cần làm mới.
-
-**Leo thang**: đặt `ECHO_ESCALATE_MIN=3` thì sự kiện CRITICAL (FALL) chưa được bấm *Đã xử lý* sau 3 phút sẽ được gửi lại kèm tiêu đề "⏫ LEO THANG". Tin đi tới `ECHO_ESCALATE_TELEGRAM_CHAT_ID` (ví dụ nhóm quản đốc) và Zalo. Mỗi sự kiện chỉ leo thang 1 lần, và có thẻ **LEO THANG** trong Events.
+**Leo thang**: đặt `ECHO_ESCALATE_MIN=3` thì sự kiện CRITICAL (FALL) chưa được bấm *Đã xử lý* sau 3 phút sẽ được gửi lại kèm tiêu đề "⏫ LEO THANG". Tin đi tới `ECHO_ESCALATE_TELEGRAM_CHAT_ID` (ví dụ nhóm quản đốc). Mỗi sự kiện chỉ leo thang 1 lần, và có thẻ **LEO THANG** trong Events.
 
 ### 4.3 Nhật ký sự kiện
 SQLite tại `output/echo.db` (bảng `events`), ảnh tại `output/snapshots/`, clip tại `output/clips/`. Sao lưu: copy cả thư mục `output/`. Xem/xuất trong tab **Sự kiện** hoặc API (`/api/events`, `/api/events.csv`, `/api/stats` — xem [ARCHITECTURE.md](ARCHITECTURE.md)).

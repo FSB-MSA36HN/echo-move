@@ -97,6 +97,22 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
 .chip.r{border-color:var(--red);background:var(--red-soft)} .chip.a{border-color:var(--amber);background:var(--amber-soft)} .chip.g{border-color:var(--green);background:var(--green-soft)} .chip.b{border-color:var(--blue);background:var(--blue-soft)}
 .arrow{font-size:40px;color:var(--muted);font-weight:900}
 
+/* pipeline rail (slide 5) */
+.pipe{display:grid;grid-template-columns:repeat(6,1fr);gap:16px;margin-top:28px}
+.pipe .step{position:relative;border-radius:20px;padding:22px 18px 20px;background:#fff;border:2px solid var(--line);min-height:168px}
+.pipe .step::after{content:'→';position:absolute;right:-18px;top:50%;transform:translateY(-50%);font-size:28px;font-weight:900;color:var(--muted);z-index:1}
+.pipe .step:last-child::after{content:none}
+.pipe .n{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;font-size:18px;font-weight:900;color:#fff;margin-bottom:10px}
+.pipe .b .n{background:var(--blue)} .pipe .a .n{background:var(--amber)} .pipe .g .n{background:var(--green)} .pipe .r .n{background:var(--red)}
+.pipe .b{border-color:var(--blue);background:var(--blue-soft)} .pipe .a{border-color:var(--amber);background:var(--amber-soft)}
+.pipe .g{border-color:var(--green);background:var(--green-soft)} .pipe .r{border-color:var(--red);background:var(--red-soft)}
+.pipe h4{font-size:26px;font-weight:900;margin:0 0 8px;line-height:1.2}
+.pipe p{font-size:20px;line-height:1.35;color:var(--ink2);margin:0}
+.pipe-out{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:18px;margin-top:22px}
+.pipe-out .card h4{font-size:28px} .pipe-out .card p{font-size:22px}
+.tbl.compact td,.tbl.compact th{padding:10px 18px;font-size:22px}
+.tbl.compact td:first-child{font-size:20px}
+
 /* architecture */
 .arch{display:grid;grid-template-columns:1fr 1.25fr 1fr;gap:28px;align-items:stretch}
 .arch .col{border-radius:24px;padding:30px 32px;background:#fff;border:2px solid var(--line)}
@@ -147,7 +163,7 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
       <p class="sub" style="font-size:38px">Bốn loại cảnh báo tư thế (FALL · STANDING · SQUAT · STOOP); PARTIAL chỉ bbox, IQA trên dashboard.</p>
       <div class="alert mt2" style="max-width:1450px">
         <h3>Một câu tóm tắt</h3>
-        <p>YOLOv8-Pose + luật hình học + <b>xác nhận theo thời gian</b> + IQA panel, camera IP/USB, nhật ký + Telegram/Zalo, SOC dashboard + người 3D.</p>
+        <p>YOLOv8-Pose + luật hình học + <b>xác nhận theo thời gian</b> + IQA panel, camera IP/USB, nhật ký + Telegram, SOC dashboard + người 3D.</p>
       </div>
     </div>
     <div class="stripe-b"></div>
@@ -202,18 +218,18 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
     <div class="arch mt">
       <div class="col" style="border-color:var(--amber)">
         <h4>MATLAB</h4><div class="role amb">Phân tích offline</div>
-        <ul><li>IQA trên toàn video</li><li>9 biểu đồ: Canny, Laplacian, histogram, Otsu…</li><li><b>So sánh PIQE fast ↔ full</b> (+ hệ số tương quan)</li><li>Xuất JSON / CSV / PNG</li></ul>
+        <ul><li>IQA trên toàn video</li><li>9 biểu đồ: Canny, Laplacian, histogram, Otsu…</li><li>Xuất JSON / CSV / PNG</li></ul>
       </div>
       <div class="col" style="border-color:var(--red);background:var(--red-soft)">
         <h4>Python · FastAPI</h4><div class="role red">Bộ não realtime</div>
-        <ul><li>Camera RTSP / USB / file video</li><li>YOLOv8-Pose → tracker → luật → xác nhận theo thời gian</li><li>SQLite + ảnh + clip, Telegram / Zalo / webhook</li><li>REST + WebSocket, phục vụ luôn giao diện web</li></ul>
+        <ul><li>Camera RTSP / USB / file video</li><li>YOLOv8-Pose → tracker → luật → xác nhận theo thời gian</li><li>SQLite + ảnh + clip, Telegram / webhook</li><li>REST + WebSocket, phục vụ luôn giao diện web</li></ul>
       </div>
       <div class="col" style="border-color:var(--blue)">
         <h4>Web · Three.js</h4><div class="role blu">Giao diện</div>
         <ul><li>SOC: live · Worker 3D lớn + Detect · Events · IQA · Cameras</li><li>Worker 3D ẩn trên mobile; không còn MATLAB IQA trên UI</li><li>Zoom fullscreen từng section (⛶)</li><li>Webcam: chọn cam / ↻ trước·sau</li></ul>
       </div>
     </div>
-    <div class="links"><span>MATLAB · PIQE <b>fast ↔ full</b> → <b>*_iqa.json</b></span><span>Python ⇄ <b>/ws/pose · /ws/events · MJPEG</b> ⇄ Web</span></div>
+    <div class="links"><span>MATLAB → <b>*_iqa.json</b> → Python</span><span>Python ⇄ <b>/ws/pose · /ws/events · MJPEG</b> ⇄ Web</span></div>
     <div class="stripe-b"></div>
     <div class="footer"><span>architecture · 3 tiers</span><span>ECHO MOVE</span></div>
     <aside class="notes">Câu hỏi hay gặp: tại sao 3 ngôn ngữ? MATLAB cho phân tích offline video và biểu đồ, Python cho AI realtime, HTML/JS cho UI giám sát nguồn thật.</aside>
@@ -223,27 +239,24 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
   <section class="slide" data-title="Pipeline mỗi frame">
     <div class="stripe"></div>
     <div class="chrome"><span class="tag blue">Pipeline</span><span class="page"></span></div>
-    <div class="kicker">StreamPipeline · một instance cho mỗi nguồn</div>
-    <h2 class="h2">Một frame đi qua <span class="red">8 bước</span></h2>
-    <div class="flow mt">
-      <div class="chip b">1 · YOLOv8-Pose<small>17 keypoint COCO, chuẩn hoá 0–1</small></div><span class="arrow">→</span>
-      <div class="chip b">2 · Tracker<small>ID ổn định + One-Euro</small></div><span class="arrow">→</span>
-      <div class="chip a">3 · classify_posture<small>PARTIAL gate → FALL → SQUAT → STOOP → STANDING</small></div><span class="arrow">→</span>
-      <div class="chip a">4 · FallAnalyzer<small>chiều cao đứng / track</small></div>
+    <div class="kicker">StreamPipeline.process · một instance / nguồn</div>
+    <h2 class="h2" style="font-size:64px;margin-bottom:8px">Luồng <span class="red">một frame</span></h2>
+    <div class="pipe">
+      <div class="step b"><div class="n">1</div><h4>YOLOv8-Pose</h4><p>detect_raw → 17 KP COCO + bbox (+ hands tùy chọn)</p></div>
+      <div class="step b"><div class="n">2</div><h4>Tracker</h4><p>ID ổn định · One-Euro · ghép theo box/tâm</p></div>
+      <div class="step a"><div class="n">3</div><h4>classify + Fall</h4><p>PARTIAL → FALL → SQUAT → STOOP → STANDING; FallAnalyzer theo track</p></div>
+      <div class="step g"><div class="n">4</div><h4>IQA</h4><p>5 metric + Overall → badge panel (không event)</p></div>
+      <div class="step r"><div class="n">5</div><h4>AlertEngine</h4><p>Confirm thời gian · cooldown · STANDING log-only</p></div>
+      <div class="step r"><div class="n">6</div><h4>AlertHub</h4><p>SQLite + ảnh/clip · Telegram · /ws/events</p></div>
     </div>
-    <div class="flow" style="margin-top:22px">
-      <span class="arrow">→</span>
-      <div class="chip a">5 · Overlay<small>vùng / PPE (không tạo event)</small></div><span class="arrow">→</span>
-      <div class="chip g">6 · IQA<small>5 metric → panel UI</small></div><span class="arrow">→</span>
-      <div class="chip r">7 · AlertEngine<small>4 loại alert · confirm + cooldown</small></div><span class="arrow">→</span>
-      <div class="chip r">8 · AlertHub<small>SQLite · Telegram · /ws/events</small></div>
-    </div>
-    <div class="grid2 mt2">
-      <div class="alert green"><h3>Model dùng chung, có khoá</h3><p>Ultralytics không thread-safe nên mọi camera chia sẻ <b>một</b> model; tracking tách riêng theo từng camera.</p></div>
-      <div class="alert amber"><h3>Không chặn event loop</h3><p>Suy luận chạy trong executor; gửi thông báo ở luồng nền, thử lại 3 lần.</p></div>
+    <div class="pipe-out">
+      <div class="card t-blue"><div class="lbl">Đầu vào</div><h4>Camera / video</h4><p>RTSP · USB · file · webcam — frame mới nhất, không xếp hàng trễ.</p></div>
+      <div class="card t-green"><div class="lbl">Song song an toàn</div><h4>1 model · N tracker</h4><p>YOLO dùng chung + khoá; mỗi camera một tracker/engine.</p></div>
+      <div class="card t-amber"><div class="lbl">Đầu ra SOC</div><h4>UI realtime</h4><p>Overlay bbox/skeleton · IQA Live · Events · Worker 3D.</p></div>
     </div>
     <div class="stripe-b"></div>
     <div class="footer"><span>pipeline · per frame</span><span>ECHO MOVE</span></div>
+    <aside class="notes">Khớp code pipeline.py: detect → track → classify/fall → IQA → AlertEngine → hub.publish. PARTIAL không vào AlertHub.</aside>
   </section>
 
   <!-- 6. IQA -->
@@ -251,31 +264,25 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
     <div class="stripe"></div>
     <div class="chrome"><span class="tag amber">Xử lý ảnh · IQA</span><span class="page"></span></div>
     <div class="kicker">Image Quality Assessment</div>
-    <h2 class="h2">Camera kém thì <span class="red">mọi luật đều sai</span></h2>
-    <table class="tbl mt">
+    <h2 class="h2" style="font-size:64px">Camera kém thì <span class="red">mọi luật đều sai</span></h2>
+    <table class="tbl compact mt">
       <tr><th>Chỉ số</th><th>Cách tính</th><th>Nguồn</th></tr>
       <tr><td>Blur</td><td>Phương sai Laplacian</td><td>Pech-Pacheco et al., 2000</td></tr>
-      <tr><td>Noise</td><td>σ̂ kiểu Immerkær (mặt nạ Laplacian 3×3)</td><td>Immerkær, 1996</td></tr>
+      <tr><td>Noise</td><td>Ước lượng nhiễu Immerkær · mặt nạ Laplacian 3×3</td><td>Immerkær, 1996</td></tr>
       <tr><td>Contrast</td><td>RMS contrast (độ lệch chuẩn mức xám)</td><td>Peli, 1990</td></tr>
-      <tr><td>Exposure</td><td>Tỉ lệ điểm ảnh cháy sáng (&gt; 0.95) và tối (&lt; 0.05)</td><td>Tinh thần ISO 18434-1</td></tr>
+      <tr><td>PIQE</td><td>MSCN toàn ảnh (proxy realtime)</td><td>Venkatanath et al., 2015</td></tr>
+      <tr><td>Exposure</td><td>Tỉ lệ pixel cháy (&gt;0.95) và tối (&lt;0.05)</td><td>ISO 18434-1 (tinh thần)</td></tr>
     </table>
-    <div class="grid2 mt">
-      <div class="card t-amber">
-        <div class="lbl">PIQE fast · realtime</div>
-        <h4 style="font-size:32px">Proxy toàn ảnh</h4>
-        <p><code>100 − 100·std(MSCN)</code> — không chia khối. Camera / SOC chỉ dùng bản này trong Overall.</p>
-      </div>
-      <div class="card t-blue">
-        <div class="lbl">PIQE full · offline</div>
-        <h4 style="font-size:32px">Khối 16×16 MSCN</h4>
-        <p>Bỏ khối phẳng (var&lt;0.1); var&gt;0.5 trọng số 2. MATLAB so sánh fast↔full + corr; <code>make bench</code> / <code>calibrate-iqa --full-piqe</code>.</p>
-      </div>
+    <div class="card t-amber mt" style="padding:22px 28px">
+      <div class="lbl">Công thức Overall</div>
+      <p style="font-family:var(--mono);font-size:24px;color:var(--ink);margin:6px 0 0;line-height:1.5">
+        Overall = <b>0.05</b>·PIQE + <b>0.50</b>·Blur + <b>0.20</b>·Contrast + <b>0.15</b>·Noise + <b>0.10</b>·Exposure<br>
+        <span style="font-size:20px;color:var(--ink2)">Overall &lt; 40 → badge trên panel IQA · không tạo event · trọng số: slide kế</span>
+      </p>
     </div>
-    <pre class="code mt"><span class="kw">Overall</span> = <span class="st">0.05</span>·PIQE<sub>fast</sub> + <span class="st">0.50</span>·Blur + <span class="st">0.20</span>·Contrast + <span class="st">0.15</span>·Noise + <span class="st">0.10</span>·Exposure
-<span class="cm"># Overall &lt; 40 → badge panel IQA (không event) · trọng số: slide kế</span></pre>
     <div class="stripe-b"></div>
-    <div class="footer"><span>iqa · 5 metrics · PIQE fast↔full</span><span>ECHO MOVE</span></div>
-    <aside class="notes">Realtime chỉ PIQE fast. Full (block-wise) để MATLAB so sánh / calibrate — trung thực: fast có thể tăng khi ảnh mờ.</aside>
+    <div class="footer"><span>iqa · 5 metrics</span><span>ECHO MOVE</span></div>
+    <aside class="notes">Trọng số tìm bằng thực nghiệm trên 275 ảnh suy giảm — slide tiếp theo.</aside>
   </section>
 
   <!-- 7. IQA WEIGHT CALIBRATION -->
@@ -304,7 +311,7 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
         </div>
       </div>
     </div>
-    <p class="sub mt" style="font-size:26px">Blur nặng hơn PIQE vì PIQE-fast có thể <b>tăng</b> khi ảnh mờ (std MSCN giảm) — nếu để PIQE = 0.25 thì Overall không giảm khi camera mất nét.</p>
+    <p class="sub mt" style="font-size:26px">Blur nặng hơn PIQE vì điểm MSCN có thể <b>tăng</b> khi ảnh mờ (std giảm) — nếu để PIQE = 0.25 thì Overall không giảm khi camera mất nét.</p>
     <div class="stripe-b"></div>
     <div class="footer"><span>iqa · weight calibration</span><span>ECHO MOVE</span></div>
     <aside class="notes">Nhấn mạnh: tối ưu trên dataset suy giảm có kiểm soát — trung thực nói chưa phải MOS người xem trên ảnh hiện trường. IQA không còn tạo event CAMERA.</aside>
@@ -465,7 +472,7 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:25px;ba
       <div class="checks">
         <div class="check ok"><div class="box">▶</div><div class="txt">Clip 5 s trước + 5 s sau <span>— xem lại trên web, gửi qua Telegram</span></div></div>
         <div class="check ok"><div class="box">⏫</div><div class="txt">Leo thang <span>— CRITICAL chưa xử lý sau N phút gửi tới quản đốc</span></div></div>
-        <div class="check ok"><div class="box">✉</div><div class="txt">Telegram · Zalo OA · webhook <span>— chạy nền, thử lại</span></div></div>
+        <div class="check ok"><div class="box">✉</div><div class="txt">Telegram · webhook <span>— chạy nền, thử lại</span></div></div>
         <div class="check ok"><div class="box">📡</div><div class="txt">Camera mất tín hiệu <span>— tự kết nối lại; trạng thái trên card (không event OFFLINE)</span></div></div>
       </div>
       <div class="checks">

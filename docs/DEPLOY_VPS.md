@@ -63,7 +63,7 @@ cd /home/ubuntu/apps/echo-move
 sudo docker compose -p echo-move -f docker/docker-compose.vps.yml --env-file .env up -d
 ```
 
-Biến quan trọng: `ECHO_WITH_AI`, `ECHO_DEMO_MODE`, `ECHO_CAMERAS`, `ECHO_TELEGRAM_*`, `ECHO_ZALO_*`, `ECHO_CORS_ORIGINS`.
+Biến quan trọng: `ECHO_WITH_AI`, `ECHO_DEMO_MODE`, `ECHO_CAMERAS`, `ECHO_TELEGRAM_*`, `ECHO_CORS_ORIGINS`.
 
 ## Deploy
 

@@ -126,8 +126,6 @@ class Settings:
     telegram_token: str = field(default_factory=lambda: _env("TELEGRAM_TOKEN", ""))
     telegram_chat_id: str = field(default_factory=lambda: _env("TELEGRAM_CHAT_ID", ""))
     webhook_url: str = field(default_factory=lambda: _env("WEBHOOK_URL", ""))
-    zalo_token: str = field(default_factory=lambda: _env("ZALO_OA_TOKEN", ""))
-    zalo_user_id: str = field(default_factory=lambda: _env("ZALO_USER_ID", ""))
     # Unacknowledged CRITICAL events are re-sent after this many minutes (0 = off)
     escalate_min: float = field(default_factory=lambda: float(_env("ESCALATE_MIN", "0")))
     escalate_chat_id: str = field(
