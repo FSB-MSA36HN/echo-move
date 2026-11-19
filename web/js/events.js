@@ -26,7 +26,7 @@
       <ul>
         <li><b>Thống kê</b>: tổng số, chưa xử lý, theo loại FALL / STANDING / SQUAT / STOOP (PARTIAL không tạo event).</li>
         <li><b>Biểu đồ giờ</b>: phân bố sự kiện theo khung giờ 0–23 trong khoảng lọc.</li>
-        <li><b>Danh sách &amp; ảnh</b>: snapshot, xác nhận / báo nhầm, xem clip.</li>
+        <li><b>Danh sách &amp; ảnh</b>: FALL / SQUAT / STOOP (STANDING chỉ đếm trong thống kê).</li>
       </ul>
       <div class="guide-actions"><button class="b" data-ev-retry>↻ Thử kết nối lại</button></div>
     </div>`;
@@ -141,8 +141,9 @@
 
   function renderList(items, append) {
     const list = $('evList');
-    if (!append) list.innerHTML = items.length ? '' : '<div class="hint">Chưa có sự kiện trong khoảng thời gian này.</div>';
-    list.insertAdjacentHTML('beforeend', items.map(row).join(''));
+    const visible = (items || []).filter(ev => ev.type !== 'STANDING');
+    if (!append) list.innerHTML = visible.length ? '' : '<div class="hint">Chưa có sự kiện trong khoảng thời gian này.</div>';
+    if (visible.length) list.insertAdjacentHTML('beforeend', visible.map(row).join(''));
   }
 
   async function ack(id, btn, falseAlarm) {

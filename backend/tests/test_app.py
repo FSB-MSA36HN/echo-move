@@ -105,6 +105,16 @@ def test_event_clip_and_false_alarm_endpoints(client):
     assert client.post("/api/events/999/false-alarm").status_code == 404
 
 
+def test_standing_counts_in_stats_not_default_list(client):
+    post_event(client, type="STANDING", detail="Đứng")
+    post_event(client, type="FALL", detail="Ngã")
+    page = client.get("/api/events").json()
+    assert page["total"] == 1 and page["items"][0]["type"] == "FALL"
+    assert client.get("/api/events", params={"type": "STANDING"}).json()["total"] == 1
+    stats = client.get("/api/stats").json()
+    assert stats["by_type"]["STANDING"] == 1 and stats["by_type"]["FALL"] == 1
+
+
 def test_event_validation(client):
     assert client.post("/api/events", json={"type": "NOPE"}).status_code == 422
     assert client.post("/api/events", json={"type": "FALL", "detail": "x" * 500}).status_code == 422

@@ -141,9 +141,8 @@
       source: a.source || 'browser',
     };
     recent.push(full); if (recent.length > 50) recent.shift();
-    // Log-only (STANDING): save quietly — no siren / desktop notify.
+    // Log-only (STANDING): save to DB/stats only — no siren / toast / notify.
     if (action) { siren(lvl); toast(full); notify(full); }
-    else toast(full);
     if (!fromServer && window.EchoBackend && EchoBackend.online) {
       const body = {type: full.type, detail: full.detail, source: full.source,
                     track_id: full.track_id, image: action ? (a.image || null) : null};

@@ -22,7 +22,7 @@
 | 2:50 | NV3 | Tab **Sự kiện** | Sự kiện vừa rồi kèm ảnh, thống kê theo giờ; bấm **▶ Clip**, **Xác nhận**, **Báo nhầm**, **⬇ CSV** |
 | 3:10 | NV3 | Tab **Camera** → ⚙ → vẽ vùng quanh một góc sàn → Lưu | NV2 bước vào vùng → cảnh báo **Vùng cấm** |
 | 3:40 | NV2 | Che một phần ống kính / tắt đèn | IQA tụt; badge "ẢNH MỜ · TỐI" (không còn BỤI/KHÓI/LỬA giả) |
-| 3:50 | NV3 | `B`, `C`, `P` | Benchmark, so sánh trước/sau, báo cáo HTML |
+| 3:50 | NV3 | `B`, `P` | Benchmark, báo cáo HTML |
 | 4:20 | NV2 | Rút dây mạng camera IP (hoặc đổi URL sai) | Trạng thái "Mất tín hiệu — thử lại"; sau 30 s có sự kiện **Mất tín hiệu camera**; cắm lại tự chạy tiếp |
 | 4:50 | NV2 | Ctrl+C backend | Chấm xám "Chưa kết nối backend"; UI về chờ nguồn (không còn kịch bản giả) |
 | 5:10 | NV3 | `T` | Self-test (gồm kiểm tra IQA warnings) |

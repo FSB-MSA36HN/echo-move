@@ -207,9 +207,12 @@ def create_app(cfg: Settings | None = None) -> FastAPI:
         store = store_or_503(request)
         if hours is not None:
             since = time.time() - hours * 3600
+        # STANDING is counted in /api/stats but omitted from the gallery list
+        # (log-only posture — no snapshot / no operator action).
+        exclude = None if type else ("STANDING",)
         items, total = store.list(type=type, source=source, level=level, since=since,
                                   until=until, acknowledged=acknowledged, limit=limit,
-                                  offset=offset)
+                                  offset=offset, exclude_types=exclude)
         return {"items": items, "total": total, "limit": limit, "offset": offset}
 
     @app.get("/api/events.csv")

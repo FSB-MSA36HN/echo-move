@@ -147,13 +147,18 @@ class EventStore:
 
     def _where(self, type: str | None, source: str | None, level: str | None,
                since: float | None, until: float | None,
-               acknowledged: bool | None) -> tuple[str, list[Any]]:
+               acknowledged: bool | None,
+               exclude_types: tuple[str, ...] | None = None) -> tuple[str, list[Any]]:
         clauses: list[str] = []
         args: list[Any] = []
         for col, val in (("type", type), ("source", source), ("level", level)):
             if val:
                 clauses.append(f"{col} = ?")
                 args.append(val)
+        if exclude_types and not type:
+            placeholders = ",".join("?" * len(exclude_types))
+            clauses.append(f"type NOT IN ({placeholders})")
+            args.extend(exclude_types)
         if since is not None:
             clauses.append("ts >= ?")
             args.append(since)
@@ -168,8 +173,10 @@ class EventStore:
     def list(self, *, type: str | None = None, source: str | None = None,
              level: str | None = None, since: float | None = None, until: float | None = None,
              acknowledged: bool | None = None, limit: int = 50,
-             offset: int = 0) -> tuple[list[dict[str, Any]], int]:
-        where, args = self._where(type, source, level, since, until, acknowledged)
+             offset: int = 0,
+             exclude_types: tuple[str, ...] | None = None) -> tuple[list[dict[str, Any]], int]:
+        where, args = self._where(type, source, level, since, until, acknowledged,
+                                  exclude_types=exclude_types)
         with self._lock:
             total = self._db.execute(f"SELECT COUNT(*) FROM events{where}", args).fetchone()[0]
             rows = self._db.execute(

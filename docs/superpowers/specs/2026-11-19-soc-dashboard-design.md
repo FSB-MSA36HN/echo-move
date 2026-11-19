@@ -13,7 +13,7 @@ Approved: wall + side rail, no tabs, drop Citations, add System metrics.
     - System metrics
     - IQA Live + Cảnh báo IQA (near bottom)
     - Cameras (server streams + feature guide when offline/empty) — bottom
-- Tools drawer (collapsed): MATLAB, Bench, Compare, Report, Test, Log, WS URL
+- Tools drawer (collapsed): MATLAB, Bench, Report, Test, Log, WS URL
 - Each `.panel` header has ⛶ zoom: expands that section fullscreen overlay; Escape / ✕ to exit
 
 ## Copy rules
