@@ -69,7 +69,7 @@ Phân loại từng frame nhiễu (che khuất, mờ chuyển động, ngồi x�
 |---|---|---|---|
 | FALL | `technique = FALL` | `ECHO_FALL_CONFIRM_S` = 1.5 s (0.75 s nếu hông rơi nhanh) | CRITICAL · ảnh + clip |
 | STOOP | `technique = STOOP` | `ECHO_POSTURE_CONFIRM_S` = 3 s | WARNING · ảnh + clip |
-| SQUAT | `technique = SQUAT` | `ECHO_POSTURE_CONFIRM_S` = 3 s | INFO · ảnh + clip |
+| SQUAT | `technique = SQUAT` | `ECHO_POSTURE_CONFIRM_S` = 3 s | WARNING · ảnh + clip |
 | STANDING | `technique = STANDING` | **0 s** (ghi ngay) | INFO · log-only, không ảnh, tự ack |
 | PARTIAL | một phần của người | — | **Không cảnh báo** · chỉ bbox overlay |
 

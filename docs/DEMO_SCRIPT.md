@@ -43,7 +43,7 @@
 
 **Độ chính xác bao nhiêu?** Trả lời bằng số **tự đo**: `make eval DATASET=urfd` trên UR Fall (30 video ngã, 40 video sinh hoạt) cho precision, recall, F1, độ trễ phát hiện và số báo nhầm/giờ, so sánh luật cũ với luật mới. Chưa chạy thì nói rõ là chưa đo.
 
-**Hệ thống ghi những sự kiện nào?** Bốn loại alert: FALL (CRITICAL), STANDING / SQUAT (INFO), STOOP (WARNING). PARTIAL = một phần của người — chỉ vẽ bbox, không cảnh báo; tư thế chỉ khi đủ mặt + chân tay. CRITICAL chưa xác nhận sau N phút vẫn leo thang tới quản đốc.
+**Hệ thống ghi những sự kiện nào?** Bốn loại alert: FALL (CRITICAL), STANDING (INFO), SQUAT / STOOP (WARNING). PARTIAL = một phần của người — chỉ vẽ bbox, không cảnh báo; tư thế chỉ khi đủ mặt + chân tay. CRITICAL chưa xác nhận sau N phút vẫn leo thang tới quản đốc.
 
 **Quyền riêng tư?** Ảnh và clip lưu lại được làm mờ vùng đầu (`ECHO_BLUR_FACES=1`), dữ liệu tự xoá sau `ECHO_RETENTION_DAYS` ngày, chỉ xem trực tiếp mới thấy mặt.
 

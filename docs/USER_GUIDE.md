@@ -41,7 +41,7 @@ Ba tab:
 Khi một cảnh báo được xác nhận: toast góc phải (bấm để mở Events), còi (ngã: còi hú; còn lại: bíp), thông báo desktop nếu tab đang ẩn. Chỉ còn **5 loại sự kiện tư thế**:
 - **Ngã (FALL)** — CRITICAL, ≥ 1.5 s (0.75 s nếu hông rơi nhanh); lưu ảnh + clip.
 - **Đứng (STANDING)** — INFO, ghi ngay (log-only); **chỉ tăng thống kê**, không hiện trong Danh sách & ảnh, không toast/ảnh.
-- **Ngồi xổm (SQUAT)** — INFO, ≥ 3 s; lưu ảnh + clip.
+- **Ngồi xổm (SQUAT)** — WARNING, ≥ 3 s; lưu ảnh + clip.
 - **Cúi khom (STOOP)** — WARNING, ≥ 3 s; lưu ảnh + clip.
 - **Một phần của người (PARTIAL)** — trạng thái detect (thiếu mặt/tay/chân); **không cảnh báo**, chỉ vẽ bbox quanh người; tư thế chỉ khi người đủ.
 

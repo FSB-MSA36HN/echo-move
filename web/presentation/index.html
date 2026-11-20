@@ -411,7 +411,7 @@ body.practice-mode .hint{bottom:52px}
       <tr><th>Loại</th><th>Điều kiện mỗi frame</th><th>Phải kéo dài</th><th>Mức</th></tr>
       <tr><td>FALL</td><td>technique = FALL</td><td>1.5 s (0.75 s nếu hông rơi nhanh)</td><td><span class="lv c">CRITICAL</span></td></tr>
       <tr><td>STOOP</td><td>technique = STOOP (cúi khom)</td><td>3 s</td><td><span class="lv w">WARNING</span></td></tr>
-      <tr><td>SQUAT</td><td>technique = SQUAT (ngồi xổm)</td><td>3 s</td><td><span class="lv i">INFO</span></td></tr>
+      <tr><td>SQUAT</td><td>technique = SQUAT (ngồi xổm)</td><td>3 s</td><td><span class="lv w">WARNING</span></td></tr>
       <tr><td>STANDING</td><td>chỉ đếm thống kê (không list/ảnh)</td><td>0 s (ngay)</td><td><span class="lv i">INFO</span></td></tr>
       <tr><td>PARTIAL</td><td>một phần người · chỉ bbox</td><td>—</td><td><span class="lv w">không alert</span></td></tr>
     </table>
@@ -429,7 +429,7 @@ body.practice-mode .hint{bottom:52px}
     <div class="grid3 mt" style="grid-template-columns:repeat(5,1fr);gap:18px">
       <div class="card t-red"><div class="lbl">CRITICAL</div><h4>FALL</h4><p>Ngã đa tín hiệu ≥ 1.5 s · còi hú · clip.</p></div>
       <div class="card t-green"><div class="lbl">INFO</div><h4>STANDING</h4><p>Đứng · chỉ tăng ô thống kê, không vào Danh sách & ảnh.</p></div>
-      <div class="card t-green"><div class="lbl">INFO</div><h4>SQUAT</h4><p>Ngồi xổm (gối gập, lưng thẳng) ≥ 3 s.</p></div>
+      <div class="card t-amber"><div class="lbl">WARNING</div><h4>SQUAT</h4><p>Ngồi xổm (gối gập, lưng thẳng) ≥ 3 s.</p></div>
       <div class="card t-amber"><div class="lbl">WARNING</div><h4>STOOP</h4><p>Cúi khom spine &gt; 60° ≥ 3 s.</p></div>
       <div class="card t-amber"><div class="lbl">OVERLAY</div><h4>PARTIAL</h4><p>Bbox vàng · nhãn «P1 - Chỉ hiển thị một phần người» · không event.</p></div>
     </div>
@@ -443,29 +443,7 @@ body.practice-mode .hint{bottom:52px}
     <div class="footer"><span>events · taxonomy</span><span>ECHO MOVE</span></div>
   </section>
 
-  <!-- 11. PARTIAL / YOLO -->
-  <section class="slide" data-title="PARTIAL bbox-only">
-    <div class="stripe"></div>
-    <div class="chrome"><span class="tag amber">Partial person</span><span class="page"></span></div>
-    <div class="kicker">Không đoán tư thế khi người chưa đủ</div>
-    <h2 class="h2">PARTIAL = <span class="amb">một phần của người</span> · chỉ bbox</h2>
-    <div class="grid2 mt">
-      <div class="checks">
-        <div class="check ok"><div class="box">1</div><div class="txt">Thiếu mặt <span>— nose / eyes / ears conf thấp</span></div></div>
-        <div class="check ok"><div class="box">2</div><div class="txt">Thiếu tay hoặc chân <span>— gối→mắt cá; chân ≥ 0.75× thân và ≥ 2.2× mặt (chống bịa cận cảnh)</span></div></div>
-        <div class="check ok"><div class="box">3</div><div class="txt">Thiếu thân / cắt mép <span>— vai–hông hoặc bbox sát biên</span></div></div>
-        <div class="check ok"><div class="box">4</div><div class="txt">Overlay giống giao thông <span>— chỉ rectangle + nhãn; không skeleton, không alert</span></div></div>
-      </div>
-      <div class="alert amber" style="align-self:start">
-        <h3>Tại sao cần?</h3>
-        <p>Không đoán FALL/STOOP khi YOLO chỉ thấy nửa người. Bbox YOLO ổn định; tư thế chỉ chạy khi đủ mặt + chân tay.</p>
-      </div>
-    </div>
-    <div class="stripe-b"></div>
-    <div class="footer"><span>partial · bbox overlay</span><span>ECHO MOVE</span></div>
-  </section>
-
-  <!-- 12. TRACKER -->
+  <!-- 11. TRACKER -->
   <section class="slide" data-title="Tracking nhiều người">
     <div class="stripe"></div>
     <div class="chrome"><span class="tag blue">Tracking</span><span class="page"></span></div>
@@ -511,37 +489,6 @@ body.practice-mode .hint{bottom:52px}
     <div class="footer"><span>operations · evidence · escalation</span><span>ECHO MOVE</span></div>
   </section>
 
-  <!-- 15. EVALUATION -->
-  <section class="slide" data-title="Đánh giá">
-    <div class="stripe"></div>
-    <div class="chrome"><span class="tag amber">Đánh giá</span><span class="page"></span></div>
-    <div class="kicker">Con số phải tự đo</div>
-    <h2 class="h2">Đo bằng dataset, <span class="strike">không đoán</span></h2>
-    <div class="grid2 mt">
-      <div class="checks">
-        <div class="check ok"><div class="box">1</div><div class="txt">Trích keypoint một lần <span>— cache trong output/eval_cache</span></div></div>
-        <div class="check ok"><div class="box">2</div><div class="txt">Phát lại qua toàn bộ luật <span>— so sánh luật v21 và đa tín hiệu</span></div></div>
-        <div class="check ok"><div class="box">3</div><div class="txt">Precision · Recall · F1 <span>— cộng độ trễ phát hiện và báo nhầm / giờ</span></div></div>
-        <div class="check ok"><div class="box">✓</div><div class="txt">Trọng số IQA <span>— đã chạy make calibrate-iqa, F1 0.46 → 0.69</span></div></div>
-        <div class="check wip"><div class="box">!</div><div class="txt">UR Fall / Le2i <span>— chạy make eval khi có GPU để lấy precision/recall</span></div></div>
-      </div>
-      <div>
-        <pre class="code" style="font-size:24px"><span class="kw">make</span> calibrate-iqa
-<span class="kw">make</span> eval DATASET=<span class="st">urfd</span> ROOT=<span class="st">data/urfd</span>
-<span class="kw">make</span> eval DATASET=<span class="st">le2i</span> ROOT=<span class="st">data/le2i</span>
-<span class="cm"># video tự quay + labels.csv</span>
-<span class="kw">make</span> eval DATASET=<span class="st">folder</span> ROOT=<span class="st">data/xuong</span></pre>
-        <div class="alert amber mt">
-          <h3>Trung thực khi báo cáo</h3>
-          <p>IQA đã đo bằng <code>calibrate-iqa</code>. Độ chính xác ngã lấy từ <code>make eval</code> trên dữ liệu của nhóm.</p>
-        </div>
-      </div>
-    </div>
-    <div class="stripe-b"></div>
-    <div class="footer"><span>evaluation · urfd · le2i</span><span>ECHO MOVE</span></div>
-    <aside class="notes">Nếu đã chạy make eval, thay ô "!" bằng số liệu thật (precision, recall, F1, độ trễ trung vị). Nếu chưa, nói rõ là chưa đo.</aside>
-  </section>
-
   <!-- 16. DEMO -->
   <section class="slide" data-title="Demo">
     <div class="stripe"></div>
@@ -557,7 +504,7 @@ body.practice-mode .hint{bottom:52px}
       </div>
       <div class="checks">
         <div class="check ok"><div class="box">5</div><div class="txt">Nằm xuống ≥ 1.5 s <span>— FALL CRITICAL + clip</span></div></div>
-        <div class="check ok"><div class="box">6</div><div class="txt">Đứng / ngồi xổm <span>— STANDING · SQUAT (INFO)</span></div></div>
+        <div class="check ok"><div class="box">6</div><div class="txt">Đứng / ngồi xổm <span>— STANDING (INFO) · SQUAT (WARNING)</span></div></div>
         <div class="check ok"><div class="box">7</div><div class="txt">Đứng sát mép khung / che thân <span>— bbox vàng «P1 - Chỉ hiển thị một phần người»</span></div></div>
         <div class="check ok"><div class="box">8</div><div class="txt">Events gallery <span>— tối đa 8 ảnh + Load more; STANDING chỉ thống kê</span></div></div>
       </div>
@@ -576,7 +523,7 @@ body.practice-mode .hint{bottom:52px}
     <div class="grid2 mt">
       <div class="card t-red">
         <div class="lbl">Hạn chế hiện tại</div>
-        <ul><li>Luật dựa trên 2D, nhạy với góc đặt camera (nên đặt cao 2–3 m)</li><li>Chưa có re-ID: người mặc giống nhau che nhau lâu có thể đổi ID</li><li>Ngưỡng góc, thời gian, IQA là giá trị thực nghiệm</li><li>Chiều sâu 3D chỉ là ước lượng từ một camera</li></ul>
+        <ul><li>Luật dựa trên 2D, nhạy với góc đặt camera (nên đặt cao 2–3 m)</li><li>Chưa có re-ID: người mặc giống nhau che nhau lâu có thể đổi ID</li><li>Ngưỡng góc, thời gian, IQA là giá trị thực nghiệm</li></ul>
       </div>
       <div class="card t-green">
         <div class="lbl">Hướng phát triển</div>
@@ -598,7 +545,7 @@ body.practice-mode .hint{bottom:52px}
         <div class="card t-red"><div class="lbl">Pose</div><p>YOLOv8-Pose · MediaPipe</p></div>
         <div class="card t-amber"><div class="lbl">IQA</div><p>Pech-Pacheco · Immerkær · Peli · PIQE</p></div>
         <div class="card t-blue"><div class="lbl">Tracking</div><p>SORT · ByteTrack · One-Euro</p></div>
-        <div class="card t-green"><div class="lbl">Events · Eval</div><p>5 posture · UR Fall · Le2i</p></div>
+        <div class="card t-green"><div class="lbl">Events</div><p>FALL · STANDING · SQUAT · STOOP · PARTIAL</p></div>
       </div>
     </div>
     <div class="stripe-b"></div>
@@ -703,13 +650,8 @@ body.practice-mode .hint{bottom:52px}
 
     'Năm sự kiện tư thế':
       '[Người 3 · mở ~50s] Cảm ơn. Em tóm tắt taxonomy. ' +
-      'FALL là CRITICAL — có ảnh, clip, còi. STOOP là WARNING. SQUAT là INFO. STANDING chỉ tăng ô thống kê, không list không toast. ' +
+      'FALL là CRITICAL — có ảnh, clip, còi. STOOP và SQUAT là WARNING. STANDING chỉ tăng ô thống kê, không list không toast. ' +
       'PARTIAL chỉ overlay bbox vàng — không event. Cách xử lý khác nhau giúp giao diện không bị ngập thông tin vô ích.',
-
-    'PARTIAL bbox-only':
-      '[Người 3 · ~50s] PARTIAL là “một phần của người”: thiếu mặt, tay, chân, hoặc chân bịa quá ngắn so với mặt trên crop cận cảnh. ' +
-      'Hệ thống chỉ vẽ bbox vàng với nhãn «chỉ hiển thị một phần người», không skeleton, không cảnh báo tư thế. ' +
-      'Đây là lựa chọn thiết kế: thà không đoán còn hơn đoán sai.',
 
     'Tracking nhiều người':
       '[Người 3 · ~45s] Nhiều người cùng khung hình: tracker kiểu ByteTrack ghép detection mạnh rồi yếu, dự đoán vận tốc, giữ ID khi người ngã đột ngột. ' +
@@ -720,16 +662,12 @@ body.practice-mode .hint{bottom:52px}
       'Có clip 5 giây trước và sau để xem lại; CRITICAL chưa xử lý thì leo thang Telegram tới quản đốc; webhook tùy chọn; camera mất tín hiệu tự kết nối lại; nút Báo nhầm để chỉnh ngưỡng; làm mờ mặt trên ảnh lưu; retention tự xoá dữ liệu cũ; xuất CSV. ' +
       'Mục tiêu: cảnh báo đến đúng người, kèm bằng chứng.',
 
-    'Đánh giá':
-      '[Người 3 · ~45s] Nhóm không báo cáo bằng cảm tính. IQA đã chạy calibrate-iqa, F1 từ khoảng 0,46 lên 0,69. ' +
-      'Độ chính xác ngã đo bằng make eval trên UR Fall, Le2i hoặc video tự quay. Chưa chạy phần nào thì nói rõ chưa đo — giữ trung thực khi bảo vệ đồ án.',
-
     'Demo':
       '[Người 3 · ~1 phút] Kịch bản demo khoảng vài phút: mở giao diện — cameras và Worker 3D; nhìn IQA Live; chọn video hoặc ảnh curated; cúi khom để ra STOOP; nằm xuống để ra FALL; đứng hoặc ngồi xổm; đứng sát mép khung để thấy PARTIAL; mở Events xem ảnh bằng chứng, tối đa tám ảnh rồi Load more. ' +
       'Nếu demo hỏng: F5, phím T self-test, đổi sang video sẵn, hoặc Server nếu backend còn sống.',
 
     'Hạn chế & hướng phát triển':
-      '[Người 3 · ~1 phút] Hạn chế hiện tại: luật 2D nhạy góc camera — nên đặt cao khoảng 2–3 mét; chưa re-ID nên người mặc giống nhau che nhau lâu có thể đổi ID; ngưỡng là thực nghiệm; chiều sâu 3D chỉ ước lượng. ' +
+      '[Người 3 · ~1 phút] Hạn chế hiện tại: luật 2D nhạy góc camera — nên đặt cao khoảng 2–3 mét; chưa re-ID nên người mặc giống nhau che nhau lâu có thể đổi ID; ngưỡng là thực nghiệm. ' +
       'Hướng phát triển: hiệu chỉnh bằng dữ liệu nhà xưởng thật và nút Báo nhầm; dùng machine learning học từ nhật ký và Báo nhầm để cập nhật trọng số IQA cùng ngưỡng tư thế, giúp phát hiện càng ngày càng đúng hơn; học chuỗi thời gian LSTM hoặc ST-GCN; thêm re-ID; cải thiện PARTIAL; và mở rộng ngoài nhà xưởng — gia đình theo dõi người già, bệnh viện, hoặc theo dõi trẻ ngồi đúng tư thế.',
 
     'Cảm ơn · Q&A':

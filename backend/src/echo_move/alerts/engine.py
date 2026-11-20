@@ -28,7 +28,7 @@ from ..config import Settings
 MESSAGES = {
     "FALL": ("CRITICAL", "Phát hiện công nhân bị ngã"),
     "STANDING": ("INFO", "Công nhân đang đứng"),
-    "SQUAT": ("INFO", "Công nhân ngồi xổm"),
+    "SQUAT": ("WARNING", "Công nhân ngồi xổm"),
     "STOOP": ("WARNING", "Công nhân cúi khom lưng"),
     "PARTIAL": ("WARNING", "Một phần của người"),  # kept for API/legacy rows; not emitted
 }
