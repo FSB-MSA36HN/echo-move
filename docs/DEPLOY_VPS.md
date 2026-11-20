@@ -65,9 +65,24 @@ sudo docker compose -p echo-move -f docker/docker-compose.vps.yml --env-file .en
 
 Biến quan trọng: `ECHO_WITH_AI`, `ECHO_CAMERAS`, `ECHO_TELEGRAM_*`, `ECHO_CORS_ORIGINS`.
 
-## Deploy
+## Deploy (local repo → VPS)
 
-Không dùng GitHub Actions deploy VPS nữa — cập nhật trực tiếp lên `/home/ubuntu/apps/echo-move` (rsync/scp + `docker cp` / `docker compose up -d` khi đổi image). Domain HTTPS giữ nguyên qua nginx.
+**Quy tắc:** sửa và kiểm tra trên máy local trước; VPS chỉ nhận bản đã ổn định từ repo. Không hot-patch riêng trên server (`docker cp` từng file Python), vì dễ lệch UI/backend.
+
+```bash
+# Từ máy local (cần SSH key ~/.ssh/echo-move-vps-deploy)
+./scripts/deploy_vps.sh
+```
+
+Script sẽ:
+
+1. `rsync` working tree local → `/home/ubuntu/apps/echo-move` (giữ `.env` trên VPS, không ghi đè)
+2. `docker compose build` + `up -d` với `docker/docker-compose.vps.yml`
+3. Kiểm tra `http://127.0.0.1:18080/health`
+
+Compose mount `../web:/app/web:ro` và đọc secrets từ `../.env` (`env_file`). Biến Telegram/camera chỉ khai báo trong `.env` VPS — không để `${VAR:-}` rỗng trong compose (sẽ ghi đè `env_file`).
+
+Domain HTTPS giữ nguyên qua nginx.
 
 ## Xoá sau demo (chỉ stack này)
 

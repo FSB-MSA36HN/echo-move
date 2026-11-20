@@ -842,7 +842,7 @@ function loop(now) {
   try {
     if (S.three) render3D();
     if (S.ext) { updDebug(); return; }
-    if (S.mode === 'video' && S.ai_on && S.pose_ready) detect();
+    if (S.mode === 'video' && S.ready && S.ai_on && S.pose_ready) detect();
     const fps = S.mode === 'video' ? FPS_VID : FPS_SRV;
     if (now - S.lastDraw < 1000/fps) return;
     S.lastDraw = now;
@@ -905,6 +905,8 @@ function cleanup() {
   if (S.ws) { try { S.ws.close(); } catch(e){} S.ws = null; }
   const v = $('v');
   try { v.pause(); } catch(e){}
+  v.onended = null;
+  v.loop = false;
   if (S.stream) { S.stream.getTracks().forEach(t => t.stop()); S.stream = null; }
   v.srcObject = null;
   if (S.url) { URL.revokeObjectURL(S.url); S.url = null; }
@@ -1350,12 +1352,18 @@ function bind() {
       return;
     }
     S.url = URL.createObjectURL(f);
-    v.src = S.url; v.muted = true; v.loop = true;
+    v.src = S.url; v.muted = true; v.loop = false;
+    v.onended = () => {
+      // One pass only — stop AI on last frame after the clip finishes.
+      S.ready = false;
+      $('stt').textContent = 'Hết video (đã chạy 1 lần)';
+      $('mode').textContent = 'XONG'; $('mode').className = 'chip';
+    };
     v.onloadedmetadata = () => {
       v.play().then(() => {
         S.ready = true; S.mode = 'video'; S.frame = 0;
         S.dbg.video = `${v.videoWidth}x${v.videoHeight}`;
-        $('stt').textContent = S.ai_on ? 'Video + AI' : 'Video (AI off)';
+        $('stt').textContent = S.ai_on ? 'Video + AI (1 lần)' : 'Video (AI off, 1 lần)';
         $('mode').textContent = 'VIDEO'; $('mode').className = 'chip';
       }).catch(err => { $('stt').textContent = 'Lỗi play: ' + err.message; });
     };

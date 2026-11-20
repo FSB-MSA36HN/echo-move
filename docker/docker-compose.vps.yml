@@ -12,21 +12,18 @@ services:
     ports:
       - "18080:8000"
     restart: unless-stopped
+    # Secrets/tunables come from ../.env (do not re-declare with ${VAR:-}
+    # here — empty host interpolation would override env_file).
+    env_file:
+      - ../.env
     environment:
       ECHO_HOST: "0.0.0.0"
       ECHO_PORT: "8000"
       ECHO_CORS_ORIGINS: "*"
-      ECHO_CAMERAS: ${ECHO_CAMERAS:-}
-      ECHO_TELEGRAM_TOKEN: ${ECHO_TELEGRAM_TOKEN:-}
-      ECHO_TELEGRAM_CHAT_ID: ${ECHO_TELEGRAM_CHAT_ID:-}
-      ECHO_WEBHOOK_URL: ${ECHO_WEBHOOK_URL:-}
-      ECHO_ESCALATE_TELEGRAM_CHAT_ID: ${ECHO_ESCALATE_TELEGRAM_CHAT_ID:-}
-      ECHO_ESCALATE_MIN: ${ECHO_ESCALATE_MIN:-0}
-      ECHO_RETENTION_DAYS: ${ECHO_RETENTION_DAYS:-7}
-      ECHO_BLUR_FACES: ${ECHO_BLUR_FACES:-1}
-      ECHO_EVENT_CLIPS: ${ECHO_EVENT_CLIPS:-1}
     volumes:
       - ../output:/data/output
+      # Host web is source of truth (avoids stale UI baked into the image).
+      - ../web:/app/web:ro
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/health')"]
       interval: 30s
